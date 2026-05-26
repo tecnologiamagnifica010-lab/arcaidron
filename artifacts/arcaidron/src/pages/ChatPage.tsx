@@ -83,10 +83,14 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
   useEffect(() => {
     const socket = getSocket();
 
-    socket.on("connect", () => setConnected(true));
+    socket.on("connect", () => {
+      setConnected(true);
+      socket.emit("get_unread_counts");
+    });
     socket.on("disconnect", () => setConnected(false));
     socket.on("reconnect", () => {
       setConnected(true);
+      socket.emit("get_unread_counts");
       if (activeConv) openChat(activeConv.otherUser, activeConv.key);
     });
 
@@ -153,6 +157,28 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
       setCallData(null);
     });
 
+    socket.on("unread_counts", (counts: Record<string, number>) => {
+      setConversations(prev => {
+        const updated = prev.map(c => ({
+          ...c,
+          unread: counts[c.chatId] ?? c.unread ?? 0
+        }));
+        localStorage.setItem(CONVS_KEY, JSON.stringify(updated));
+        return updated;
+      });
+    });
+
+    socket.on("unread_update", ({ chatId, count }: { chatId: string; count: number }) => {
+      setConversations(prev => {
+        const updated = prev.map(c => c.chatId === chatId ? { ...c, unread: count } : c);
+        localStorage.setItem(CONVS_KEY, JSON.stringify(updated));
+        return updated;
+      });
+    });
+
+    // Request counts immediately if already connected
+    if (socket.connected) socket.emit("get_unread_counts");
+
     return () => {
       socket.off("connect");
       socket.off("disconnect");
@@ -165,6 +191,8 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
       socket.off("typing");
       socket.off("call-made");
       socket.off("call-ended");
+      socket.off("unread_counts");
+      socket.off("unread_update");
     };
   }, [activeConv, user.username, conversations, CONVS_KEY, openChat]);
 

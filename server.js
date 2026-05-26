@@ -130,6 +130,15 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS likes (postId TEXT, username TEXT)`);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS unread_counts (
+      username TEXT,
+      chatId TEXT,
+      count INTEGER DEFAULT 0,
+      PRIMARY KEY (username, chatId)
+    )
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS comments (
       id TEXT PRIMARY KEY,
       postId TEXT,
@@ -361,6 +370,13 @@ io.on("connection", socket => {
     socket.currentChat = chatId;
     socket.currentOtherUser = otherUser;
 
+    // Reset unread count for this user when they open the chat
+    db.run(
+      "DELETE FROM unread_counts WHERE username=? AND chatId=?",
+      [normalize(socket.username), chatId],
+      () => { socket.emit("unread_update", { chatId, count: 0 }); }
+    );
+
     db.all(
       "SELECT m.*, u.avatarUrl as senderAvatarUrl FROM messages m LEFT JOIN users u ON LOWER(m.username)=LOWER(u.username) WHERE m.chatId=? AND m.deleted!='true' ORDER BY m.rowid ASC",
       [chatId],
@@ -396,8 +412,34 @@ io.on("connection", socket => {
       [msg.id, msg.chatId, msg.username, msg.avatar, msg.avatarUrl, msg.type, msg.text, msg.media, msg.time, msg.seenBy, msg.replyTo, msg.deleted],
       () => {
         io.to(socket.currentChat).emit("new_message", msg);
-        if (socket.currentOtherUser) {
-          criarNotificacao(socket.currentOtherUser, socket.username + " enviou uma mensagem.");
+
+        // Increment unread count for the other user if they're not in this chat right now
+        const otherUser = socket.currentOtherUser;
+        if (otherUser) {
+          const otherKey = normalize(otherUser);
+          const otherSocketId = userSockets[otherKey];
+          const otherSock = otherSocketId ? io.sockets.sockets.get(otherSocketId) : null;
+          const otherIsHere = otherSock && otherSock.currentChat === socket.currentChat;
+
+          if (!otherIsHere) {
+            db.run(
+              `INSERT INTO unread_counts (username, chatId, count) VALUES (?, ?, 1)
+               ON CONFLICT(username, chatId) DO UPDATE SET count = count + 1`,
+              [otherKey, socket.currentChat],
+              () => {
+                if (otherSock) {
+                  db.get(
+                    "SELECT count FROM unread_counts WHERE username=? AND chatId=?",
+                    [otherKey, socket.currentChat],
+                    (err, row) => {
+                      if (row) otherSock.emit("unread_update", { chatId: socket.currentChat, count: row.count });
+                    }
+                  );
+                }
+              }
+            );
+            criarNotificacao(otherUser, socket.username + " enviou uma mensagem.");
+          }
         }
       }
     );
@@ -479,6 +521,19 @@ io.on("connection", socket => {
   });
 
   socket.on("get_feed", () => { enviarFeed(socket); });
+
+  socket.on("get_unread_counts", () => {
+    if (!socket.username) return;
+    db.all(
+      "SELECT chatId, count FROM unread_counts WHERE username=?",
+      [normalize(socket.username)],
+      (err, rows) => {
+        const counts = {};
+        (rows || []).forEach(r => { counts[r.chatId] = r.count; });
+        socket.emit("unread_counts", counts);
+      }
+    );
+  });
 
   socket.on("call-user", data => {
     if (!socket.currentChat) return;
