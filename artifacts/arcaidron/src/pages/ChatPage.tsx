@@ -63,6 +63,13 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
 
   const CONVS_KEY = `arcaidron_convs_${user.username}`;
 
+  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread || 0), 0);
+
+  useEffect(() => {
+    document.title = totalUnread > 0 ? `(${totalUnread}) Arcaidron` : "Arcaidron";
+    return () => { document.title = "Arcaidron"; };
+  }, [totalUnread]);
+
   useEffect(() => {
     const saved = localStorage.getItem(CONVS_KEY);
     if (saved) {
