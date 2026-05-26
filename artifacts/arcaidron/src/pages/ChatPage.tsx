@@ -280,7 +280,7 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
         <div className="p-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => setShowProfile(true)} data-testid="button-profile" className="hover:opacity-80 transition-opacity">
-              <Avatar src={user.avatarUrl} name={user.displayName || user.username} size="md" online={true} />
+              <Avatar src={user.avatarUrl} name={user.displayName || user.username} size="md" />
             </button>
             <div className="min-w-0">
               <h2 className="font-semibold text-sm truncate">{user.displayName || user.username}</h2>
@@ -340,7 +340,7 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
               <button onClick={() => setShowMobileList(true)} className="md:hidden w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground">
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <Avatar name={otherUser} size="md" online={undefined} />
+              <Avatar name={otherUser} size="md" />
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold truncate">{otherUser}</h3>
                 <div className="flex items-center gap-1.5">
