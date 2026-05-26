@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <link rel="manifest" href="/manifest.json">
+
+<meta name="theme-color" content="#0b1020">
+
+<link rel="apple-touch-icon" href="/icon-192.png">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="/manifest.json">
+
+<meta name="theme-color" content="#2563eb">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCAIDRON</title>
+  <link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ARCAIDRON">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:#0b1020;
+color:white;
+}
+
+.app{
+max-width:700px;
+margin:auto;
+padding:20px;
+}
+
+.card{
+background:#121a33;
+padding:20px;
+border-radius:20px;
+margin-top:20px;
+}
+
+.hidden{
+display:none;
+}
+
+input,select,button{
+width:100%;
+padding:15px;
+margin-top:10px;
+border:none;
+border-radius:15px;
+font-size:16px;
+box-sizing:border-box;
+}
+
+button{
+background:#3b82f6;
+color:white;
+font-weight:bold;
+cursor:pointer;
+}
+
+.message{
+background:#1b2647;
+padding:15px;
+border-radius:15px;
+margin-top:10px;
+word-break:break-word;
+}
+
+.media{
+width:100%;
+border-radius:15px;
+margin-top:10px;
+}
+
+.emojiBox{
+display:flex;
+gap:5px;
+flex-wrap:wrap;
+margin-top:10px;
+}
+
+.emojiBox button{
+width:auto;
+padding:10px;
+}
+
+.callBox video{
+width:100%;
+background:black;
+border-radius:15px;
+margin-top:10px;
+}
+
+.callButtons{
+display:flex;
+gap:10px;
+}
+
+.loginButtons{
+display:flex;
+gap:10px;
+}
+
+.system{
+font-size:13px;
+opacity:0.8;
+margin-top:5px;
+}
+
+.replyBox{
+background:#0f172a;
+border:1px solid #3b82f6;
+border-radius:12px;
+padding:10px;
+margin-top:10px;
+display:none;
+}
+
+.actionButtons{
+display:flex;
+gap:10px;
+margin-top:10px;
+flex-wrap:wrap;
+}
+
+.actionButtons button{
+flex:1;
+min-width:120px;
+}
+</style>
+</head>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js");
+  });
+}
+</script>
+  <script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .register("/sw.js")
+    .then(() => {
+      console.log("Service Worker ativo");
+    });
+}
+  </script>
+<body>
+
+<main class="app">
+
+<section class="card" id="loginArea">
+
+<h1>ARCAIDRON 🔒</h1>
+
+<p>Rede privada criptografada.</p>
+
+<input id="username" placeholder="Seu nome">
+
+<input id="password" type="password" placeholder="Sua senha">
+
+<select id="avatar">
+<option>👤</option>
+<option>😎</option>
+<option>🔥</option>
+<option>👑</option>
+<option>🚀</option>
+<option>🐺</option>
+<option>🦅</option>
+<option>🛡️</option>
+</select>
+
+<div class="loginButtons">
+
+<button onclick="entrar()">
+Entrar
+</button>
+
+<button onclick="criarConta()">
+Criar conta
+</button>
+
+</div>
+
+<p id="loginError"></p>
+
+</section>
+
+<section class="card hidden" id="chatArea">
+
+<h2>ARCAIDRON</h2>
+
+<p id="me"></p>
+
+<div class="loginButtons">
+
+<button onclick="mostrarChat()">
+Chat privado
+</button>
+
+<button onclick="mostrarFeed()">
+Feed
+</button>
+
+</div>
+
+<div id="chatBox">
+
+<p class="system">
+Digite o nome da pessoa com quem você quer conversar. Não coloque seu próprio nome.
+</p>
+
+<input
+id="otherUser"
+placeholder="Nome da pessoa"
+oninput="verificarPessoa()">
+
+<p id="targetStatus"></p>
+
+<p class="system">
+Digite a chave privada combinada entre vocês. Os dois precisam usar a mesma chave.
+</p>
+
+<input
+id="chatKey"
+type="password"
+placeholder="Chave privada">
+
+<button onclick="abrirConversa()">
+Abrir conversa privada
+</button>
+
+<div class="callBox">
+
+<video
+id="localVideo"
+autoplay
+muted
+playsinline></video>
+
+<video
+id="remoteVideo"
+autoplay
+playsinline></video>
+
+<div class="callButtons">
+
+<button onclick="startCall()">
+📞
+</button>
+
+<button onclick="endCall()">
+❌
+</button>
+
+</div>
+
+</div>
+
+<div id="messages"></div>
+
+<p id="typing"></p>
+
+<div id="replyBox" class="replyBox">
+
+<p id="replyText">
+Respondendo mensagem...
+</p>
+
+<button onclick="cancelarResposta()">
+Cancelar resposta
+</button>
+
+</div>
+
+<div class="emojiBox">
+
+<button onclick="emoji('😀')">😀</button>
+<button onclick="emoji('😂')">😂</button>
+<button onclick="emoji('🔥')">🔥</button>
+<button onclick="emoji('❤️')">❤️</button>
+<button onclick="emoji('👑')">👑</button>
+<button onclick="emoji('🚀')">🚀</button>
+
+</div>
+
+<input
+id="message"
+placeholder="Digite mensagem"
+oninput="digitando()">
+
+<button onclick="enviarTexto()">
+Enviar
+</button>
+
+<input
+id="gifInput"
+placeholder="Link do GIF">
+
+<button onclick="enviarGif()">
+Enviar GIF
+</button>
+
+<input
+id="photoInput"
+type="file"
+accept="image/*">
+
+<button onclick="enviarFoto()">
+Enviar foto
+</button>
+
+<input
+id="audioInput"
+type="file"
+accept="audio/*">
+
+<button onclick="enviarAudio()">
+Enviar áudio
+</button>
+
+</div>
+
+<div id="feedBox" class="hidden">
+
+<h3>Moments</h3>
+
+<input
+id="postText"
+placeholder="Compartilhe algo">
+
+<input
+id="postMedia"
+type="file"
+accept="image/*,video/*">
+
+<button onclick="criarPost()">
+Publicar
+</button>
+
+<div id="feed"></div>
+
+</div>
+
+</section>
+
+</main>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+const socket = io();
+
+let currentUser = "";
+let currentAvatar = "";
+let currentChat = "";
+let currentKey = "";
+let usersCache = [];
+let peerConnection;
+let localStream;
+let replyToMessage = "";
+
+const servers = {
+iceServers:[
+{urls:"stun:stun.l.google.com:19302"}
+]
+};
+
+function mostrarChat(){
+
+document.getElementById("chatBox")
+.classList.remove("hidden");
+
+document.getElementById("feedBox")
+.classList.add("hidden");
+
+}
+
+function mostrarFeed(){
+
+document.getElementById("feedBox")
+.classList.remove("hidden");
+
+document.getElementById("chatBox")
+.classList.add("hidden");
+
+socket.emit("get_feed");
+
+}
+
+function notificar(titulo,corpo){
+
+if(!("Notification" in window)) return;
+
+if(Notification.permission==="granted"){
+
+new Notification(titulo,{
+body:corpo
+});
+
+}
+
+}
+
+async function criarChaveCrypto(senha){
+
+const encoder = new TextEncoder();
+
+const baseKey =
+await crypto.subtle.importKey(
+"raw",
+encoder.encode(senha),
+"PBKDF2",
+false,
+["deriveKey"]
+);
+
+return crypto.subtle.deriveKey(
+{
+name:"PBKDF2",
+salt:encoder.encode("ARCAIDRON"),
+iterations:250000,
+hash:"SHA-256"
+},
+baseKey,
+{
+name:"AES-GCM",
+length:256
+},
+false,
+["encrypt","decrypt"]
+);
+
+}
+
+function bufferParaBase64(buffer){
+
+return btoa(
+String.fromCharCode(
+...new Uint8Array(buffer)
+)
+);
+
+}
+
+function base64ParaBuffer(base64){
+
+const binary = atob(base64);
+
+const bytes =
+new Uint8Array(binary.length);
+
+for(let i=0;i<binary.length;i++){
+bytes[i]=binary.charCodeAt(i);
+}
+
+return bytes.buffer;
+
+}
+
+async function criptografarTexto(texto,senha){
+
+const encoder = new TextEncoder();
+
+const key =
+await criarChaveCrypto(senha);
+
+const iv =
+crypto.getRandomValues(
+new Uint8Array(12)
+);
+
+const encrypted =
+await crypto.subtle.encrypt(
+{
+name:"AES-GCM",
+iv
+},
+key,
+encoder.encode(texto)
+);
+
+return "ARCAIDRON_ENC:" +
+JSON.stringify({
+iv:bufferParaBase64(iv),
+data:bufferParaBase64(encrypted)
+});
+
+}
+
+async function descriptografarTexto(payload,senha){
+
+try{
+
+if(!payload.startsWith("ARCAIDRON_ENC:")){
+return payload;
+}
+
+const raw =
+payload.replace("ARCAIDRON_ENC:","");
+
+const obj = JSON.parse(raw);
+
+const key =
+await criarChaveCrypto(senha);
+
+const decrypted =
+await crypto.subtle.decrypt(
+{
+name:"AES-GCM",
+iv:base64ParaBuffer(obj.iv)
+},
+key,
+base64ParaBuffer(obj.data)
+);
+
+return new TextDecoder()
+.decode(decrypted);
+
+}catch{
+
+return "🔒 Mensagem protegida";
+
+}
+
+}
+
+function criarConta(){
+
+const username =
+document.getElementById("username")
+.value.trim();
+
+const password =
+document.getElementById("password")
+.value.trim();
+
+const avatar =
+document.getElementById("avatar")
+.value;
+
+socket.emit("create_account",{
+username,
+password,
+avatar
+});
+
+}
+
+function entrar(){
+
+const username =
+document.getElementById("username")
+.value.trim();
+
+const password =
+document.getElementById("password")
+.value.trim();
+
+socket.emit("login",{
+username,
+password
+});
+
+}
+
+socket.on("error_msg",msg=>{
+
+alert(msg);
+
+});
+
+socket.on("login_ok",user=>{
+
+currentUser = user.username;
+currentAvatar = user.avatar;
+
+document.getElementById("loginArea")
+.classList.add("hidden");
+
+document.getElementById("chatArea")
+.classList.remove("hidden");
+
+document.getElementById("me")
+.innerText =
+currentAvatar + " " + currentUser;
+
+socket.emit("get_users");
+socket.emit("get_feed");
+
+if("Notification" in window){
+Notification.requestPermission();
+}
+
+setInterval(()=>{
+
+socket.emit("heartbeat");
+
+},10000);
+
+});
+
+socket.on("users_list",list=>{
+
+usersCache = list;
+
+verificarPessoa();
+
+});
+
+function verificarPessoa(){
+
+const nome =
+document.getElementById("otherUser")
+.value.trim();
+
+const status =
+document.getElementById("targetStatus");
+
+if(!nome){
+
+status.innerText = "";
+
+return;
+
+}
+
+const pessoa =
+usersCache.find(
+u=>u.name.toLowerCase()===
+nome.toLowerCase()
+);
+
+if(!pessoa){
+
+status.innerText =
+"❌ Usuário não encontrado";
+
+return;
+
+}
+
+if(pessoa.online){
+
+status.innerText =
+"🟢 " + pessoa.name + " online";
+
+}else{
+
+status.innerText =
+"⚫ " + pessoa.name + " offline";
+
+}
+
+}
+
+function abrirConversa(){
+
+const otherUser =
+document.getElementById("otherUser")
+.value.trim();
+
+const key =
+document.getElementById("chatKey")
+.value.trim();
+
+if(!otherUser || !key){
+
+alert("Digite nome e chave");
+
+return;
+
+}
+
+currentKey = key;
+
+socket.emit("open_private_chat",{
+otherUser,
+key
+});
+
+}
+
+socket.on("chat_opened",async data=>{
+
+currentChat = data.chatId;
+
+document.getElementById("messages")
+.innerHTML = "";
+
+for(const msg of data.messages){
+
+await addMessage(msg);
+
+}
+
+});
+
+async function addMessage(msg){
+
+const div =
+document.createElement("div");
+
+div.className = "message";
+
+div.id = msg.id;
+
+let content = "";
+
+if(msg.type==="text"){
+
+const texto =
+await descriptografarTexto(
+msg.text,
+currentKey
+);
+
+content = `<p>${texto}</p>`;
+
+}
+
+if(msg.type==="gif"){
+
+content =
+`<img src="${msg.media}" class="media">`;
+
+}
+
+if(msg.type==="photo"){
+
+content =
+`<img src="${msg.media}" class="media">`;
+
+}
+
+if(msg.type==="audio"){
+
+content =
+`<audio controls src="${msg.media}"></audio>`;
+
+}
+
+let status = "";
+
+if(msg.username===currentUser){
+
+status = `
+<div class="system"
+id="seen-${msg.id}">
+${msg.seenBy ? "✅ Visualizada" : "✓ Enviada"}
+</div>
+`;
+
+}
+
+div.innerHTML = `
+<strong>${msg.avatar}
+${msg.username}</strong>
+
+<small>${msg.time}</small>
+
+${content}
+
+${status}
+
+<div class="actionButtons">
+
+<button onclick="responderMensagem('${msg.id}')">
+Responder
+</button>
+
+<button onclick="apagarMensagem('${msg.id}')">
+🗑️ Apagar
+</button>
+
+</div>
+`;
+
+document.getElementById("messages")
+.appendChild(div);
+
+if(msg.username!==currentUser){
+
+socket.emit("mark_seen",{
+id:msg.id
+});
+
+}
+
+div.scrollIntoView();
+
+}
+
+socket.on("new_message",async msg=>{
+
+await addMessage(msg);
+
+if(msg.username!==currentUser){
+
+notificar(
+"Nova mensagem",
+msg.username + " enviou mensagem"
+);
+
+}
+
+});
+
+socket.on("remove_message",id=>{
+
+const el =
+document.getElementById(id);
+
+if(el){
+
+el.remove();
+
+}
+
+});
+
+socket.on("message_seen",data=>{
+
+const el =
+document.getElementById(
+"seen-"+data.id
+);
+
+if(el){
+
+el.innerText =
+"✅ Visualizada";
+
+}
+
+});
+
+function responderMensagem(id){
+
+replyToMessage = id;
+
+document.getElementById("replyBox")
+.style.display = "block";
+
+document.getElementById("replyText")
+.innerText =
+"Você está respondendo uma mensagem. Quando enviar, a mensagem respondida será apagada.";
+
+document.getElementById("message")
+.focus();
+
+}
+
+function cancelarResposta(){
+
+replyToMessage = "";
+
+document.getElementById("replyBox")
+.style.display = "none";
+
+}
+
+function apagarMensagem(id){
+
+if(!id){
+alert("Erro: essa mensagem está sem ID.");
+return;
+}
+
+if(!confirm("Apagar mensagem para todos?")){
+return;
+}
+
+const el = document.getElementById(id);
+
+if(el){
+el.remove();
+}
+
+socket.emit("delete_message",{
+id:id
+});
+
+}
+
+function digitando(){
+
+if(!currentChat) return;
+
+socket.emit("typing");
+
+}
+
+socket.on("typing",msg=>{
+
+document.getElementById("typing")
+.innerText = msg;
+
+setTimeout(()=>{
+
+document.getElementById("typing")
+.innerText = "";
+
+},1000);
+
+});
+
+async function enviarTexto(){
+
+if(!currentChat){
+
+alert("Abra conversa");
+
+return;
+
+}
+
+const text =
+document.getElementById("message")
+.value.trim();
+
+if(!text) return;
+
+const criptografado =
+await criptografarTexto(
+text,
+currentKey
+);
+
+socket.emit("send_message",{
+type:"text",
+text:criptografado,
+replyTo:replyToMessage
+});
+
+replyToMessage = "";
+
+document.getElementById("replyBox")
+.style.display = "none";
+
+document.getElementById("message")
+.value = "";
+
+}
+
+function enviarGif(){
+
+const media =
+document.getElementById("gifInput")
+.value.trim();
+
+if(!media) return;
+
+socket.emit("send_message",{
+type:"gif",
+media,
+replyTo:replyToMessage
+});
+
+replyToMessage = "";
+
+document.getElementById("replyBox")
+.style.display = "none";
+
+document.getElementById("gifInput")
+.value = "";
+
+}
+
+function enviarFoto(){
+
+const file =
+document.getElementById("photoInput")
+.files[0];
+
+if(!file) return;
+
+const reader =
+new FileReader();
+
+reader.onload = e=>{
+
+socket.emit("send_message",{
+type:"photo",
+media:e.target.result,
+replyTo:replyToMessage
+});
+
+replyToMessage = "";
+
+document.getElementById("replyBox")
+.style.display = "none";
+
+};
+
+reader.readAsDataURL(file);
+
+}
+
+function enviarAudio(){
+
+const file =
+document.getElementById("audioInput")
+.files[0];
+
+if(!file) return;
+
+const reader =
+new FileReader();
+
+reader.onload = e=>{
+
+socket.emit("send_message",{
+type:"audio",
+media:e.target.result,
+replyTo:replyToMessage
+});
+
+replyToMessage = "";
+
+document.getElementById("replyBox")
+.style.display = "none";
+
+};
+
+reader.readAsDataURL(file);
+
+}
+
+function emoji(e){
+
+document.getElementById("message")
+.value += e;
+
+}
+
+function criarPost(){
+
+const text =
+document.getElementById("postText")
+.value.trim();
+
+const file =
+document.getElementById("postMedia")
+.files[0];
+
+if(!text && !file){
+
+return;
+
+}
+
+if(!file){
+
+socket.emit("create_post",{
+text,
+media:"",
+mediaType:"text"
+});
+
+return;
+
+}
+
+const reader =
+new FileReader();
+
+reader.onload = e=>{
+
+let mediaType = "photo";
+
+if(file.type.startsWith("video/")){
+
+mediaType = "video";
+
+}
+
+socket.emit("create_post",{
+text,
+media:e.target.result,
+mediaType
+});
+
+};
+
+reader.readAsDataURL(file);
+
+}
+
+socket.on("feed_update",feed=>{
+
+const feedDiv =
+document.getElementById("feed");
+
+feedDiv.innerHTML = "";
+
+feed.forEach(post=>{
+
+const div =
+document.createElement("div");
+
+div.className = "message";
+
+let media = "";
+
+if(post.mediaType==="photo"){
+
+media =
+`<img src="${post.media}" class="media">`;
+
+}
+
+if(post.mediaType==="video"){
+
+media =
+`<video src="${post.media}"
+class="media"
+controls></video>`;
+
+}
+
+let comments = "";
+
+post.comments.forEach(c=>{
+
+comments += `
+<div class="system">
+<strong>${c.avatar}
+${c.username}</strong>
+${c.text}
+</div>
+`;
+
+});
+
+div.innerHTML = `
+<strong>${post.avatar}
+${post.username}</strong>
+
+<small>${post.time}</small>
+
+<p>${post.text}</p>
+
+${media}
+
+<button onclick="curtirPost('${post.id}')">
+❤️ Curtir (${post.likes})
+</button>
+
+<input id="comment-${post.id}"
+placeholder="Comentar">
+
+<button onclick="comentarPost('${post.id}')">
+Comentar
+</button>
+
+${comments}
+`;
+
+feedDiv.appendChild(div);
+
+});
+
+});
+
+function curtirPost(postId){
+
+socket.emit("like_post",{
+postId
+});
+
+}
+
+function comentarPost(postId){
+
+const input =
+document.getElementById(
+"comment-"+postId
+);
+
+const text =
+input.value.trim();
+
+if(!text) return;
+
+socket.emit("comment_post",{
+postId,
+text
+});
+
+input.value = "";
+
+}
+
+async function startCall(){
+
+localStream =
+await navigator.mediaDevices
+.getUserMedia({
+video:true,
+audio:true
+});
+
+document.getElementById("localVideo")
+.srcObject = localStream;
+
+peerConnection =
+new RTCPeerConnection(servers);
+
+localStream.getTracks()
+.forEach(track=>{
+
+peerConnection.addTrack(
+track,
+localStream
+);
+
+});
+
+peerConnection.ontrack = event=>{
+
+document.getElementById("remoteVideo")
+.srcObject = event.streams[0];
+
+};
+
+peerConnection.onicecandidate = event=>{
+
+if(event.candidate){
+
+socket.emit("ice-candidate",{
+candidate:event.candidate
+});
+
+}
+
+};
+
+const offer =
+await peerConnection.createOffer();
+
+await peerConnection
+.setLocalDescription(offer);
+
+socket.emit("call-user",{
+offer
+});
+
+}
+
+socket.on("call-made",async data=>{
+
+localStream =
+await navigator.mediaDevices
+.getUserMedia({
+video:true,
+audio:true
+});
+
+document.getElementById("localVideo")
+.srcObject = localStream;
+
+peerConnection =
+new RTCPeerConnection(servers);
+
+localStream.getTracks()
+.forEach(track=>{
+
+peerConnection.addTrack(
+track,
+localStream
+);
+
+});
+
+peerConnection.ontrack = event=>{
+
+document.getElementById("remoteVideo")
+.srcObject = event.streams[0];
+
+};
+
+peerConnection.onicecandidate = event=>{
+
+if(event.candidate){
+
+socket.emit("ice-candidate",{
+candidate:event.candidate
+});
+
+}
+
+};
+
+await peerConnection
+.setRemoteDescription(
+new RTCSessionDescription(data.offer)
+);
+
+const answer =
+await peerConnection.createAnswer();
+
+await peerConnection
+.setLocalDescription(answer);
+
+socket.emit("make-answer",{
+answer
+});
+
+});
+
+socket.on("answer-made",async data=>{
+
+await peerConnection
+.setRemoteDescription(
+new RTCSessionDescription(data.answer)
+);
+
+});
+
+socket.on("ice-candidate",async candidate=>{
+
+if(peerConnection){
+
+await peerConnection
+.addIceCandidate(
+new RTCIceCandidate(candidate)
+);
+
+}
+
+});
+
+function endCall(){
+
+if(peerConnection){
+
+peerConnection.close();
+
+}
+
+if(localStream){
+
+localStream.getTracks()
+.forEach(track=>track.stop());
+
+}
+
+document.getElementById("localVideo")
+.srcObject = null;
+
+document.getElementById("remoteVideo")
+.srcObject = null;
+
+socket.emit("end-call");
+
+}
+
+socket.on("call-ended",endCall);
+
+</script>
+
+</body>
+</html>
