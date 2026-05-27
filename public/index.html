@@ -1,27 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <link rel="manifest" href="/manifest.json">
-
-<meta name="theme-color" content="#0b1020">
-
-<link rel="apple-touch-icon" href="/icon-192.png">
 <head>
-  <link rel="manifest" href="/manifest.json">
-  <link rel="manifest" href="/manifest.json">
-
-<meta name="theme-color" content="#2563eb">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ARCAIDRON</title>
-  <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#2563eb">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="ARCAIDRON">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <style>
 body{
@@ -113,45 +95,9 @@ font-size:13px;
 opacity:0.8;
 margin-top:5px;
 }
-
-.replyBox{
-background:#0f172a;
-border:1px solid #3b82f6;
-border-radius:12px;
-padding:10px;
-margin-top:10px;
-display:none;
-}
-
-.actionButtons{
-display:flex;
-gap:10px;
-margin-top:10px;
-flex-wrap:wrap;
-}
-
-.actionButtons button{
-flex:1;
-min-width:120px;
-}
 </style>
 </head>
-<script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/service-worker.js");
-  });
-}
-</script>
-  <script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker
-    .register("/sw.js")
-    .then(() => {
-      console.log("Service Worker ativo");
-    });
-}
-  </script>
+
 <body>
 
 <main class="app">
@@ -178,15 +124,8 @@ if ("serviceWorker" in navigator) {
 </select>
 
 <div class="loginButtons">
-
-<button onclick="entrar()">
-Entrar
-</button>
-
-<button onclick="criarConta()">
-Criar conta
-</button>
-
+<button onclick="entrar()">Entrar</button>
+<button onclick="criarConta()">Criar conta</button>
 </div>
 
 <p id="loginError"></p>
@@ -200,36 +139,19 @@ Criar conta
 <p id="me"></p>
 
 <div class="loginButtons">
-
-<button onclick="mostrarChat()">
-Chat privado
-</button>
-
-<button onclick="mostrarFeed()">
-Feed
-</button>
-
+<button onclick="mostrarChat()">Chat privado</button>
+<button onclick="mostrarFeed()">Feed</button>
 </div>
 
 <div id="chatBox">
 
-<p class="system">
-Digite o nome da pessoa com quem você quer conversar. Não coloque seu próprio nome.
-</p>
-
-<input
-id="otherUser"
+<input id="otherUser"
 placeholder="Nome da pessoa"
 oninput="verificarPessoa()">
 
 <p id="targetStatus"></p>
 
-<p class="system">
-Digite a chave privada combinada entre vocês. Os dois precisam usar a mesma chave.
-</p>
-
-<input
-id="chatKey"
+<input id="chatKey"
 type="password"
 placeholder="Chave privada">
 
@@ -239,27 +161,15 @@ Abrir conversa privada
 
 <div class="callBox">
 
-<video
-id="localVideo"
-autoplay
-muted
-playsinline></video>
+<video id="localVideo"
+autoplay muted playsinline></video>
 
-<video
-id="remoteVideo"
-autoplay
-playsinline></video>
+<video id="remoteVideo"
+autoplay playsinline></video>
 
 <div class="callButtons">
-
-<button onclick="startCall()">
-📞
-</button>
-
-<button onclick="endCall()">
-❌
-</button>
-
+<button onclick="startCall()">📞</button>
+<button onclick="endCall()">❌</button>
 </div>
 
 </div>
@@ -268,31 +178,16 @@ playsinline></video>
 
 <p id="typing"></p>
 
-<div id="replyBox" class="replyBox">
-
-<p id="replyText">
-Respondendo mensagem...
-</p>
-
-<button onclick="cancelarResposta()">
-Cancelar resposta
-</button>
-
-</div>
-
 <div class="emojiBox">
-
 <button onclick="emoji('😀')">😀</button>
 <button onclick="emoji('😂')">😂</button>
 <button onclick="emoji('🔥')">🔥</button>
 <button onclick="emoji('❤️')">❤️</button>
 <button onclick="emoji('👑')">👑</button>
 <button onclick="emoji('🚀')">🚀</button>
-
 </div>
 
-<input
-id="message"
+<input id="message"
 placeholder="Digite mensagem"
 oninput="digitando()">
 
@@ -300,16 +195,14 @@ oninput="digitando()">
 Enviar
 </button>
 
-<input
-id="gifInput"
+<input id="gifInput"
 placeholder="Link do GIF">
 
 <button onclick="enviarGif()">
 Enviar GIF
 </button>
 
-<input
-id="photoInput"
+<input id="photoInput"
 type="file"
 accept="image/*">
 
@@ -317,8 +210,7 @@ accept="image/*">
 Enviar foto
 </button>
 
-<input
-id="audioInput"
+<input id="audioInput"
 type="file"
 accept="audio/*">
 
@@ -332,12 +224,10 @@ Enviar áudio
 
 <h3>Moments</h3>
 
-<input
-id="postText"
+<input id="postText"
 placeholder="Compartilhe algo">
 
-<input
-id="postMedia"
+<input id="postMedia"
 type="file"
 accept="image/*,video/*">
 
@@ -356,6 +246,7 @@ Publicar
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
+
 const socket = io();
 
 let currentUser = "";
@@ -363,9 +254,9 @@ let currentAvatar = "";
 let currentChat = "";
 let currentKey = "";
 let usersCache = [];
+
 let peerConnection;
 let localStream;
-let replyToMessage = "";
 
 const servers = {
 iceServers:[
@@ -374,17 +265,14 @@ iceServers:[
 };
 
 function mostrarChat(){
-
 document.getElementById("chatBox")
 .classList.remove("hidden");
 
 document.getElementById("feedBox")
 .classList.add("hidden");
-
 }
 
 function mostrarFeed(){
-
 document.getElementById("feedBox")
 .classList.remove("hidden");
 
@@ -392,7 +280,6 @@ document.getElementById("chatBox")
 .classList.add("hidden");
 
 socket.emit("get_feed");
-
 }
 
 function notificar(titulo,corpo){
@@ -441,13 +328,11 @@ false,
 }
 
 function bufferParaBase64(buffer){
-
 return btoa(
 String.fromCharCode(
 ...new Uint8Array(buffer)
 )
 );
-
 }
 
 function base64ParaBuffer(base64){
@@ -572,9 +457,7 @@ password
 }
 
 socket.on("error_msg",msg=>{
-
 alert(msg);
-
 });
 
 socket.on("login_ok",user=>{
@@ -599,12 +482,6 @@ if("Notification" in window){
 Notification.requestPermission();
 }
 
-setInterval(()=>{
-
-socket.emit("heartbeat");
-
-},10000);
-
 });
 
 socket.on("users_list",list=>{
@@ -625,11 +502,8 @@ const status =
 document.getElementById("targetStatus");
 
 if(!nome){
-
-status.innerText = "";
-
+status.innerText="";
 return;
-
 }
 
 const pessoa =
@@ -672,11 +546,8 @@ document.getElementById("chatKey")
 .value.trim();
 
 if(!otherUser || !key){
-
 alert("Digite nome e chave");
-
 return;
-
 }
 
 currentKey = key;
@@ -696,9 +567,7 @@ document.getElementById("messages")
 .innerHTML = "";
 
 for(const msg of data.messages){
-
 await addMessage(msg);
-
 }
 
 });
@@ -709,8 +578,6 @@ const div =
 document.createElement("div");
 
 div.className = "message";
-
-div.id = msg.id;
 
 let content = "";
 
@@ -727,24 +594,18 @@ content = `<p>${texto}</p>`;
 }
 
 if(msg.type==="gif"){
-
 content =
 `<img src="${msg.media}" class="media">`;
-
 }
 
 if(msg.type==="photo"){
-
 content =
 `<img src="${msg.media}" class="media">`;
-
 }
 
 if(msg.type==="audio"){
-
 content =
 `<audio controls src="${msg.media}"></audio>`;
-
 }
 
 let status = "";
@@ -769,18 +630,6 @@ ${msg.username}</strong>
 ${content}
 
 ${status}
-
-<div class="actionButtons">
-
-<button onclick="responderMensagem('${msg.id}')">
-Responder
-</button>
-
-<button onclick="apagarMensagem('${msg.id}')">
-🗑️ Apagar
-</button>
-
-</div>
 `;
 
 document.getElementById("messages")
@@ -813,19 +662,6 @@ msg.username + " enviou mensagem"
 
 });
 
-socket.on("remove_message",id=>{
-
-const el =
-document.getElementById(id);
-
-if(el){
-
-el.remove();
-
-}
-
-});
-
 socket.on("message_seen",data=>{
 
 const el =
@@ -834,61 +670,11 @@ document.getElementById(
 );
 
 if(el){
-
 el.innerText =
 "✅ Visualizada";
-
 }
 
 });
-
-function responderMensagem(id){
-
-replyToMessage = id;
-
-document.getElementById("replyBox")
-.style.display = "block";
-
-document.getElementById("replyText")
-.innerText =
-"Você está respondendo uma mensagem. Quando enviar, a mensagem respondida será apagada.";
-
-document.getElementById("message")
-.focus();
-
-}
-
-function cancelarResposta(){
-
-replyToMessage = "";
-
-document.getElementById("replyBox")
-.style.display = "none";
-
-}
-
-function apagarMensagem(id){
-
-if(!id){
-alert("Erro: essa mensagem está sem ID.");
-return;
-}
-
-if(!confirm("Apagar mensagem para todos?")){
-return;
-}
-
-const el = document.getElementById(id);
-
-if(el){
-el.remove();
-}
-
-socket.emit("delete_message",{
-id:id
-});
-
-}
 
 function digitando(){
 
@@ -915,11 +701,8 @@ document.getElementById("typing")
 async function enviarTexto(){
 
 if(!currentChat){
-
 alert("Abra conversa");
-
 return;
-
 }
 
 const text =
@@ -936,14 +719,8 @@ currentKey
 
 socket.emit("send_message",{
 type:"text",
-text:criptografado,
-replyTo:replyToMessage
+text:criptografado
 });
-
-replyToMessage = "";
-
-document.getElementById("replyBox")
-.style.display = "none";
 
 document.getElementById("message")
 .value = "";
@@ -960,17 +737,8 @@ if(!media) return;
 
 socket.emit("send_message",{
 type:"gif",
-media,
-replyTo:replyToMessage
+media
 });
-
-replyToMessage = "";
-
-document.getElementById("replyBox")
-.style.display = "none";
-
-document.getElementById("gifInput")
-.value = "";
 
 }
 
@@ -989,14 +757,8 @@ reader.onload = e=>{
 
 socket.emit("send_message",{
 type:"photo",
-media:e.target.result,
-replyTo:replyToMessage
+media:e.target.result
 });
-
-replyToMessage = "";
-
-document.getElementById("replyBox")
-.style.display = "none";
 
 };
 
@@ -1019,14 +781,8 @@ reader.onload = e=>{
 
 socket.emit("send_message",{
 type:"audio",
-media:e.target.result,
-replyTo:replyToMessage
+media:e.target.result
 });
-
-replyToMessage = "";
-
-document.getElementById("replyBox")
-.style.display = "none";
 
 };
 
@@ -1052,9 +808,7 @@ document.getElementById("postMedia")
 .files[0];
 
 if(!text && !file){
-
 return;
-
 }
 
 if(!file){
@@ -1066,7 +820,6 @@ mediaType:"text"
 });
 
 return;
-
 }
 
 const reader =
@@ -1077,9 +830,7 @@ reader.onload = e=>{
 let mediaType = "photo";
 
 if(file.type.startsWith("video/")){
-
 mediaType = "video";
-
 }
 
 socket.emit("create_post",{
@@ -1341,9 +1092,7 @@ new RTCIceCandidate(candidate)
 function endCall(){
 
 if(peerConnection){
-
 peerConnection.close();
-
 }
 
 if(localStream){
