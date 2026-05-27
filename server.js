@@ -158,6 +158,15 @@ db.serialize(() => {
       readed TEXT DEFAULT 'false'
     )
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS reactions (
+      message_id TEXT,
+      username TEXT,
+      emoji TEXT,
+      PRIMARY KEY (message_id, username, emoji)
+    )
+  `);
 });
 
 app.get("/", (req, res) => {
@@ -400,11 +409,25 @@ io.on("connection", socket => {
       "SELECT m.*, u.avatarUrl as senderAvatarUrl FROM messages m LEFT JOIN users u ON LOWER(m.username)=LOWER(u.username) WHERE m.chatId=? AND m.deleted!='true' ORDER BY m.rowid ASC",
       [chatId],
       (err, rows) => {
-        socket.emit("chat_opened", {
-          chatId,
-          otherUser,
-          messages: rows || []
-        });
+        const messages = rows || [];
+        if (messages.length === 0) {
+          socket.emit("chat_opened", { chatId, otherUser, messages });
+          return;
+        }
+        db.all(
+          "SELECT message_id, username, emoji FROM reactions WHERE message_id IN (" + messages.map(() => "?").join(",") + ")",
+          messages.map(m => m.id),
+          (err2, rxRows) => {
+            const rxMap = {};
+            (rxRows || []).forEach(r => {
+              if (!rxMap[r.message_id]) rxMap[r.message_id] = {};
+              if (!rxMap[r.message_id][r.emoji]) rxMap[r.message_id][r.emoji] = [];
+              rxMap[r.message_id][r.emoji].push(r.username);
+            });
+            messages.forEach(m => { m.reactions = rxMap[m.id] || {}; });
+            socket.emit("chat_opened", { chatId, otherUser, messages });
+          }
+        );
       }
     );
   });
@@ -471,6 +494,38 @@ io.on("connection", socket => {
         io.to(msg.chatId).emit("remove_message", id);
       });
     });
+  });
+
+  socket.on("react_message", ({ messageId, emoji }) => {
+    if (!socket.username || !messageId || !emoji) return;
+    const username = socket.username;
+    db.get(
+      "SELECT * FROM reactions WHERE message_id=? AND username=? AND emoji=?",
+      [messageId, username, emoji],
+      (err, existing) => {
+        const done = () => {
+          db.all(
+            "SELECT username, emoji FROM reactions WHERE message_id=?",
+            [messageId],
+            (err2, rows) => {
+              const grouped = {};
+              (rows || []).forEach(r => {
+                if (!grouped[r.emoji]) grouped[r.emoji] = [];
+                grouped[r.emoji].push(r.username);
+              });
+              db.get("SELECT chatId FROM messages WHERE id=?", [messageId], (err3, msg) => {
+                if (msg) io.to(msg.chatId).emit("message_reaction", { messageId, reactions: grouped });
+              });
+            }
+          );
+        };
+        if (existing) {
+          db.run("DELETE FROM reactions WHERE message_id=? AND username=? AND emoji=?", [messageId, username, emoji], done);
+        } else {
+          db.run("INSERT OR REPLACE INTO reactions (message_id, username, emoji) VALUES (?,?,?)", [messageId, username, emoji], done);
+        }
+      }
+    );
   });
 
   socket.on("clear_chat", () => {

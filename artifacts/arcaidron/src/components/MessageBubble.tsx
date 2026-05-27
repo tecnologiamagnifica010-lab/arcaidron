@@ -3,10 +3,14 @@ import { Trash2, Check, CheckCheck, Mic, Play, Pause } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { Message } from "@/pages/ChatPage";
 
+const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢"];
+
 interface MessageBubbleProps {
   msg: Message;
   isOwn: boolean;
+  currentUsername: string;
   onDelete: (id: string) => void;
+  onReact: (id: string, emoji: string) => void;
   onImageClick?: (src: string) => void;
 }
 
@@ -68,14 +72,38 @@ function AudioPlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
   );
 }
 
-export function MessageBubble({ msg, isOwn, onDelete, onImageClick }: MessageBubbleProps) {
+export function MessageBubble({ msg, isOwn, currentUsername, onDelete, onReact, onImageClick }: MessageBubbleProps) {
   const [hovering, setHovering] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const reactions = msg.reactions || {};
+  const hasReactions = Object.keys(reactions).length > 0;
+
+  function openPicker() { setShowPicker(true); }
+
+  function handleContextMenu(e: React.MouseEvent) {
+    e.preventDefault();
+    openPicker();
+  }
+
+  function handleTouchStart() {
+    longPressTimer.current = setTimeout(openPicker, 500);
+  }
+  function cancelLongPress() {
+    clearTimeout(longPressTimer.current);
+  }
+
+  function pickEmoji(emoji: string) {
+    onReact(msg.id, emoji);
+    setShowPicker(false);
+  }
 
   return (
     <div
       className={`flex items-end gap-2 group ${isOwn ? "flex-row-reverse" : "flex-row"}`}
       onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
+      onMouseLeave={() => { setHovering(false); setShowPicker(false); }}
       data-testid={`message-${msg.id}`}
     >
       {!isOwn && (
@@ -87,43 +115,91 @@ export function MessageBubble({ msg, isOwn, onDelete, onImageClick }: MessageBub
         />
       )}
 
-      <div className={`max-w-[72%] md:max-w-[60%] space-y-1 ${isOwn ? "items-end" : "items-start"} flex flex-col`}>
+      <div className={`max-w-[72%] md:max-w-[60%] ${isOwn ? "items-end" : "items-start"} flex flex-col gap-1`}>
         {!isOwn && (
           <span className="text-xs text-muted-foreground px-1">{msg.username}</span>
         )}
 
-        <div
-          className={`relative rounded-2xl shadow-sm overflow-hidden ${
-            isOwn
-              ? "bg-primary text-primary-foreground rounded-br-sm"
-              : "bg-card border border-border text-foreground rounded-bl-sm"
-          }`}
-        >
-          {msg.type === "text" && (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words px-3.5 py-2.5">
-              {msg.decryptedText || msg.text}
-            </p>
-          )}
+        {/* Bubble */}
+        <div className="relative">
+          <div
+            className={`relative rounded-2xl shadow-sm overflow-hidden select-none ${
+              isOwn
+                ? "bg-primary text-primary-foreground rounded-br-sm"
+                : "bg-card border border-border text-foreground rounded-bl-sm"
+            }`}
+            onContextMenu={handleContextMenu}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={cancelLongPress}
+            onTouchMove={cancelLongPress}
+          >
+            {msg.type === "text" && (
+              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words px-3.5 py-2.5">
+                {msg.decryptedText || msg.text}
+              </p>
+            )}
 
-          {(msg.type === "photo" || msg.type === "gif") && msg.media && (
-            <button
-              onClick={() => onImageClick?.(msg.media)}
-              className="block w-full"
+            {(msg.type === "photo" || msg.type === "gif") && msg.media && (
+              <button onClick={() => onImageClick?.(msg.media)} className="block w-full">
+                <img
+                  src={msg.media}
+                  alt="media"
+                  className="max-w-full max-h-64 object-cover hover:opacity-90 transition-opacity"
+                  style={{ display: "block" }}
+                />
+              </button>
+            )}
+
+            {msg.type === "audio" && msg.media && (
+              <AudioPlayer src={msg.media} isOwn={isOwn} />
+            )}
+          </div>
+
+          {/* Emoji picker popup */}
+          {showPicker && (
+            <div
+              className={`absolute z-30 bottom-full mb-2 flex items-center gap-1 bg-card border border-border rounded-2xl px-2 py-1.5 shadow-xl ${
+                isOwn ? "right-0" : "left-0"
+              }`}
             >
-              <img
-                src={msg.media}
-                alt="media"
-                className="max-w-full max-h-64 object-cover hover:opacity-90 transition-opacity"
-                style={{ display: "block" }}
-              />
-            </button>
-          )}
-
-          {msg.type === "audio" && msg.media && (
-            <AudioPlayer src={msg.media} isOwn={isOwn} />
+              {REACTION_EMOJIS.map(emoji => (
+                <button
+                  key={emoji}
+                  onClick={() => pickEmoji(emoji)}
+                  className="text-xl hover:scale-125 transition-transform leading-none p-0.5 rounded-lg hover:bg-muted"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
+        {/* Reaction pills */}
+        {hasReactions && (
+          <div className={`flex flex-wrap gap-1 px-1 ${isOwn ? "justify-end" : "justify-start"}`}>
+            {Object.entries(reactions).map(([emoji, users]) => {
+              const iReacted = users.includes(currentUsername);
+              return (
+                <button
+                  key={emoji}
+                  onClick={() => onReact(msg.id, emoji)}
+                  title={users.join(", ")}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-all ${
+                    iReacted
+                      ? "bg-primary/20 border-primary/50 text-primary"
+                      : "bg-card border-border text-muted-foreground hover:border-primary/30"
+                  }`}
+                >
+                  <span>{emoji}</span>
+                  <span className="font-medium">{users.length}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Timestamp + seen */}
         <div className={`flex items-center gap-1.5 px-1 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
           <span className="text-xs text-muted-foreground">{msg.time}</span>
           {isOwn && (

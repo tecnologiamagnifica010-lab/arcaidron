@@ -29,6 +29,7 @@ export interface Message {
   replyTo: string;
   deleted: string;
   decryptedText?: string;
+  reactions?: Record<string, string[]>;
 }
 
 interface Conversation {
@@ -187,6 +188,10 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
     socket.on("call-ended", () => setCallState(null));
     socket.on("call-declined", () => setCallState(null));
 
+    socket.on("message_reaction", ({ messageId, reactions }: { messageId: string; reactions: Record<string, string[]> }) => {
+      setMessages(prev => prev.map(m => m.id === messageId ? { ...m, reactions } : m));
+    });
+
     socket.on("unread_counts", (counts: Record<string, number>) => {
       setConversations(prev => {
         const updated = prev.map(c => ({ ...c, unread: counts[c.chatId] ?? c.unread ?? 0 }));
@@ -218,6 +223,7 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
       socket.off("call-made");
       socket.off("call-ended");
       socket.off("call-declined");
+      socket.off("message_reaction");
       socket.off("unread_counts");
       socket.off("unread_update");
     };
@@ -286,6 +292,10 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
 
   function deleteMessage(id: string) {
     getSocket().emit("delete_message", { id });
+  }
+
+  function handleReact(messageId: string, emoji: string) {
+    getSocket().emit("react_message", { messageId, emoji });
   }
 
   function startVideoCall() {
@@ -475,7 +485,9 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
                   key={msg.id}
                   msg={msg}
                   isOwn={msg.username === user.username}
+                  currentUsername={user.username}
                   onDelete={deleteMessage}
+                  onReact={handleReact}
                   onImageClick={setLightbox}
                 />
               ))}
