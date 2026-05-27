@@ -8,6 +8,7 @@
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "express": "latest",
+    "jsonwebtoken": "^9.0.3",
     "socket.io": "latest",
     "sqlite3": "^5.1.7",
     "uuid": "^14.0.0"
