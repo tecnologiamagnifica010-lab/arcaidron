@@ -4,30 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>ARCAIDRON</title>
-<meta name="theme-color" content="#2563eb">
+<meta name="theme-color" content="#07111f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ARCAIDRON">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/icon-192.png">
 <script src="/socket.io/socket.io.js"></script>
 
 <style>
 :root{
 --bg:#050914;
---panel:#0b1224;
---panel2:#0f172a;
---card:#111a33;
---line:#223153;
---text:#edf4ff;
---muted:#8fa0bf;
+--panel:#07111f;
+--panel2:#0c1728;
+--card:#101d32;
+--bubble:#14233b;
+--mine:#075e54;
+--mine2:#0b776a;
+--line:#223654;
+--text:#eef6ff;
+--muted:#8da3bd;
 --blue:#3b82f6;
---blue2:#60a5fa;
 --green:#22c55e;
 --red:#ef4444;
---yellow:#facc15;
---radius:22px;
---shadow:0 24px 90px rgba(0,0,0,.45);
+--shadow:0 22px 80px rgba(0,0,0,.45);
 }
 
 *{
@@ -36,31 +35,19 @@ box-sizing:border-box;
 
 html,
 body{
+margin:0;
 height:100%;
+font-family:Arial,system-ui,sans-serif;
+background:var(--bg);
+color:var(--text);
 }
 
 body{
-margin:0;
-font-family:Arial,system-ui,sans-serif;
 background:
-radial-gradient(circle at 60% 28%,rgba(14,165,233,.18),transparent 30%),
-radial-gradient(circle at 44% 35%,rgba(37,99,235,.22),transparent 35%),
-radial-gradient(circle at 70% 48%,rgba(16,185,129,.10),transparent 26%),
+radial-gradient(circle at 55% 25%,rgba(59,130,246,.18),transparent 32%),
+radial-gradient(circle at 30% 80%,rgba(34,197,94,.11),transparent 30%),
 var(--bg);
-color:var(--text);
 overflow:hidden;
-}
-
-body:before{
-content:"";
-position:fixed;
-inset:0;
-background-image:
-linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),
-linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
-background-size:40px 40px;
-opacity:.45;
-pointer-events:none;
 }
 
 button,
@@ -78,14 +65,11 @@ display:none!important;
 }
 
 .screen{
-position:relative;
-z-index:1;
 height:100%;
 width:100%;
 }
 
-.authWrap{
-min-height:100%;
+.authScreen{
 display:grid;
 place-items:center;
 padding:22px;
@@ -97,96 +81,94 @@ text-align:center;
 }
 
 .logo{
-width:66px;
-height:66px;
-margin:0 auto 18px;
-border-radius:20px;
+width:72px;
+height:72px;
+border-radius:24px;
+margin:0 auto 16px;
 display:grid;
 place-items:center;
-background:linear-gradient(145deg,#101b34,#071022);
-box-shadow:0 0 28px rgba(59,130,246,.85),inset 0 0 18px rgba(96,165,250,.12);
+background:linear-gradient(145deg,#101f38,#06101f);
+box-shadow:0 0 35px rgba(59,130,246,.55);
 border:1px solid rgba(96,165,250,.25);
 }
 
 .logo svg{
-width:36px;
-height:36px;
+width:40px;
+height:40px;
 }
 
 .brand{
-font-size:31px;
+font-size:34px;
 font-weight:900;
 letter-spacing:-1px;
-color:var(--blue);
-text-shadow:0 0 18px rgba(59,130,246,.65);
+color:#60a5fa;
+text-shadow:0 0 20px rgba(96,165,250,.55);
 }
 
 .sub{
-color:var(--muted);
 font-size:14px;
-margin:8px 0 28px;
+color:var(--muted);
+margin:8px 0 24px;
 }
 
 .panel{
-background:rgba(13,20,40,.88);
+background:rgba(10,22,39,.88);
 border:1px solid var(--line);
-border-radius:var(--radius);
-padding:24px;
+border-radius:24px;
+padding:22px;
 box-shadow:var(--shadow);
-backdrop-filter:blur(18px);
+backdrop-filter:blur(16px);
 }
 
 .tabs{
 display:grid;
 grid-template-columns:1fr 1fr;
 gap:6px;
-background:#0a1020;
-border-radius:17px;
 padding:5px;
+border-radius:18px;
+background:#050d19;
 margin-bottom:18px;
 }
 
 .tabs button{
 border:0;
-border-radius:13px;
 padding:13px;
+border-radius:14px;
 background:transparent;
 color:var(--muted);
 font-weight:800;
 }
 
 .tabs button.active{
-background:#111d38;
+background:#13243d;
 color:white;
-box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);
 }
 
 .input,
 .select{
 width:100%;
-margin-top:10px;
-padding:15px 16px;
-border-radius:16px;
 border:1px solid var(--line);
-background:#111a30;
-color:var(--text);
+background:#0d1a2d;
+color:white;
+border-radius:16px;
+padding:15px;
 outline:none;
+margin-top:10px;
 }
 
 .input:focus,
 .select:focus{
 border-color:var(--blue);
-box-shadow:0 0 0 4px rgba(59,130,246,.15);
+box-shadow:0 0 0 4px rgba(59,130,246,.16);
 }
 
 .btn{
 border:0;
 border-radius:16px;
 padding:14px 16px;
-background:linear-gradient(135deg,#2563eb,#4f8cff);
-color:white;
 font-weight:900;
-box-shadow:0 10px 25px rgba(37,99,235,.22);
+background:linear-gradient(135deg,#2563eb,#60a5fa);
+color:white;
 }
 
 .btn.full{
@@ -194,243 +176,272 @@ width:100%;
 margin-top:12px;
 }
 
-.btn.secondary{
-background:#101a31;
+.btn.dark{
+background:#102033;
 border:1px solid var(--line);
-box-shadow:none;
 }
 
-.btn.danger{
+.btn.red{
 background:linear-gradient(135deg,#dc2626,#ef4444);
 }
 
-.hint{
-color:var(--muted);
-font-size:12px;
-line-height:1.5;
-}
-
 .error{
-color:#fecaca;
 min-height:18px;
 font-size:13px;
+color:#fecaca;
 }
 
 .app{
 height:100%;
 display:grid;
-grid-template-columns:350px 1fr;
+grid-template-columns:340px 1fr;
 }
 
-.side{
-background:rgba(6,13,28,.82);
-border-right:1px solid var(--line);
-padding:18px;
+.sidebar{
+height:100%;
 overflow:auto;
-backdrop-filter:blur(16px);
+background:rgba(4,12,25,.85);
+border-right:1px solid var(--line);
+padding:16px;
 }
 
-.profile{
+.meBox{
 display:flex;
-gap:12px;
 align-items:center;
-margin-bottom:18px;
+gap:12px;
+margin-bottom:16px;
 }
 
 .avatar{
-width:45px;
-height:45px;
-border-radius:16px;
-background:#111d38;
+width:46px;
+height:46px;
+border-radius:17px;
 display:grid;
 place-items:center;
 font-size:24px;
+background:#12243d;
 border:1px solid var(--line);
 }
 
-.sideTitle{
+.sideBrand{
+font-size:23px;
 font-weight:900;
-font-size:22px;
-color:var(--blue);
+color:#60a5fa;
 }
 
-.navBtns{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:10px;
-margin:14px 0;
+.small{
+font-size:12px;
+color:var(--muted);
+line-height:1.45;
 }
 
-.privateNote{
-padding:12px;
-border-radius:16px;
-background:#071022;
-border:1px solid var(--line);
-margin-top:12px;
+.setup{
+margin-top:14px;
 }
 
-.statusRow{
+.statusLine{
 display:flex;
-gap:9px;
 align-items:center;
+gap:8px;
 margin-top:12px;
 }
 
 .dot{
-width:11px;
-height:11px;
+width:10px;
+height:10px;
 border-radius:99px;
 background:#64748b;
 }
 
 .dot.online{
 background:var(--green);
-box-shadow:0 0 14px var(--green);
+box-shadow:0 0 12px var(--green);
 }
 
-.main{
+.safeList{
+display:grid;
+gap:8px;
+margin-top:12px;
+}
+
+.safeItem{
+font-size:13px;
+padding:10px;
+border:1px solid var(--line);
+background:#081424;
+border-radius:14px;
+}
+
+.chat{
+height:100%;
 display:grid;
 grid-template-rows:auto 1fr auto;
-height:100%;
 min-width:0;
 }
 
-.top{
+.chatHeader{
+height:68px;
 display:flex;
+align-items:center;
 justify-content:space-between;
 gap:12px;
-align-items:center;
-padding:15px 18px;
+padding:10px 14px;
+background:#07111f;
 border-bottom:1px solid var(--line);
-background:rgba(7,14,29,.78);
-backdrop-filter:blur(14px);
 }
 
-.peer{
+.peerBox{
 display:flex;
 align-items:center;
-gap:12px;
+gap:11px;
+min-width:0;
+}
+
+.peerAvatar{
+width:43px;
+height:43px;
+border-radius:50%;
+display:grid;
+place-items:center;
+font-size:22px;
+background:#102033;
+border:1px solid var(--line);
+}
+
+.peerInfo{
 min-width:0;
 }
 
 .peerName{
+font-size:16px;
 font-weight:900;
 white-space:nowrap;
 overflow:hidden;
 text-overflow:ellipsis;
 }
 
-.topActions{
+.peerStatus{
+font-size:12px;
+color:var(--muted);
+margin-top:3px;
+}
+
+.headerActions{
 display:flex;
+align-items:center;
 gap:8px;
-flex-wrap:wrap;
 }
 
-.iconBtn{
+.circleBtn{
+width:42px;
+height:42px;
+border-radius:50%;
 border:1px solid var(--line);
-background:#0f172a;
-color:#e7efff;
-border-radius:13px;
-padding:10px 12px;
-font-weight:800;
+background:#102033;
+color:white;
+font-size:18px;
+display:grid;
+place-items:center;
 }
 
-.iconBtn:hover{
-border-color:var(--blue);
+.circleBtn:hover{
+border-color:#60a5fa;
+}
+
+.messagesWrap{
+position:relative;
+overflow:hidden;
+background:
+linear-gradient(rgba(5,9,20,.82),rgba(5,9,20,.82)),
+radial-gradient(circle at 40% 20%,rgba(96,165,250,.12),transparent 30%);
 }
 
 .messages{
-padding:18px;
+height:100%;
 overflow:auto;
+padding:18px 18px 12px;
 display:flex;
 flex-direction:column;
-gap:10px;
+gap:8px;
 }
 
 .empty{
 margin:auto;
 text-align:center;
 color:var(--muted);
-max-width:360px;
+max-width:340px;
+}
+
+.empty h3{
+color:white;
+margin-bottom:5px;
+}
+
+.dayMark{
+align-self:center;
+font-size:11px;
+color:#cbd5e1;
+background:rgba(15,23,42,.82);
+border:1px solid rgba(255,255,255,.06);
+border-radius:99px;
+padding:6px 10px;
+margin:8px 0;
 }
 
 .bubble{
-max-width:min(74%,720px);
-padding:11px 12px;
-border-radius:18px;
-background:rgba(17,26,51,.94);
-border:1px solid var(--line);
-box-shadow:0 10px 30px rgba(0,0,0,.18);
+max-width:min(76%,760px);
+padding:8px 9px 6px;
+border-radius:14px 14px 14px 4px;
+background:var(--bubble);
+box-shadow:0 8px 25px rgba(0,0,0,.18);
 word-break:break-word;
+position:relative;
 }
 
 .bubble.mine{
 align-self:flex-end;
-background:linear-gradient(145deg,#1d4c96,#17386f);
+background:linear-gradient(145deg,var(--mine),var(--mine2));
+border-radius:14px 14px 4px 14px;
 }
 
 .bubble.deleted{
-opacity:.68;
+opacity:.72;
 font-style:italic;
-}
-
-.msgTop{
-display:flex;
-gap:8px;
-align-items:center;
-justify-content:space-between;
-margin-bottom:6px;
-}
-
-.msgName{
-font-weight:900;
-font-size:13px;
-}
-
-.msgTime{
-font-size:11px;
-color:#b8c6de;
-}
-
-.msgBody{
-white-space:pre-wrap;
-line-height:1.38;
-}
-
-.media{
-max-width:100%;
-border-radius:14px;
-margin-top:6px;
-background:#050914;
-}
-
-.fileLink{
-display:inline-flex;
-gap:8px;
-align-items:center;
-color:white;
-text-decoration:none;
-border:1px solid rgba(255,255,255,.14);
-padding:10px;
-border-radius:12px;
-background:rgba(0,0,0,.16);
 }
 
 .replyPreview{
 font-size:12px;
 color:#dbeafe;
-border-left:3px solid var(--blue2);
+border-left:3px solid #60a5fa;
+background:rgba(0,0,0,.18);
 padding:6px 8px;
-background:rgba(0,0,0,.16);
 border-radius:8px;
-margin-bottom:6px;
+margin-bottom:5px;
+}
+
+.msgBody{
+font-size:15px;
+line-height:1.38;
+white-space:pre-wrap;
+padding-right:4px;
+}
+
+.msgMeta{
+display:flex;
+align-items:center;
+justify-content:flex-end;
+gap:4px;
+font-size:10px;
+color:rgba(238,246,255,.75);
+margin-top:4px;
+user-select:none;
 }
 
 .msgActions{
 display:none;
-gap:7px;
+gap:6px;
 flex-wrap:wrap;
-margin-top:8px;
+margin-top:6px;
 }
 
 .bubble:hover .msgActions{
@@ -438,107 +449,205 @@ display:flex;
 }
 
 .msgActions button{
-width:auto;
-border:1px solid rgba(255,255,255,.14);
-background:rgba(5,9,20,.45);
+border:0;
+background:rgba(0,0,0,.22);
 color:white;
-border-radius:10px;
-padding:7px 9px;
-font-size:12px;
+border-radius:9px;
+padding:6px 8px;
+font-size:11px;
 }
 
-.seen{
-font-size:11px;
-color:#d7e6ff;
-margin-top:6px;
-text-align:right;
+.media{
+max-width:100%;
+border-radius:12px;
+margin-top:5px;
+background:#020617;
+}
+
+.fileLink{
+display:inline-flex;
+align-items:center;
+gap:8px;
+color:white;
+text-decoration:none;
+border:1px solid rgba(255,255,255,.18);
+border-radius:12px;
+padding:10px;
+background:rgba(0,0,0,.18);
 }
 
 .typing{
 height:18px;
-color:var(--muted);
 font-size:12px;
-padding:0 18px;
+color:var(--muted);
+padding:0 16px;
+background:#07111f;
 }
 
 .replyBox{
-margin:0 14px 8px;
-border:1px solid var(--blue);
-background:#0f172a;
-border-radius:14px;
-padding:10px;
 display:flex;
+align-items:center;
 justify-content:space-between;
 gap:10px;
-align-items:center;
+background:#0d1a2d;
+border-top:1px solid var(--line);
+padding:9px 12px;
 }
 
-.replyBox button{
-width:auto;
+.replyText{
+font-size:12px;
+color:#dbeafe;
+overflow:hidden;
+white-space:nowrap;
+text-overflow:ellipsis;
 }
 
 .composer{
+background:#07111f;
 border-top:1px solid var(--line);
-background:rgba(7,14,29,.82);
-padding:12px;
+padding:9px;
 display:grid;
-gap:9px;
+gap:7px;
 }
 
-.emojiBox{
-display:flex;
-gap:6px;
-flex-wrap:wrap;
-}
-
-.emojiBox button{
-width:auto;
-border:1px solid var(--line);
-background:#101a31;
-color:white;
-border-radius:12px;
-padding:8px;
-}
-
-.sendLine{
-display:flex;
-gap:8px;
-align-items:center;
-}
-
-.sendLine .input{
-margin:0;
-flex:1;
-}
-
-.attachMenu{
+.extraRow{
 display:flex;
 gap:7px;
 flex-wrap:wrap;
 }
 
-.attachMenu label,
-.attachMenu button{
+.extraRow button,
+.extraRow label{
 width:auto;
 border:1px solid var(--line);
-background:#101a31;
+background:#102033;
 color:white;
-border-radius:12px;
-padding:9px 11px;
+border-radius:13px;
+padding:8px 10px;
+font-size:13px;
 font-weight:800;
 }
 
-.videoPane{
-position:fixed;
-z-index:5;
-right:18px;
-bottom:86px;
-width:min(560px,94vw);
-background:#050914;
-border:1px solid var(--line);
+.sendRow{
+display:flex;
+gap:8px;
+align-items:center;
+}
+
+.sendRow .input{
+margin:0;
+flex:1;
 border-radius:22px;
-padding:10px;
+}
+
+.sendBtn{
+width:45px;
+height:45px;
+border-radius:50%;
+border:0;
+background:#22c55e;
+color:white;
+font-size:18px;
+display:grid;
+place-items:center;
+}
+
+.toast{
+position:fixed;
+z-index:20;
+left:50%;
+bottom:24px;
+transform:translateX(-50%);
+background:#102033;
+border:1px solid var(--line);
 box-shadow:var(--shadow);
+border-radius:15px;
+padding:12px 16px;
+max-width:90vw;
+}
+
+.callOverlay{
+position:fixed;
+z-index:30;
+inset:0;
+background:rgba(2,6,23,.92);
+display:grid;
+place-items:center;
+padding:16px;
+}
+
+.callCard{
+width:min(430px,94vw);
+background:#081424;
+border:1px solid var(--line);
+border-radius:28px;
+padding:26px;
+box-shadow:var(--shadow);
+text-align:center;
+}
+
+.callAvatar{
+width:92px;
+height:92px;
+margin:0 auto 16px;
+border-radius:50%;
+background:#102033;
+display:grid;
+place-items:center;
+font-size:44px;
+border:1px solid var(--line);
+box-shadow:0 0 28px rgba(59,130,246,.22);
+}
+
+.callTitle{
+font-size:22px;
+font-weight:900;
+margin-bottom:6px;
+}
+
+.callSub{
+font-size:14px;
+color:var(--muted);
+margin-bottom:22px;
+}
+
+.callButtons{
+display:flex;
+justify-content:center;
+gap:14px;
+flex-wrap:wrap;
+}
+
+.callBtn{
+width:64px;
+height:64px;
+border-radius:50%;
+border:0;
+color:white;
+font-size:26px;
+display:grid;
+place-items:center;
+}
+
+.callBtn.green{
+background:#22c55e;
+}
+
+.callBtn.red{
+background:#ef4444;
+}
+
+.callWindow{
+position:fixed;
+z-index:25;
+right:14px;
+bottom:82px;
+width:min(560px,94vw);
+background:#030712;
+border:1px solid var(--line);
+border-radius:24px;
+box-shadow:var(--shadow);
+padding:10px;
 }
 
 .videoGrid{
@@ -547,89 +656,126 @@ grid-template-columns:1fr 1fr;
 gap:8px;
 }
 
-.videoGrid video{
+.videoBox{
+position:relative;
+border-radius:17px;
+overflow:hidden;
+background:#000;
+min-height:150px;
+}
+
+.videoBox video{
 width:100%;
+height:100%;
 aspect-ratio:16/10;
 object-fit:cover;
 background:#000;
-border-radius:16px;
+display:block;
+}
+
+.videoLabel{
+position:absolute;
+left:8px;
+bottom:8px;
+font-size:11px;
+background:rgba(0,0,0,.55);
+padding:4px 7px;
+border-radius:99px;
+}
+
+.audioOnlyBox{
+display:grid;
+place-items:center;
+height:220px;
+border-radius:18px;
+background:
+radial-gradient(circle at 50% 45%,rgba(34,197,94,.15),transparent 35%),
+#020617;
+}
+
+.audioPulse{
+width:110px;
+height:110px;
+border-radius:50%;
+display:grid;
+place-items:center;
+font-size:48px;
+background:#102033;
+border:1px solid var(--line);
+animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+0%{box-shadow:0 0 0 0 rgba(34,197,94,.42);}
+70%{box-shadow:0 0 0 26px rgba(34,197,94,0);}
+100%{box-shadow:0 0 0 0 rgba(34,197,94,0);}
 }
 
 .callControls{
 display:flex;
-gap:8px;
-margin-top:8px;
+justify-content:center;
+gap:10px;
 flex-wrap:wrap;
+margin-top:10px;
 }
 
-.callControls button{
-width:auto;
-}
-
-.toast{
-position:fixed;
-z-index:9;
-left:50%;
-bottom:24px;
-transform:translateX(-50%);
-background:#111a33;
+.callControl{
 border:1px solid var(--line);
+background:#102033;
 color:white;
-border-radius:15px;
-padding:12px 16px;
-box-shadow:var(--shadow);
-max-width:90vw;
+border-radius:999px;
+padding:10px 13px;
+font-weight:800;
 }
 
-.securityList{
-display:grid;
-gap:8px;
-margin-top:12px;
+.callControl.end{
+background:#ef4444;
+border-color:#ef4444;
 }
 
-.securityItem{
-padding:10px;
-border-radius:14px;
-background:#071022;
-border:1px solid var(--line);
-font-size:13px;
-color:#dbeafe;
-}
-
-@media(max-width:850px){
+@media(max-width:860px){
 body{
-overflow:auto;
+overflow:hidden;
 }
 
 .app{
-height:auto;
-min-height:100%;
 grid-template-columns:1fr;
 }
 
-.side{
+.sidebar{
+height:auto;
+max-height:340px;
 border-right:0;
 border-bottom:1px solid var(--line);
 }
 
-.main{
-height:calc(100vh - 330px);
-min-height:540px;
+.chat{
+height:calc(100vh - 340px);
+min-height:450px;
 }
 
 .bubble{
 max-width:88%;
 }
 
-.top{
-align-items:flex-start;
-flex-direction:column;
+.chatHeader{
+height:64px;
 }
 
-.videoPane{
-right:10px;
+.headerActions{
+gap:5px;
+}
+
+.circleBtn{
+width:39px;
+height:39px;
+}
+
+.callWindow{
 left:10px;
+right:10px;
 width:auto;
+bottom:74px;
 }
 
 .videoGrid{
@@ -641,23 +787,20 @@ grid-template-columns:1fr;
 
 <body>
 
-<section id="authScreen" class="screen authWrap">
+<section id="authScreen" class="screen authScreen">
 
 <div class="authCard">
 
 <div class="logo">
-<svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.8">
+<svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.9">
 <path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/>
+<path d="M9 12l2 2 4-5"/>
 </svg>
 </div>
 
-<div class="brand">
-ARCAIDRON
-</div>
+<div class="brand">ARCAIDRON</div>
 
-<div class="sub">
-🔒 Rede privada criptografada • Sem lupa pública • Sem rastreamento
-</div>
+<div class="sub">Chat privado criptografado • Voz • Vídeo • Mensagens temporárias</div>
 
 <div class="panel">
 
@@ -666,9 +809,9 @@ ARCAIDRON
 <button id="registerTab">Criar conta</button>
 </div>
 
-<input id="username" class="input" placeholder="Seu nome privado" autocomplete="username">
+<input id="username" class="input" placeholder="Seu nome privado">
 
-<input id="password" class="input" type="password" placeholder="Sua senha" autocomplete="current-password">
+<input id="password" class="input" type="password" placeholder="Sua senha">
 
 <select id="avatar" class="select">
 <option>🛡️</option>
@@ -683,17 +826,13 @@ ARCAIDRON
 <option>💎</option>
 </select>
 
-<button id="authBtn" class="btn full">
-⚡ Entrar
-</button>
+<button id="authBtn" class="btn full">⚡ Entrar</button>
 
 <p id="loginError" class="error"></p>
 
 </div>
 
-<p class="hint">
-As mensagens e arquivos são criptografados no navegador antes de sair do aparelho.
-</p>
+<p class="small">A chave da conversa não é enviada ao servidor. Ela serve para criptografar as mensagens no aparelho.</p>
 
 </div>
 
@@ -701,152 +840,72 @@ As mensagens e arquivos são criptografados no navegador antes de sair do aparel
 
 <main id="appScreen" class="screen app hidden">
 
-<aside class="side">
+<aside class="sidebar">
 
-<div class="profile">
-
-<div id="meAvatar" class="avatar">
-🛡️
-</div>
-
+<div class="meBox">
+<div id="meAvatar" class="avatar">🛡️</div>
 <div>
-<div class="sideTitle">ARCAIDRON</div>
-<div id="meText" class="hint">desconectado</div>
+<div class="sideBrand">ARCAIDRON</div>
+<div id="meText" class="small">desconectado</div>
+</div>
 </div>
 
-</div>
+<div class="panel setup">
 
-<div class="navBtns">
+<h3 style="margin-top:0">Abrir conversa privada</h3>
 
-<button id="showChatBtn" class="btn secondary">
-Chat privado
-</button>
-
-<button id="showInfoBtn" class="btn secondary">
-Segurança
-</button>
-
-</div>
-
-<section id="chatSetup" class="panel">
-
-<h3 style="margin-top:0">
-Abrir conversa privada
-</h3>
-
-<p class="hint">
-Digite o nome exato da pessoa. O Arcaidron não mostra lista pública de usuários.
-</p>
+<p class="small">Não existe lista pública. Para conversar, digite o nome exato e a chave combinada.</p>
 
 <input id="otherUser" class="input" placeholder="Nome exato do usuário">
 
-<p class="hint">
-Digite a chave privada combinada entre vocês. Os dois precisam usar a mesma chave.
-</p>
-
 <input id="chatKey" class="input" type="password" placeholder="Chave privada compartilhada">
 
-<button id="openChatBtn" class="btn full">
-🔐 Abrir ala segura
-</button>
+<button id="openChatBtn" class="btn full">🔐 Abrir conversa</button>
 
-<div class="statusRow">
+<div class="statusLine">
 <span id="targetDot" class="dot"></span>
-<span id="targetStatus" class="hint">Status aparece somente depois da chave válida.</span>
+<span id="targetStatus" class="small">Status aparece depois da chave válida.</span>
 </div>
 
-<div class="privateNote">
-<p class="hint">
-Não existe busca pública, lista de contatos, seguidores, amigos ou exploração de usuários.
-</p>
-</div>
-
-</section>
-
-<section id="securityBox" class="panel hidden" style="margin-top:14px">
-
-<h3 style="margin-top:0">
-Proteção do Arcaidron
-</h3>
-
-<div class="securityList">
-
-<div class="securityItem">
-✅ Login com senha protegida no servidor.
-</div>
-
-<div class="securityItem">
-✅ Mensagens criptografadas no navegador com AES-GCM.
-</div>
-
-<div class="securityItem">
-✅ Chave privada não é enviada para o servidor.
-</div>
-
-<div class="securityItem">
-✅ Conversa abre somente com nome exato + mesma chave.
-</div>
-
-<div class="securityItem">
-✅ Mensagens expiram automaticamente em 1 hora.
-</div>
-
-<div class="securityItem">
-✅ Arquivos, imagens e áudios também são criptografados antes do envio.
-</div>
-
-<div class="securityItem">
-✅ Chamadas de voz e vídeo usam WebRTC entre os usuários.
+<div class="safeList">
+<div class="safeItem">✅ Mensagens com criptografia AES-GCM no navegador.</div>
+<div class="safeItem">✅ Arquivos criptografados antes do envio.</div>
+<div class="safeItem">✅ Mensagens autodestruídas em 1 hora.</div>
+<div class="safeItem">✅ Ligações por WebRTC com áudio/vídeo em tempo real.</div>
 </div>
 
 </div>
-
-</section>
 
 </aside>
 
-<section class="main">
+<section class="chat">
 
-<header class="top">
+<header class="chatHeader">
 
-<div class="peer">
-
-<span id="peerDot" class="dot"></span>
-
-<div>
-<div id="peerName" class="peerName">Nenhuma conversa aberta</div>
-<div id="peerStatus" class="hint">offline</div>
+<div class="peerBox">
+<div id="peerAvatar" class="peerAvatar">🔒</div>
+<div class="peerInfo">
+<div id="peerName" class="peerName">Nenhuma conversa</div>
+<div id="peerStatus" class="peerStatus">offline</div>
+</div>
 </div>
 
-</div>
-
-<div class="topActions">
-
-<button id="voiceBtn" class="iconBtn">
-☎️ Voz
-</button>
-
-<button id="videoBtn" class="iconBtn">
-🎥 Vídeo
-</button>
-
-<button id="clearLocalBtn" class="iconBtn">
-🧹 Limpar tela
-</button>
-
-<button id="logoutBtn" class="iconBtn">
-Sair
-</button>
-
+<div class="headerActions">
+<button id="voiceBtn" class="circleBtn" title="Ligação de voz">📞</button>
+<button id="videoBtn" class="circleBtn" title="Ligação de vídeo">🎥</button>
+<button id="clearBtn" class="circleBtn" title="Limpar tela">🧹</button>
+<button id="logoutBtn" class="circleBtn" title="Sair">↩</button>
 </div>
 
 </header>
 
-<div id="messages" class="messages">
+<div class="messagesWrap">
 
+<div id="messages" class="messages">
 <div class="empty">
-<h3>ARCAIDRON privado</h3>
-<p>Abra uma conversa usando nome exato e chave compartilhada.</p>
+<h3>Conversa privada</h3>
+<p>Abra uma conversa com nome exato + chave privada.</p>
+</div>
 </div>
 
 </div>
@@ -854,33 +913,19 @@ Sair
 <div id="typing" class="typing"></div>
 
 <div id="replyBox" class="replyBox hidden">
-
-<span id="replyText" class="hint">
-Respondendo mensagem...
-</span>
-
-<button id="cancelReplyBtn" class="iconBtn">
-Cancelar
-</button>
-
+<span id="replyText" class="replyText">Respondendo...</span>
+<button id="cancelReplyBtn" class="btn dark" style="padding:7px 10px">Cancelar</button>
 </div>
 
 <footer class="composer">
 
-<div class="emojiBox">
-<button>😀</button>
-<button>😂</button>
-<button>🔥</button>
-<button>❤️</button>
-<button>👑</button>
-<button>🚀</button>
-<button>🛡️</button>
-<button>🔒</button>
-<button>✅</button>
-<button>🙏</button>
-</div>
-
-<div class="attachMenu">
+<div class="extraRow">
+<button data-emoji="😀">😀</button>
+<button data-emoji="😂">😂</button>
+<button data-emoji="🔥">🔥</button>
+<button data-emoji="❤️">❤️</button>
+<button data-emoji="👑">👑</button>
+<button data-emoji="🚀">🚀</button>
 
 <label>
 📎 Arquivo
@@ -896,17 +941,11 @@ Cancelar
 🎧 Áudio
 <input id="audioInput" type="file" accept="audio/*" hidden>
 </label>
-
 </div>
 
-<div class="sendLine">
-
-<input id="messageInput" class="input" placeholder="Digite uma mensagem privada...">
-
-<button id="sendBtn" class="btn">
-Enviar
-</button>
-
+<div class="sendRow">
+<input id="messageInput" class="input" placeholder="Mensagem">
+<button id="sendBtn" class="sendBtn">➤</button>
 </div>
 
 </footer>
@@ -915,33 +954,52 @@ Enviar
 
 </main>
 
-<div id="videoPane" class="videoPane hidden">
+<section id="incomingCall" class="callOverlay hidden">
 
-<div class="videoGrid">
+<div class="callCard">
 
-<video id="localVideo" autoplay muted playsinline></video>
+<div id="incomingAvatar" class="callAvatar">👤</div>
 
+<div id="incomingTitle" class="callTitle">Chamada recebida</div>
+
+<div id="incomingSub" class="callSub">Ligação privada do ARCAIDRON</div>
+
+<div class="callButtons">
+<button id="acceptCallBtn" class="callBtn green">📞</button>
+<button id="declineCallBtn" class="callBtn red">✕</button>
+</div>
+
+</div>
+
+</section>
+
+<section id="callWindow" class="callWindow hidden">
+
+<div id="audioOnlyBox" class="audioOnlyBox hidden">
+<div class="audioPulse">📞</div>
+</div>
+
+<div id="videoGrid" class="videoGrid hidden">
+
+<div class="videoBox">
 <video id="remoteVideo" autoplay playsinline></video>
+<div class="videoLabel">Contato</div>
+</div>
+
+<div class="videoBox">
+<video id="localVideo" autoplay muted playsinline></video>
+<div class="videoLabel">Você</div>
+</div>
 
 </div>
 
 <div class="callControls">
-
-<button id="flipCameraBtn" class="iconBtn">
-🔄 Virar câmera
-</button>
-
-<button id="muteBtn" class="iconBtn">
-🎙️ Mudo
-</button>
-
-<button id="endCallBtn" class="iconBtn">
-❌ Encerrar
-</button>
-
+<button id="muteBtn" class="callControl">🎙️ Mudo</button>
+<button id="flipBtn" class="callControl">🔄 Câmera</button>
+<button id="endCallBtn" class="callControl end">❌ Encerrar</button>
 </div>
 
-</div>
+</section>
 
 <div id="toast" class="toast hidden"></div>
 
@@ -972,9 +1030,9 @@ let socket = null;
 
 let currentRoom = "";
 
-let peerName = "";
+let peerUser = "";
 
-let currentKeyText = "";
+let peerAvatar = "👤";
 
 let cryptoKey = null;
 
@@ -986,9 +1044,17 @@ let peerConnection = null;
 
 let localStream = null;
 
-let usingFront = true;
+let currentCallVideo = false;
+
+let usingFrontCamera = true;
 
 let muted = false;
+
+let pendingOffer = null;
+
+let pendingOfferVideo = false;
+
+let callBusy = false;
 
 const rtcConfig = {
 iceServers:[
@@ -998,9 +1064,9 @@ urls:"stun:stun.l.google.com:19302"
 ]
 };
 
-function toast(message){
+function toast(text){
 
-$("toast").textContent = message;
+$("toast").textContent = text;
 
 $("toast").classList.remove("hidden");
 
@@ -1008,13 +1074,7 @@ setTimeout(function(){
 
 $("toast").classList.add("hidden");
 
-},3000);
-
-}
-
-function setLoginError(message){
-
-$("loginError").textContent = message || "";
+},2800);
 
 }
 
@@ -1028,30 +1088,28 @@ return String(name || "")
 
 }
 
-function timeNow(ts){
-
-const date = ts ? new Date(ts) : new Date();
-
-return date.toLocaleTimeString("pt-BR",{
-hour:"2-digit",
-minute:"2-digit"
-});
-
-}
-
 function escapeHtml(text){
 
 return String(text || "")
-.replace(/[&<>'"]/g,function(char){
+.replace(/[&<>"']/g,function(c){
 
 return {
 "&":"&amp;",
 "<":"&lt;",
 ">":"&gt;",
-"'":"&#39;",
-'"':"&quot;"
-}[char];
+'"':"&quot;",
+"'":"&#039;"
+}[c];
 
+});
+
+}
+
+function timeNow(ts){
+
+return new Date(ts || Date.now()).toLocaleTimeString("pt-BR",{
+hour:"2-digit",
+minute:"2-digit"
 });
 
 }
@@ -1062,7 +1120,7 @@ const bytes = new Uint8Array(buffer);
 
 let binary = "";
 
-for(let i = 0; i < bytes.byteLength; i++){
+for(let i = 0; i < bytes.length; i++){
 
 binary += String.fromCharCode(bytes[i]);
 
@@ -1109,7 +1167,7 @@ false,
 ["deriveKey"]
 );
 
-const key = await crypto.subtle.deriveKey(
+return crypto.subtle.deriveKey(
 {
 name:"PBKDF2",
 salt:encoder.encode("ARCAIDRON-v1"),
@@ -1124,8 +1182,6 @@ length:256
 false,
 ["encrypt","decrypt"]
 );
-
-return key;
 
 }
 
@@ -1164,7 +1220,7 @@ base64ToBuffer(cipher)
 
 return decoder.decode(decrypted);
 
-}catch(error){
+}catch(e){
 
 return "🔒 Mensagem protegida por outra chave";
 
@@ -1176,15 +1232,13 @@ async function encryptFile(file){
 
 const iv = crypto.getRandomValues(new Uint8Array(12));
 
-const buffer = await file.arrayBuffer();
-
 const encrypted = await crypto.subtle.encrypt(
 {
 name:"AES-GCM",
 iv:iv
 },
 cryptoKey,
-buffer
+await file.arrayBuffer()
 );
 
 return {
@@ -1209,16 +1263,16 @@ cryptoKey,
 base64ToBuffer(message.cipher)
 );
 
-const blob = new Blob(
+return URL.createObjectURL(
+new Blob(
 [decrypted],
 {
 type:message.fileMime || "application/octet-stream"
 }
+)
 );
 
-return URL.createObjectURL(blob);
-
-}catch(error){
+}catch(e){
 
 return null;
 
@@ -1261,12 +1315,6 @@ $("meText").textContent = currentAvatar + " " + currentUser;
 
 connectSocket();
 
-if("Notification" in window){
-
-Notification.requestPermission().catch(function(){});
-
-}
-
 }
 
 $("loginTab").onclick = function(){
@@ -1279,7 +1327,7 @@ $("registerTab").classList.remove("active");
 
 $("authBtn").textContent = "⚡ Entrar";
 
-setLoginError("");
+$("loginError").textContent = "";
 
 };
 
@@ -1293,7 +1341,7 @@ $("loginTab").classList.remove("active");
 
 $("authBtn").textContent = "🛡️ Criar conta";
 
-setLoginError("");
+$("loginError").textContent = "";
 
 };
 
@@ -1307,7 +1355,7 @@ const avatar = $("avatar").value;
 
 if(!username || !password){
 
-setLoginError("Digite nome e senha.");
+$("loginError").textContent = "Digite nome e senha.";
 
 return;
 
@@ -1321,7 +1369,7 @@ avatar:avatar
 
 if(result.error){
 
-setLoginError(result.error);
+$("loginError").textContent = result.error;
 
 return;
 
@@ -1369,7 +1417,7 @@ showAuth();
 
 socket.on("presence:update",function(data){
 
-if(data.username === peerName){
+if(data.username === peerUser){
 
 setPeerStatus(data.status);
 
@@ -1377,22 +1425,22 @@ setPeerStatus(data.status);
 
 });
 
-socket.on("room:history",async function(list){
+socket.on("room:history",async function(messages){
 
 $("messages").innerHTML = "";
 
-if(!list || list.length === 0){
+if(!messages || messages.length === 0){
 
 $("messages").innerHTML =
-'<div class="empty"><h3>Ala segura aberta</h3><p>Comece a conversa. Tudo aqui expira em 1 hora.</p></div>';
+'<div class="empty"><h3>Ala segura aberta</h3><p>As mensagens aparecem aqui, sem poluir a leitura.</p></div>';
 
 return;
 
 }
 
-for(const message of list){
+for(const msg of messages){
 
-await addMessage(message);
+await addMessage(msg);
 
 }
 
@@ -1401,12 +1449,6 @@ await addMessage(message);
 socket.on("message:new",async function(message){
 
 await addMessage(message);
-
-if(message.from !== currentUser){
-
-notify("Nova mensagem","Mensagem recebida no ARCAIDRON");
-
-}
 
 });
 
@@ -1438,7 +1480,7 @@ socket.on("typing",function(data){
 
 if(data.username !== currentUser){
 
-$("typing").textContent = data.typing ? data.username + " está digitando..." : "";
+$("typing").textContent = data.typing ? "digitando..." : "";
 
 }
 
@@ -1448,51 +1490,15 @@ socket.on("call:signal",handleCallSignal);
 
 }
 
-function notify(title,body){
-
-if("Notification" in window && Notification.permission === "granted"){
-
-new Notification(title,{
-body:body
-});
-
-}
-
-}
-
 function setPeerStatus(status){
 
 $("peerStatus").textContent = status;
 
-$("targetStatus").textContent = peerName ? peerName + " " + status : "Status aparece somente depois da chave válida.";
-
-$("peerDot").classList.toggle("online",status === "online");
+$("targetStatus").textContent = peerUser ? peerUser + " " + status : "Status aparece depois da chave válida.";
 
 $("targetDot").classList.toggle("online",status === "online");
 
 }
-
-$("showChatBtn").onclick = function(){
-
-$("chatSetup").classList.remove("hidden");
-
-$("securityBox").classList.add("hidden");
-
-};
-
-$("showInfoBtn").onclick = function(){
-
-$("securityBox").classList.toggle("hidden");
-
-};
-
-$("logoutBtn").onclick = function(){
-
-localStorage.clear();
-
-location.reload();
-
-};
 
 $("openChatBtn").onclick = async function(){
 
@@ -1508,8 +1514,6 @@ return;
 
 }
 
-currentKeyText = key;
-
 cryptoKey = await createCryptoKey(key);
 
 const sharedKeyHash = await sha256(key);
@@ -1521,7 +1525,7 @@ sharedKeyHash:sharedKeyHash
 
 if(result.error){
 
-toast("Usuário ou chave inválidos. Nenhum dado foi revelado.");
+toast("Usuário ou chave inválidos.");
 
 return;
 
@@ -1529,9 +1533,13 @@ return;
 
 currentRoom = result.roomId;
 
-peerName = result.peer.username;
+peerUser = result.peer.username;
 
-$("peerName").textContent = (result.peer.avatar || "👤") + " " + peerName;
+peerAvatar = result.peer.avatar || "👤";
+
+$("peerAvatar").textContent = peerAvatar;
+
+$("peerName").textContent = peerUser;
 
 setPeerStatus(result.status);
 
@@ -1539,7 +1547,22 @@ socket.emit("room:join",{
 roomId:currentRoom
 });
 
-toast("Ala segura aberta.");
+toast("Conversa segura aberta.");
+
+};
+
+$("logoutBtn").onclick = function(){
+
+localStorage.clear();
+
+location.reload();
+
+};
+
+$("clearBtn").onclick = function(){
+
+$("messages").innerHTML =
+'<div class="empty"><h3>Tela limpa</h3><p>Isso limpa apenas sua tela. As mensagens ainda expiram em 1 hora.</p></div>';
 
 };
 
@@ -1616,14 +1639,6 @@ await decryptText(message.cipher,message.iv)
 
 let html = "";
 
-html += '<div class="msgTop">';
-
-html += '<span class="msgName">' + (message.avatar || "🛡️") + " " + escapeHtml(message.from) + "</span>";
-
-html += '<span class="msgTime">' + timeNow(message.createdAt) + "</span>";
-
-html += "</div>";
-
 if(message.replyTo){
 
 html += '<div class="replyPreview">Respondendo mensagem anterior</div>';
@@ -1634,17 +1649,23 @@ html += '<div class="msgBody">' + body;
 
 if(message.edited){
 
-html += " <small>(editada)</small>";
+html += ' <small>(editada)</small>';
 
 }
 
-html += "</div>";
+html += '</div>';
+
+html += '<div class="msgMeta">';
+
+html += '<span>' + timeNow(message.createdAt) + '</span>';
 
 if(message.from === currentUser){
 
-html += '<div class="seen" id="seen_' + message.id + '">✓ enviada</div>';
+html += '<span id="seen_' + message.id + '">✓</span>';
 
 }
+
+html += '</div>';
 
 html += '<div class="msgActions">';
 
@@ -1654,47 +1675,49 @@ if(message.from === currentUser){
 
 html += '<button data-act="edit">Editar</button>';
 
-html += '<button data-act="delete">Apagar para todos</button>';
+html += '<button data-act="delete">Apagar</button>';
 
 }
 
-html += "</div>";
+html += '</div>';
 
 div.innerHTML = html;
 
-const replyButton = div.querySelector('[data-act="reply"]');
+const replyBtn = div.querySelector('[data-act="reply"]');
 
-if(replyButton){
+if(replyBtn){
 
-replyButton.onclick = function(){
+replyBtn.onclick = function(){
 
-const text = div.querySelector(".msgBody").innerText.slice(0,80);
-
-startReply(message.id,text);
-
-};
-
-}
-
-const editButton = div.querySelector('[data-act="edit"]');
-
-if(editButton){
-
-editButton.onclick = function(){
-
-const text = div.querySelector(".msgBody").innerText;
-
-editMessage(message.id,text);
+startReply(
+message.id,
+div.querySelector(".msgBody").innerText.slice(0,80)
+);
 
 };
 
 }
 
-const deleteButton = div.querySelector('[data-act="delete"]');
+const editBtn = div.querySelector('[data-act="edit"]');
 
-if(deleteButton){
+if(editBtn){
 
-deleteButton.onclick = function(){
+editBtn.onclick = function(){
+
+editMessage(
+message.id,
+div.querySelector(".msgBody").innerText
+);
+
+};
+
+}
+
+const delBtn = div.querySelector('[data-act="delete"]');
+
+if(delBtn){
+
+delBtn.onclick = function(){
 
 deleteMessage(message.id);
 
@@ -1812,11 +1835,11 @@ element.querySelector(".msgBody").textContent =
 
 function updateSeen(id){
 
-const element = $("seen_" + id);
+const el = $("seen_" + id);
 
-if(element){
+if(el){
 
-element.textContent = "✅ visualizada";
+el.textContent = "✓✓";
 
 }
 
@@ -1896,11 +1919,11 @@ $("replyBox").classList.add("hidden");
 
 }
 
-document.querySelectorAll(".emojiBox button").forEach(function(button){
+document.querySelectorAll("[data-emoji]").forEach(function(btn){
 
-button.onclick = function(){
+btn.onclick = function(){
 
-$("messageInput").value += button.textContent;
+$("messageInput").value += btn.getAttribute("data-emoji");
 
 $("messageInput").focus();
 
@@ -1908,7 +1931,7 @@ $("messageInput").focus();
 
 });
 
-async function sendSelectedFile(file,type){
+async function sendFile(file,type){
 
 if(!currentRoom){
 
@@ -1926,7 +1949,7 @@ return;
 
 if(file.size > 22 * 1024 * 1024){
 
-toast("Arquivo muito grande. Use até 22MB neste protótipo.");
+toast("Arquivo muito grande. Use até 22MB.");
 
 return;
 
@@ -1950,71 +1973,85 @@ $("replyBox").classList.add("hidden");
 
 }
 
-$("fileInput").onchange = function(event){
+$("fileInput").onchange = function(e){
 
-sendSelectedFile(event.target.files[0],"file").then(function(){
+sendFile(e.target.files[0],"file").then(function(){
 
-event.target.value = "";
-
-});
-
-};
-
-$("imageInput").onchange = function(event){
-
-sendSelectedFile(event.target.files[0],"image").then(function(){
-
-event.target.value = "";
+e.target.value = "";
 
 });
 
 };
 
-$("audioInput").onchange = function(event){
+$("imageInput").onchange = function(e){
 
-sendSelectedFile(event.target.files[0],"audio").then(function(){
+sendFile(e.target.files[0],"image").then(function(){
 
-event.target.value = "";
+e.target.value = "";
 
 });
 
 };
 
-$("clearLocalBtn").onclick = function(){
+$("audioInput").onchange = function(e){
 
-$("messages").innerHTML =
-'<div class="empty"><h3>Tela limpa somente neste aparelho</h3><p>As mensagens ainda expiram automaticamente em 1 hora.</p></div>';
+sendFile(e.target.files[0],"audio").then(function(){
+
+e.target.value = "";
+
+});
 
 };
 
-async function startCall(video){
+function showCallWindow(video){
 
-if(!currentRoom){
+$("callWindow").classList.remove("hidden");
 
-toast("Abra uma conversa.");
+currentCallVideo = video;
 
-return;
+if(video){
+
+$("videoGrid").classList.remove("hidden");
+
+$("audioOnlyBox").classList.add("hidden");
+
+$("flipBtn").classList.remove("hidden");
+
+}else{
+
+$("videoGrid").classList.add("hidden");
+
+$("audioOnlyBox").classList.remove("hidden");
+
+$("flipBtn").classList.add("hidden");
 
 }
 
-$("videoPane").classList.remove("hidden");
+}
 
-localStream = await navigator.mediaDevices.getUserMedia({
-audio:true,
-video:video ? {
-facingMode:usingFront ? "user" : "environment"
-} : false
-});
+function hideIncoming(){
 
-$("localVideo").srcObject = localStream;
+$("incomingCall").classList.add("hidden");
+
+}
+
+function showIncoming(video){
+
+pendingOfferVideo = video;
+
+$("incomingAvatar").textContent = peerAvatar || "👤";
+
+$("incomingTitle").textContent = video ? "Chamada de vídeo" : "Chamada de voz";
+
+$("incomingSub").textContent = peerUser + " está chamando no ARCAIDRON";
+
+$("incomingCall").classList.remove("hidden");
+
+}
+
+async function createPeer(){
 
 peerConnection = new RTCPeerConnection(rtcConfig);
-
-localStream.getTracks().forEach(function(track){
-
-peerConnection.addTrack(track,localStream);
-
-});
 
 peerConnection.ontrack = function(event){
 
@@ -2024,7 +2061,7 @@ $("remoteVideo").srcObject = event.streams[0];
 
 peerConnection.onicecandidate = function(event){
 
-if(event.candidate){
+if(event.candidate && currentRoom){
 
 socket.emit("call:signal",{
 roomId:currentRoom,
@@ -2036,6 +2073,66 @@ candidate:event.candidate
 
 };
 
+peerConnection.onconnectionstatechange = function(){
+
+if(
+peerConnection &&
+["failed","disconnected","closed"].includes(peerConnection.connectionState)
+){
+
+}
+
+};
+
+}
+
+async function getMedia(video){
+
+return navigator.mediaDevices.getUserMedia({
+audio:true,
+video:video ? {
+facingMode:usingFrontCamera ? "user" : "environment"
+} : false
+});
+
+}
+
+async function startCall(video){
+
+if(!currentRoom){
+
+toast("Abra uma conversa primeiro.");
+
+return;
+
+}
+
+if(callBusy){
+
+toast("Já existe uma ligação em andamento.");
+
+return;
+
+}
+
+try{
+
+callBusy = true;
+
+showCallWindow(video);
+
+localStream = await getMedia(video);
+
+$("localVideo").srcObject = localStream;
+
+await createPeer();
+
+localStream.getTracks().forEach(function(track){
+
+peerConnection.addTrack(track,localStream);
+
+});
+
 const offer = await peerConnection.createOffer();
 
 await peerConnection.setLocalDescription(offer);
@@ -2046,6 +2143,85 @@ type:"offer",
 offer:offer,
 video:video
 });
+
+toast(video ? "Chamando vídeo..." : "Chamando voz...");
+
+}catch(error){
+
+callBusy = false;
+
+endCall(false);
+
+toast("Não foi possível iniciar a chamada. Permita câmera/microfone.");
+
+}
+
+}
+
+async function answerCall(){
+
+if(!pendingOffer){
+
+return;
+
+}
+
+try{
+
+hideIncoming();
+
+callBusy = true;
+
+showCallWindow(pendingOfferVideo);
+
+localStream = await getMedia(pendingOfferVideo);
+
+$("localVideo").srcObject = localStream;
+
+await createPeer();
+
+localStream.getTracks().forEach(function(track){
+
+peerConnection.addTrack(track,localStream);
+
+});
+
+await peerConnection.setRemoteDescription(pendingOffer);
+
+const answer = await peerConnection.createAnswer();
+
+await peerConnection.setLocalDescription(answer);
+
+socket.emit("call:signal",{
+roomId:currentRoom,
+type:"answer",
+answer:answer
+});
+
+pendingOffer = null;
+
+}catch(error){
+
+declineCall();
+
+toast("Não foi possível atender. Verifique permissões.");
+
+}
+
+}
+
+function declineCall(){
+
+hideIncoming();
+
+pendingOffer = null;
+
+socket.emit("call:signal",{
+roomId:currentRoom,
+type:"decline"
+});
+
+callBusy = false;
 
 }
 
@@ -2059,62 +2235,30 @@ return;
 
 if(data.type === "offer"){
 
-$("videoPane").classList.remove("hidden");
-
-localStream = await navigator.mediaDevices.getUserMedia({
-audio:true,
-video:data.video ? {
-facingMode:usingFront ? "user" : "environment"
-} : false
-});
-
-$("localVideo").srcObject = localStream;
-
-peerConnection = new RTCPeerConnection(rtcConfig);
-
-localStream.getTracks().forEach(function(track){
-
-peerConnection.addTrack(track,localStream);
-
-});
-
-peerConnection.ontrack = function(event){
-
-$("remoteVideo").srcObject = event.streams[0];
-
-};
-
-peerConnection.onicecandidate = function(event){
-
-if(event.candidate){
+if(callBusy){
 
 socket.emit("call:signal",{
 roomId:currentRoom,
-type:"ice",
-candidate:event.candidate
+type:"busy"
 });
+
+return;
 
 }
 
-};
+pendingOffer = data.offer;
 
-await peerConnection.setRemoteDescription(data.offer);
+showIncoming(!!data.video);
 
-const answer = await peerConnection.createAnswer();
-
-await peerConnection.setLocalDescription(answer);
-
-socket.emit("call:signal",{
-roomId:currentRoom,
-type:"answer",
-answer:answer
-});
+return;
 
 }
 
 if(data.type === "answer" && peerConnection){
 
 await peerConnection.setRemoteDescription(data.answer);
+
+return;
 
 }
 
@@ -2124,13 +2268,39 @@ try{
 
 await peerConnection.addIceCandidate(data.candidate);
 
-}catch(error){}
+}catch(e){}
+
+return;
+
+}
+
+if(data.type === "decline"){
+
+toast("Chamada recusada.");
+
+endCall(false);
+
+return;
+
+}
+
+if(data.type === "busy"){
+
+toast("Usuário está em outra chamada.");
+
+endCall(false);
+
+return;
 
 }
 
 if(data.type === "hang"){
 
+toast("Chamada encerrada.");
+
 endCall(false);
+
+return;
 
 }
 
@@ -2152,6 +2322,10 @@ type:"hang"
 });
 
 }
+
+hideIncoming();
+
+pendingOffer = null;
 
 if(peerConnection){
 
@@ -2177,7 +2351,13 @@ $("localVideo").srcObject = null;
 
 $("remoteVideo").srcObject = null;
 
-$("videoPane").classList.add("hidden");
+$("callWindow").classList.add("hidden");
+
+callBusy = false;
+
+muted = false;
+
+$("muteBtn").textContent = "🎙️ Mudo";
 
 }
 
@@ -2193,23 +2373,21 @@ startCall(true);
 
 };
 
-$("endCallBtn").onclick = function(){
+$("acceptCallBtn").onclick = function(){
 
-endCall(true);
+answerCall();
 
 };
 
-$("flipCameraBtn").onclick = async function(){
+$("declineCallBtn").onclick = function(){
 
-usingFront = !usingFront;
+declineCall();
 
-if(localStream){
+};
 
-endCall(false);
+$("endCallBtn").onclick = function(){
 
-await startCall(true);
-
-}
+endCall(true);
 
 };
 
@@ -2228,6 +2406,62 @@ track.enabled = !muted;
 }
 
 $("muteBtn").textContent = muted ? "🔇 Ativar áudio" : "🎙️ Mudo";
+
+};
+
+$("flipBtn").onclick = async function(){
+
+if(!currentCallVideo || !localStream || !peerConnection){
+
+return;
+
+}
+
+usingFrontCamera = !usingFrontCamera;
+
+try{
+
+const newStream = await getMedia(true);
+
+const newVideoTrack = newStream.getVideoTracks()[0];
+
+const oldVideoTrack = localStream.getVideoTracks()[0];
+
+const sender = peerConnection.getSenders().find(function(s){
+
+return s.track && s.track.kind === "video";
+
+});
+
+if(sender && newVideoTrack){
+
+await sender.replaceTrack(newVideoTrack);
+
+}
+
+if(oldVideoTrack){
+
+oldVideoTrack.stop();
+
+}
+
+localStream.removeTrack(oldVideoTrack);
+
+localStream.addTrack(newVideoTrack);
+
+$("localVideo").srcObject = localStream;
+
+newStream.getAudioTracks().forEach(function(track){
+
+track.stop();
+
+});
+
+}catch(e){
+
+toast("Não foi possível virar a câmera.");
+
+}
 
 };
 
