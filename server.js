@@ -210,6 +210,7 @@ function enviarFeed(target) {
         const feed = (posts || []).map(post => ({
           ...post,
           likes: (likes || []).filter(l => l.postId === post.id).length,
+          likedBy: (likes || []).filter(l => l.postId === post.id).map(l => l.username),
           comments: (comments || []).filter(c => c.postId === post.id)
         }));
         target.emit("feed_update", feed);
@@ -255,7 +256,6 @@ io.on("connection", socket => {
         status: row.status || "Disponível",
         token
       });
-      enviarFeed(socket);
     });
   });
 
@@ -265,6 +265,35 @@ io.on("connection", socket => {
     onlineUsers[key] = true;
     userLastSeen[key] = Date.now();
     userSockets[key] = socket.id;
+  });
+
+  // Search for a user — returns exists+online without revealing more
+  socket.on("search_user", ({ username }) => {
+    if (!socket.username) return;
+    username = safeText(username);
+    if (!username) return;
+    if (normalize(username) === normalize(socket.username)) {
+      socket.emit("user_search_result", { found: false });
+      return;
+    }
+    db.get(
+      "SELECT username, displayName, avatarUrl FROM users WHERE LOWER(username)=LOWER(?)",
+      [username],
+      (err, row) => {
+        if (!row) {
+          socket.emit("user_search_result", { found: false });
+        } else {
+          const isOnline = !!onlineUsers[normalize(row.username)];
+          socket.emit("user_search_result", {
+            found: true,
+            username: row.username,
+            displayName: row.displayName || row.username,
+            avatarUrl: row.avatarUrl || null,
+            online: isOnline
+          });
+        }
+      }
+    );
   });
 
   socket.on("create_account", ({ username, password, avatar, avatarUrl }) => {
@@ -282,18 +311,7 @@ io.on("connection", socket => {
         "INSERT INTO users (username,password,avatar,avatarUrl,displayName,bio,status,createdAt) VALUES (?,?,?,?,?,?,?,?)",
         [username, hashedPw, avatar, avatarUrl || null, username, "", "Disponível", dataHoraBrasil()],
         (err2) => {
-          if (err2) {
-            const legacyPw = password;
-            db.run(
-              "INSERT INTO users (username,password,avatar,avatarUrl,displayName,bio,status,createdAt) VALUES (?,?,?,?,?,?,?,?)",
-              [username, legacyPw, avatar, avatarUrl || null, username, "", "Disponível", dataHoraBrasil()],
-              (err3) => {
-                if (err3) { emitError(socket, "Erro ao criar conta."); return; }
-                loginSuccess(socket, username, avatar, avatarUrl, "");
-              }
-            );
-            return;
-          }
+          if (err2) { emitError(socket, "Erro ao criar conta."); return; }
           loginSuccess(socket, username, avatar, avatarUrl, "");
         }
       );
@@ -335,7 +353,6 @@ io.on("connection", socket => {
       status: "Disponível",
       token
     });
-    enviarFeed(socket);
   }
 
   socket.on("update_profile", ({ bio, status, displayName, avatarUrl }) => {
@@ -355,13 +372,14 @@ io.on("connection", socket => {
     );
   });
 
+  // Open private chat: uses username + shared key; no user existence check
   socket.on("open_private_chat", ({ otherUser, key }) => {
     if (!socket.username) { emitError(socket, "Você precisa entrar primeiro."); return; }
     otherUser = safeText(otherUser);
     key = safeText(key);
-    if (!otherUser || !key) { emitError(socket, "Digite usuário e chave."); return; }
+    if (!otherUser || !key) { emitError(socket, "Digite o nome e a chave."); return; }
     if (normalize(otherUser) === normalize(socket.username)) {
-      emitError(socket, "Digite o nome da outra pessoa, não o seu.");
+      emitError(socket, "Você não pode conversar consigo mesmo.");
       return;
     }
 
@@ -369,8 +387,9 @@ io.on("connection", socket => {
     socket.join(chatId);
     socket.currentChat = chatId;
     socket.currentOtherUser = otherUser;
+    socket.currentKey = key;
 
-    // Reset unread count for this user when they open the chat
+    // Reset unread count when opening chat
     db.run(
       "DELETE FROM unread_counts WHERE username=? AND chatId=?",
       [normalize(socket.username), chatId],
@@ -413,7 +432,6 @@ io.on("connection", socket => {
       () => {
         io.to(socket.currentChat).emit("new_message", msg);
 
-        // Increment unread count for the other user if they're not in this chat right now
         const otherUser = socket.currentOtherUser;
         if (otherUser) {
           const otherKey = normalize(otherUser);
@@ -477,6 +495,7 @@ io.on("connection", socket => {
     socket.to(socket.currentChat).emit("typing", socket.username + " está digitando...");
   });
 
+  // Feed
   socket.on("create_post", ({ text, media, mediaType }) => {
     if (!socket.username) return;
     const post = {
@@ -493,6 +512,21 @@ io.on("connection", socket => {
       [post.id, post.username, post.avatar, post.text, post.media, post.mediaType, post.time],
       () => { enviarFeed(io); }
     );
+  });
+
+  socket.on("delete_post", ({ postId }) => {
+    if (!socket.username || !postId) return;
+    db.get("SELECT * FROM posts WHERE id=?", [postId], (err, post) => {
+      if (!post) return;
+      if (normalize(post.username) !== normalize(socket.username)) return; // ownership check
+      db.run("DELETE FROM posts WHERE id=?", [postId], () => {
+        db.run("DELETE FROM likes WHERE postId=?", [postId], () => {
+          db.run("DELETE FROM comments WHERE postId=?", [postId], () => {
+            enviarFeed(io);
+          });
+        });
+      });
+    });
   });
 
   socket.on("like_post", ({ postId }) => {
@@ -535,9 +569,10 @@ io.on("connection", socket => {
     );
   });
 
+  // WebRTC signaling
   socket.on("call-user", data => {
     if (!socket.currentChat) return;
-    socket.to(socket.currentChat).emit("call-made", data);
+    socket.to(socket.currentChat).emit("call-made", { ...data, callerName: socket.username, callerAvatar: socket.avatarUrl });
   });
 
   socket.on("make-answer", data => {
@@ -553,6 +588,11 @@ io.on("connection", socket => {
   socket.on("end-call", () => {
     if (!socket.currentChat) return;
     socket.to(socket.currentChat).emit("call-ended");
+  });
+
+  socket.on("call-declined", () => {
+    if (!socket.currentChat) return;
+    socket.to(socket.currentChat).emit("call-declined");
   });
 
   socket.on("disconnect", () => {

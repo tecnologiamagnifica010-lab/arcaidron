@@ -7,14 +7,15 @@ interface MessageBubbleProps {
   msg: Message;
   isOwn: boolean;
   onDelete: (id: string) => void;
+  onImageClick?: (src: string) => void;
 }
 
-export function MessageBubble({ msg, isOwn, onDelete }: MessageBubbleProps) {
+export function MessageBubble({ msg, isOwn, onDelete, onImageClick }: MessageBubbleProps) {
   const [hovering, setHovering] = useState(false);
 
   return (
     <div
-      className={`flex items-end gap-2 group ${isOwn ? "flex-row-reverse" : "flex-row"} ${isOwn ? "msg-out" : "msg-in"}`}
+      className={`flex items-end gap-2 group ${isOwn ? "flex-row-reverse" : "flex-row"}`}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       data-testid={`message-${msg.id}`}
@@ -34,28 +35,36 @@ export function MessageBubble({ msg, isOwn, onDelete }: MessageBubbleProps) {
         )}
 
         <div
-          className={`relative rounded-2xl px-3.5 py-2.5 shadow-sm ${
+          className={`relative rounded-2xl shadow-sm overflow-hidden ${
             isOwn
               ? "bg-primary text-primary-foreground rounded-br-sm"
               : "bg-card border border-border text-foreground rounded-bl-sm"
           }`}
         >
           {msg.type === "text" && (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words px-3.5 py-2.5">
               {msg.decryptedText || msg.text}
             </p>
           )}
 
           {(msg.type === "photo" || msg.type === "gif") && msg.media && (
-            <img
-              src={msg.media}
-              alt="media"
-              className="max-w-full rounded-xl max-h-64 object-cover"
-            />
+            <button
+              onClick={() => onImageClick?.(msg.media)}
+              className="block w-full"
+            >
+              <img
+                src={msg.media}
+                alt="media"
+                className="max-w-full max-h-64 object-cover hover:opacity-90 transition-opacity"
+                style={{ display: "block" }}
+              />
+            </button>
           )}
 
           {msg.type === "audio" && msg.media && (
-            <audio controls src={msg.media} className="max-w-xs" />
+            <div className="px-3 py-2">
+              <audio controls src={msg.media} className="max-w-xs h-8" />
+            </div>
           )}
         </div>
 

@@ -8,9 +8,11 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { VideoCallOverlay } from "@/components/VideoCallOverlay";
 import { ProfileModal } from "@/components/ProfileModal";
 import { OpenChatModal } from "@/components/OpenChatModal";
+import { FeedPage } from "@/pages/FeedPage";
 import {
-  Lock, LogOut, Settings, Plus, Send, Paperclip, Smile,
-  Phone, Video, MoreVertical, Shield, Wifi, WifiOff, ChevronLeft
+  Lock, LogOut, Plus, Send, Camera,
+  Phone, Video, Shield, Wifi, WifiOff, ChevronLeft,
+  X, Newspaper
 } from "lucide-react";
 
 export interface Message {
@@ -36,6 +38,14 @@ interface Conversation {
   lastMessage?: string;
   lastTime?: string;
   unread?: number;
+  otherAvatarUrl?: string | null;
+}
+
+interface CallState {
+  voiceOnly: boolean;
+  incomingOffer?: RTCSessionDescriptionInit | null;
+  callerName?: string;
+  callerAvatar?: string | null;
 }
 
 interface ChatPageProps {
@@ -53,9 +63,11 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
   const [connected, setConnected] = useState(true);
   const [showProfile, setShowProfile] = useState(false);
   const [showOpenChat, setShowOpenChat] = useState(false);
-  const [inCall, setInCall] = useState(false);
-  const [callData, setCallData] = useState<{ offer?: RTCSessionDescriptionInit; answer?: RTCSessionDescriptionInit } | null>(null);
+  const [showFeed, setShowFeed] = useState(false);
+  const [callState, setCallState] = useState<CallState | null>(null);
   const [showMobileList, setShowMobileList] = useState(true);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -120,7 +132,7 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
     socket.on("new_message", async (msg: Message) => {
       if (msg.chatId !== activeConv?.chatId) {
         setConversations(prev => {
-          const updated = prev.map(c => c.chatId === msg.chatId ? { ...c, unread: (c.unread || 0) + 1 } : c);
+          const updated = prev.map(c => c.chatId === msg.chatId ? { ...c, unread: (c.unread || 0) + 1, lastTime: msg.time } : c);
           localStorage.setItem(CONVS_KEY, JSON.stringify(updated));
           return updated;
         });
@@ -154,22 +166,22 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
       typingTimeout.current = setTimeout(() => setTypingMsg(""), 2000);
     });
 
-    socket.on("call-made", (data: { offer: RTCSessionDescriptionInit }) => {
-      setCallData(data);
-      setInCall(true);
+    // Incoming call
+    socket.on("call-made", (data: { offer: RTCSessionDescriptionInit; voiceOnly?: boolean; callerName?: string; callerAvatar?: string }) => {
+      setCallState({
+        voiceOnly: data.voiceOnly ?? false,
+        incomingOffer: data.offer,
+        callerName: data.callerName,
+        callerAvatar: data.callerAvatar ?? null
+      });
     });
 
-    socket.on("call-ended", () => {
-      setInCall(false);
-      setCallData(null);
-    });
+    socket.on("call-ended", () => setCallState(null));
+    socket.on("call-declined", () => setCallState(null));
 
     socket.on("unread_counts", (counts: Record<string, number>) => {
       setConversations(prev => {
-        const updated = prev.map(c => ({
-          ...c,
-          unread: counts[c.chatId] ?? c.unread ?? 0
-        }));
+        const updated = prev.map(c => ({ ...c, unread: counts[c.chatId] ?? c.unread ?? 0 }));
         localStorage.setItem(CONVS_KEY, JSON.stringify(updated));
         return updated;
       });
@@ -183,7 +195,6 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
       });
     });
 
-    // Request counts immediately if already connected
     if (socket.connected) socket.emit("get_unread_counts");
 
     return () => {
@@ -198,6 +209,7 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
       socket.off("typing");
       socket.off("call-made");
       socket.off("call-ended");
+      socket.off("call-declined");
       socket.off("unread_counts");
       socket.off("unread_update");
     };
@@ -205,9 +217,7 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
 
   function handleOpenConversation(otherUser: string, key: string) {
     const existing = conversations.find(c => c.otherUser.toLowerCase() === otherUser.toLowerCase());
-    let chatId = "";
     if (existing) {
-      chatId = existing.chatId;
       setActiveConv(existing);
       openChat(otherUser, key);
     } else {
@@ -231,6 +241,7 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
       return updated;
     });
     openChat(conv.otherUser, conv.key);
+    setShowMobileList(false);
   }
 
   async function sendText() {
@@ -252,25 +263,36 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
     getSocket().emit("typing");
   }
 
-  function sendImage(file: File) {
+  function handleImageSelect(file: File) {
     const reader = new FileReader();
-    reader.onload = e => {
-      getSocket().emit("send_message", { type: "photo", media: e.target?.result });
-    };
+    reader.onload = e => setImagePreview(e.target?.result as string);
     reader.readAsDataURL(file);
+  }
+
+  function sendImagePreview() {
+    if (!imagePreview) return;
+    getSocket().emit("send_message", { type: "photo", media: imagePreview });
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function deleteMessage(id: string) {
     getSocket().emit("delete_message", { id });
   }
 
-  function startCall() {
-    setInCall(true);
-    setCallData(null);
+  function startVideoCall() {
+    setCallState({ voiceOnly: false, incomingOffer: null });
+  }
+
+  function startVoiceCall() {
+    setCallState({ voiceOnly: true, incomingOffer: null });
   }
 
   const otherUser = activeConv?.otherUser || "";
-  const otherInitial = otherUser ? otherUser.slice(0, 2).toUpperCase() : "?";
+
+  if (showFeed) {
+    return <FeedPage user={user} onBack={() => setShowFeed(false)} />;
+  }
 
   return (
     <div className="h-screen w-full flex bg-background overflow-hidden">
@@ -294,6 +316,10 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <button onClick={() => setShowFeed(true)} title="Feed"
+              className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+              <Newspaper className="w-4 h-4" />
+            </button>
             <button onClick={() => setShowOpenChat(true)} data-testid="button-new-chat"
               className="w-8 h-8 rounded-lg bg-primary/10 hover:bg-primary/20 flex items-center justify-center text-primary transition-colors">
               <Plus className="w-4 h-4" />
@@ -349,12 +375,13 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={startCall} data-testid="button-video-call"
+                <button onClick={startVoiceCall} data-testid="button-voice-call"
+                  className="w-9 h-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 flex items-center justify-center text-emerald-400 transition-colors">
+                  <Phone className="w-4 h-4" />
+                </button>
+                <button onClick={startVideoCall} data-testid="button-video-call"
                   className="w-9 h-9 rounded-xl bg-primary/10 hover:bg-primary/20 flex items-center justify-center text-primary transition-colors">
                   <Video className="w-4 h-4" />
-                </button>
-                <button className="w-9 h-9 rounded-xl hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
-                  <MoreVertical className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -367,6 +394,7 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
                   msg={msg}
                   isOwn={msg.username === user.username}
                   onDelete={deleteMessage}
+                  onImageClick={setLightbox}
                 />
               ))}
               {typingMsg && (
@@ -392,10 +420,10 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
                   data-testid="button-attach"
                   className="w-9 h-9 flex items-center justify-center rounded-xl bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
                 >
-                  <Paperclip className="w-4 h-4" />
+                  <Camera className="w-4 h-4" />
                 </button>
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
-                  onChange={e => e.target.files?.[0] && sendImage(e.target.files[0])} />
+                <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden"
+                  onChange={e => e.target.files?.[0] && handleImageSelect(e.target.files[0])} />
 
                 <div className="flex-1 relative">
                   <textarea
@@ -454,13 +482,53 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
         />
       )}
 
-      {inCall && activeConv && (
+      {callState && activeConv && (
         <VideoCallOverlay
           socket={getSocket()}
-          otherUser={activeConv.otherUser}
-          incomingOffer={callData?.offer}
-          onClose={() => { setInCall(false); setCallData(null); }}
+          otherUser={callState.callerName || activeConv.otherUser}
+          otherAvatarUrl={callState.callerAvatar ?? activeConv.otherAvatarUrl ?? null}
+          voiceOnly={callState.voiceOnly}
+          incomingOffer={callState.incomingOffer}
+          onClose={() => setCallState(null)}
         />
+      )}
+
+      {/* Image preview before send */}
+      {imagePreview && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl fade-in-up overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <span className="font-medium text-sm">Enviar foto</span>
+              <button onClick={() => { setImagePreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4">
+              <img src={imagePreview} alt="preview" className="w-full max-h-72 object-contain rounded-xl border border-border" />
+            </div>
+            <div className="flex gap-3 p-4 pt-0">
+              <button onClick={() => { setImagePreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                className="flex-1 py-2.5 bg-muted hover:bg-muted/80 rounded-xl text-sm font-medium transition-colors">
+                Cancelar
+              </button>
+              <button onClick={sendImagePreview}
+                className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-medium transition-all neon-blue flex items-center justify-center gap-2">
+                <Send className="w-4 h-4" /> Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo lightbox */}
+      {lightbox && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm" onClick={() => setLightbox(null)}>
+          <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+          <img src={lightbox} alt="fullsize" className="max-w-full max-h-full object-contain rounded-xl" onClick={e => e.stopPropagation()} />
+        </div>
       )}
     </div>
   );
