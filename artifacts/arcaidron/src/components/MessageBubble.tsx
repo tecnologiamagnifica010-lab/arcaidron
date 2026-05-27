@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Trash2, Check, CheckCheck } from "lucide-react";
+import { useState, useRef } from "react";
+import { Trash2, Check, CheckCheck, Mic, Play, Pause } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { Message } from "@/pages/ChatPage";
 
@@ -8,6 +8,64 @@ interface MessageBubbleProps {
   isOwn: boolean;
   onDelete: (id: string) => void;
   onImageClick?: (src: string) => void;
+}
+
+function AudioPlayer({ src, isOwn }: { src: string; isOwn: boolean }) {
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  function togglePlay() {
+    const el = audioRef.current;
+    if (!el) return;
+    if (playing) { el.pause(); } else { el.play(); }
+    setPlaying(!playing);
+  }
+
+  function formatTime(s: number) {
+    if (!isFinite(s)) return "0:00";
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60).toString().padStart(2, "0");
+    return `${m}:${sec}`;
+  }
+
+  return (
+    <div className="flex items-center gap-2.5 px-3 py-2.5 min-w-[180px]">
+      <audio
+        ref={audioRef}
+        src={src}
+        onEnded={() => { setPlaying(false); setProgress(0); }}
+        onTimeUpdate={() => {
+          const el = audioRef.current;
+          if (el && el.duration) setProgress(el.currentTime / el.duration);
+        }}
+        onLoadedMetadata={() => {
+          if (audioRef.current) setDuration(audioRef.current.duration);
+        }}
+      />
+      <button
+        onClick={togglePlay}
+        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+          isOwn ? "bg-white/20 hover:bg-white/30" : "bg-primary/20 hover:bg-primary/30"
+        }`}
+      >
+        {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5" />}
+      </button>
+      <div className="flex-1 flex flex-col gap-1 min-w-0">
+        <div className={`h-1 rounded-full overflow-hidden ${isOwn ? "bg-white/20" : "bg-muted"}`}>
+          <div
+            className={`h-full rounded-full transition-all ${isOwn ? "bg-white/70" : "bg-primary"}`}
+            style={{ width: `${progress * 100}%` }}
+          />
+        </div>
+        <span className={`text-[10px] tabular-nums ${isOwn ? "text-white/60" : "text-muted-foreground"}`}>
+          {formatTime(duration)}
+        </span>
+      </div>
+      <Mic className={`w-3.5 h-3.5 flex-shrink-0 ${isOwn ? "text-white/50" : "text-muted-foreground"}`} />
+    </div>
+  );
 }
 
 export function MessageBubble({ msg, isOwn, onDelete, onImageClick }: MessageBubbleProps) {
@@ -62,9 +120,7 @@ export function MessageBubble({ msg, isOwn, onDelete, onImageClick }: MessageBub
           )}
 
           {msg.type === "audio" && msg.media && (
-            <div className="px-3 py-2">
-              <audio controls src={msg.media} className="max-w-xs h-8" />
-            </div>
+            <AudioPlayer src={msg.media} isOwn={isOwn} />
           )}
         </div>
 

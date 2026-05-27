@@ -12,7 +12,7 @@ import { FeedPage } from "@/pages/FeedPage";
 import {
   Lock, LogOut, Plus, Send, Camera,
   Phone, Video, Shield, Wifi, WifiOff, ChevronLeft,
-  X, Newspaper
+  X, Newspaper, Mic, Play, Trash2
 } from "lucide-react";
 
 export interface Message {
@@ -69,9 +69,17 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [audioPreview, setAudioPreview] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval>>();
+  const recordingStreamRef = useRef<MediaStream | null>(null);
 
   const CONVS_KEY = `arcaidron_convs_${user.username}`;
 
@@ -288,6 +296,80 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
     setCallState({ voiceOnly: true, incomingOffer: null });
   }
 
+  async function startRecording() {
+    if (!activeConv) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordingStreamRef.current = stream;
+      audioChunksRef.current = [];
+
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : "audio/ogg";
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = e => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        const reader = new FileReader();
+        reader.onload = ev => setAudioPreview(ev.target?.result as string);
+        reader.readAsDataURL(blob);
+        stream.getTracks().forEach(t => t.stop());
+        recordingStreamRef.current = null;
+      };
+
+      recorder.start(100);
+      setIsRecording(true);
+      setRecordingDuration(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration(d => d + 1);
+      }, 1000);
+    } catch {
+      // mic permission denied — silently ignore
+    }
+  }
+
+  function stopRecording() {
+    clearInterval(recordingTimerRef.current);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    setRecordingDuration(0);
+  }
+
+  function cancelRecording() {
+    clearInterval(recordingTimerRef.current);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    recordingStreamRef.current?.getTracks().forEach(t => t.stop());
+    recordingStreamRef.current = null;
+    audioChunksRef.current = [];
+    setIsRecording(false);
+    setRecordingDuration(0);
+    setAudioPreview(null);
+  }
+
+  function sendAudio() {
+    if (!audioPreview) return;
+    getSocket().emit("send_message", { type: "audio", media: audioPreview });
+    setAudioPreview(null);
+  }
+
+  function formatRecDuration(s: number) {
+    const m = Math.floor(s / 60).toString().padStart(2, "0");
+    const sec = (s % 60).toString().padStart(2, "0");
+    return `${m}:${sec}`;
+  }
+
   const otherUser = activeConv?.otherUser || "";
 
   if (showFeed) {
@@ -414,39 +496,74 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
 
             {/* Input */}
             <div className="px-4 py-3 border-t border-border bg-card/50 backdrop-blur-sm">
-              <div className="flex items-end gap-2">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  data-testid="button-attach"
-                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-                >
-                  <Camera className="w-4 h-4" />
-                </button>
-                <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden"
-                  onChange={e => e.target.files?.[0] && handleImageSelect(e.target.files[0])} />
-
-                <div className="flex-1 relative">
-                  <textarea
-                    value={input}
-                    onChange={e => { setInput(e.target.value); handleTyping(); }}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Digite uma mensagem..."
-                    rows={1}
-                    data-testid="input-message"
-                    className="w-full px-4 py-2.5 bg-muted border border-border rounded-2xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all max-h-32 overflow-y-auto leading-relaxed"
-                    style={{ minHeight: "40px" }}
-                  />
+              {isRecording ? (
+                /* Recording indicator */
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={cancelRecording}
+                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-muted hover:bg-muted/80 text-muted-foreground transition-colors flex-shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <div className="flex-1 flex items-center gap-3 px-4 py-2.5 bg-muted border border-red-500/40 rounded-2xl">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+                    <span className="text-sm text-red-400 font-medium tabular-nums">{formatRecDuration(recordingDuration)}</span>
+                    <span className="text-xs text-muted-foreground">Gravando...</span>
+                  </div>
+                  <button
+                    onMouseUp={stopRecording}
+                    onTouchEnd={stopRecording}
+                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-500 hover:bg-red-600 text-white transition-all flex-shrink-0 shadow-lg shadow-red-500/30"
+                  >
+                    <Mic className="w-4 h-4" />
+                  </button>
                 </div>
+              ) : (
+                <div className="flex items-end gap-2">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    data-testid="button-attach"
+                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+                  <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden"
+                    onChange={e => e.target.files?.[0] && handleImageSelect(e.target.files[0])} />
 
-                <button
-                  onClick={sendText}
-                  disabled={!input.trim()}
-                  data-testid="button-send"
-                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-primary-foreground transition-all neon-blue flex-shrink-0"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
+                  <div className="flex-1 relative">
+                    <textarea
+                      value={input}
+                      onChange={e => { setInput(e.target.value); handleTyping(); }}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Digite uma mensagem..."
+                      rows={1}
+                      data-testid="input-message"
+                      className="w-full px-4 py-2.5 bg-muted border border-border rounded-2xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all max-h-32 overflow-y-auto leading-relaxed"
+                      style={{ minHeight: "40px" }}
+                    />
+                  </div>
+
+                  {input.trim() ? (
+                    <button
+                      onClick={sendText}
+                      data-testid="button-send"
+                      className="w-9 h-9 flex items-center justify-center rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground transition-all neon-blue flex-shrink-0"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button
+                      onMouseDown={startRecording}
+                      onTouchStart={startRecording}
+                      data-testid="button-mic"
+                      title="Segure para gravar"
+                      className="w-9 h-9 flex items-center justify-center rounded-xl bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all flex-shrink-0 select-none"
+                    >
+                      <Mic className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </>
         ) : (
@@ -513,6 +630,40 @@ export function ChatPage({ user, onLogout, onUpdateUser }: ChatPageProps) {
                 Cancelar
               </button>
               <button onClick={sendImagePreview}
+                className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-medium transition-all neon-blue flex items-center justify-center gap-2">
+                <Send className="w-4 h-4" /> Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audio preview before send */}
+      {audioPreview && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl fade-in-up overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Mic className="w-4 h-4 text-primary" />
+                <span className="font-medium text-sm">Mensagem de voz</span>
+              </div>
+              <button onClick={cancelRecording}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 flex flex-col items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Play className="w-6 h-6 text-primary" />
+              </div>
+              <audio src={audioPreview} controls className="w-full h-10 rounded-xl" />
+            </div>
+            <div className="flex gap-3 p-4 pt-0">
+              <button onClick={cancelRecording}
+                className="flex-1 py-2.5 bg-muted hover:bg-muted/80 rounded-xl text-sm font-medium transition-colors">
+                Descartar
+              </button>
+              <button onClick={sendAudio}
                 className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-medium transition-all neon-blue flex items-center justify-center gap-2">
                 <Send className="w-4 h-4" /> Enviar
               </button>
