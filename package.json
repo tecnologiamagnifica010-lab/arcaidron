@@ -6,6 +6,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "express": "latest",
     "socket.io": "latest",
     "sqlite3": "^5.1.7",
