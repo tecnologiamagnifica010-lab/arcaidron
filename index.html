@@ -1,0 +1,2246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ARCAIDRON</title>
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ARCAIDRON">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<script src="/socket.io/socket.io.js"></script>
+
+<style>
+:root{
+--bg:#050914;
+--panel:#0b1224;
+--panel2:#0f172a;
+--card:#111a33;
+--line:#223153;
+--text:#edf4ff;
+--muted:#8fa0bf;
+--blue:#3b82f6;
+--blue2:#60a5fa;
+--green:#22c55e;
+--red:#ef4444;
+--yellow:#facc15;
+--radius:22px;
+--shadow:0 24px 90px rgba(0,0,0,.45);
+}
+
+*{
+box-sizing:border-box;
+}
+
+html,
+body{
+height:100%;
+}
+
+body{
+margin:0;
+font-family:Arial,system-ui,sans-serif;
+background:
+radial-gradient(circle at 60% 28%,rgba(14,165,233,.18),transparent 30%),
+radial-gradient(circle at 44% 35%,rgba(37,99,235,.22),transparent 35%),
+radial-gradient(circle at 70% 48%,rgba(16,185,129,.10),transparent 26%),
+var(--bg);
+color:var(--text);
+overflow:hidden;
+}
+
+body:before{
+content:"";
+position:fixed;
+inset:0;
+background-image:
+linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),
+linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+background-size:40px 40px;
+opacity:.45;
+pointer-events:none;
+}
+
+button,
+input,
+select{
+font:inherit;
+}
+
+button{
+cursor:pointer;
+}
+
+.hidden{
+display:none!important;
+}
+
+.screen{
+position:relative;
+z-index:1;
+height:100%;
+width:100%;
+}
+
+.authWrap{
+min-height:100%;
+display:grid;
+place-items:center;
+padding:22px;
+}
+
+.authCard{
+width:min(430px,94vw);
+text-align:center;
+}
+
+.logo{
+width:66px;
+height:66px;
+margin:0 auto 18px;
+border-radius:20px;
+display:grid;
+place-items:center;
+background:linear-gradient(145deg,#101b34,#071022);
+box-shadow:0 0 28px rgba(59,130,246,.85),inset 0 0 18px rgba(96,165,250,.12);
+border:1px solid rgba(96,165,250,.25);
+}
+
+.logo svg{
+width:36px;
+height:36px;
+}
+
+.brand{
+font-size:31px;
+font-weight:900;
+letter-spacing:-1px;
+color:var(--blue);
+text-shadow:0 0 18px rgba(59,130,246,.65);
+}
+
+.sub{
+color:var(--muted);
+font-size:14px;
+margin:8px 0 28px;
+}
+
+.panel{
+background:rgba(13,20,40,.88);
+border:1px solid var(--line);
+border-radius:var(--radius);
+padding:24px;
+box-shadow:var(--shadow);
+backdrop-filter:blur(18px);
+}
+
+.tabs{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:6px;
+background:#0a1020;
+border-radius:17px;
+padding:5px;
+margin-bottom:18px;
+}
+
+.tabs button{
+border:0;
+border-radius:13px;
+padding:13px;
+background:transparent;
+color:var(--muted);
+font-weight:800;
+}
+
+.tabs button.active{
+background:#111d38;
+color:white;
+box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);
+}
+
+.input,
+.select{
+width:100%;
+margin-top:10px;
+padding:15px 16px;
+border-radius:16px;
+border:1px solid var(--line);
+background:#111a30;
+color:var(--text);
+outline:none;
+}
+
+.input:focus,
+.select:focus{
+border-color:var(--blue);
+box-shadow:0 0 0 4px rgba(59,130,246,.15);
+}
+
+.btn{
+border:0;
+border-radius:16px;
+padding:14px 16px;
+background:linear-gradient(135deg,#2563eb,#4f8cff);
+color:white;
+font-weight:900;
+box-shadow:0 10px 25px rgba(37,99,235,.22);
+}
+
+.btn.full{
+width:100%;
+margin-top:12px;
+}
+
+.btn.secondary{
+background:#101a31;
+border:1px solid var(--line);
+box-shadow:none;
+}
+
+.btn.danger{
+background:linear-gradient(135deg,#dc2626,#ef4444);
+}
+
+.hint{
+color:var(--muted);
+font-size:12px;
+line-height:1.5;
+}
+
+.error{
+color:#fecaca;
+min-height:18px;
+font-size:13px;
+}
+
+.app{
+height:100%;
+display:grid;
+grid-template-columns:350px 1fr;
+}
+
+.side{
+background:rgba(6,13,28,.82);
+border-right:1px solid var(--line);
+padding:18px;
+overflow:auto;
+backdrop-filter:blur(16px);
+}
+
+.profile{
+display:flex;
+gap:12px;
+align-items:center;
+margin-bottom:18px;
+}
+
+.avatar{
+width:45px;
+height:45px;
+border-radius:16px;
+background:#111d38;
+display:grid;
+place-items:center;
+font-size:24px;
+border:1px solid var(--line);
+}
+
+.sideTitle{
+font-weight:900;
+font-size:22px;
+color:var(--blue);
+}
+
+.navBtns{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+margin:14px 0;
+}
+
+.privateNote{
+padding:12px;
+border-radius:16px;
+background:#071022;
+border:1px solid var(--line);
+margin-top:12px;
+}
+
+.statusRow{
+display:flex;
+gap:9px;
+align-items:center;
+margin-top:12px;
+}
+
+.dot{
+width:11px;
+height:11px;
+border-radius:99px;
+background:#64748b;
+}
+
+.dot.online{
+background:var(--green);
+box-shadow:0 0 14px var(--green);
+}
+
+.main{
+display:grid;
+grid-template-rows:auto 1fr auto;
+height:100%;
+min-width:0;
+}
+
+.top{
+display:flex;
+justify-content:space-between;
+gap:12px;
+align-items:center;
+padding:15px 18px;
+border-bottom:1px solid var(--line);
+background:rgba(7,14,29,.78);
+backdrop-filter:blur(14px);
+}
+
+.peer{
+display:flex;
+align-items:center;
+gap:12px;
+min-width:0;
+}
+
+.peerName{
+font-weight:900;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+}
+
+.topActions{
+display:flex;
+gap:8px;
+flex-wrap:wrap;
+}
+
+.iconBtn{
+border:1px solid var(--line);
+background:#0f172a;
+color:#e7efff;
+border-radius:13px;
+padding:10px 12px;
+font-weight:800;
+}
+
+.iconBtn:hover{
+border-color:var(--blue);
+}
+
+.messages{
+padding:18px;
+overflow:auto;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+.empty{
+margin:auto;
+text-align:center;
+color:var(--muted);
+max-width:360px;
+}
+
+.bubble{
+max-width:min(74%,720px);
+padding:11px 12px;
+border-radius:18px;
+background:rgba(17,26,51,.94);
+border:1px solid var(--line);
+box-shadow:0 10px 30px rgba(0,0,0,.18);
+word-break:break-word;
+}
+
+.bubble.mine{
+align-self:flex-end;
+background:linear-gradient(145deg,#1d4c96,#17386f);
+}
+
+.bubble.deleted{
+opacity:.68;
+font-style:italic;
+}
+
+.msgTop{
+display:flex;
+gap:8px;
+align-items:center;
+justify-content:space-between;
+margin-bottom:6px;
+}
+
+.msgName{
+font-weight:900;
+font-size:13px;
+}
+
+.msgTime{
+font-size:11px;
+color:#b8c6de;
+}
+
+.msgBody{
+white-space:pre-wrap;
+line-height:1.38;
+}
+
+.media{
+max-width:100%;
+border-radius:14px;
+margin-top:6px;
+background:#050914;
+}
+
+.fileLink{
+display:inline-flex;
+gap:8px;
+align-items:center;
+color:white;
+text-decoration:none;
+border:1px solid rgba(255,255,255,.14);
+padding:10px;
+border-radius:12px;
+background:rgba(0,0,0,.16);
+}
+
+.replyPreview{
+font-size:12px;
+color:#dbeafe;
+border-left:3px solid var(--blue2);
+padding:6px 8px;
+background:rgba(0,0,0,.16);
+border-radius:8px;
+margin-bottom:6px;
+}
+
+.msgActions{
+display:none;
+gap:7px;
+flex-wrap:wrap;
+margin-top:8px;
+}
+
+.bubble:hover .msgActions{
+display:flex;
+}
+
+.msgActions button{
+width:auto;
+border:1px solid rgba(255,255,255,.14);
+background:rgba(5,9,20,.45);
+color:white;
+border-radius:10px;
+padding:7px 9px;
+font-size:12px;
+}
+
+.seen{
+font-size:11px;
+color:#d7e6ff;
+margin-top:6px;
+text-align:right;
+}
+
+.typing{
+height:18px;
+color:var(--muted);
+font-size:12px;
+padding:0 18px;
+}
+
+.replyBox{
+margin:0 14px 8px;
+border:1px solid var(--blue);
+background:#0f172a;
+border-radius:14px;
+padding:10px;
+display:flex;
+justify-content:space-between;
+gap:10px;
+align-items:center;
+}
+
+.replyBox button{
+width:auto;
+}
+
+.composer{
+border-top:1px solid var(--line);
+background:rgba(7,14,29,.82);
+padding:12px;
+display:grid;
+gap:9px;
+}
+
+.emojiBox{
+display:flex;
+gap:6px;
+flex-wrap:wrap;
+}
+
+.emojiBox button{
+width:auto;
+border:1px solid var(--line);
+background:#101a31;
+color:white;
+border-radius:12px;
+padding:8px;
+}
+
+.sendLine{
+display:flex;
+gap:8px;
+align-items:center;
+}
+
+.sendLine .input{
+margin:0;
+flex:1;
+}
+
+.attachMenu{
+display:flex;
+gap:7px;
+flex-wrap:wrap;
+}
+
+.attachMenu label,
+.attachMenu button{
+width:auto;
+border:1px solid var(--line);
+background:#101a31;
+color:white;
+border-radius:12px;
+padding:9px 11px;
+font-weight:800;
+}
+
+.videoPane{
+position:fixed;
+z-index:5;
+right:18px;
+bottom:86px;
+width:min(560px,94vw);
+background:#050914;
+border:1px solid var(--line);
+border-radius:22px;
+padding:10px;
+box-shadow:var(--shadow);
+}
+
+.videoGrid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:8px;
+}
+
+.videoGrid video{
+width:100%;
+aspect-ratio:16/10;
+object-fit:cover;
+background:#000;
+border-radius:16px;
+}
+
+.callControls{
+display:flex;
+gap:8px;
+margin-top:8px;
+flex-wrap:wrap;
+}
+
+.callControls button{
+width:auto;
+}
+
+.toast{
+position:fixed;
+z-index:9;
+left:50%;
+bottom:24px;
+transform:translateX(-50%);
+background:#111a33;
+border:1px solid var(--line);
+color:white;
+border-radius:15px;
+padding:12px 16px;
+box-shadow:var(--shadow);
+max-width:90vw;
+}
+
+.securityList{
+display:grid;
+gap:8px;
+margin-top:12px;
+}
+
+.securityItem{
+padding:10px;
+border-radius:14px;
+background:#071022;
+border:1px solid var(--line);
+font-size:13px;
+color:#dbeafe;
+}
+
+@media(max-width:850px){
+body{
+overflow:auto;
+}
+
+.app{
+height:auto;
+min-height:100%;
+grid-template-columns:1fr;
+}
+
+.side{
+border-right:0;
+border-bottom:1px solid var(--line);
+}
+
+.main{
+height:calc(100vh - 330px);
+min-height:540px;
+}
+
+.bubble{
+max-width:88%;
+}
+
+.top{
+align-items:flex-start;
+flex-direction:column;
+}
+
+.videoPane{
+right:10px;
+left:10px;
+width:auto;
+}
+
+.videoGrid{
+grid-template-columns:1fr;
+}
+}
+</style>
+</head>
+
+<body>
+
+<section id="authScreen" class="screen authWrap">
+
+<div class="authCard">
+
+<div class="logo">
+<svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.8">
+<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/>
+</svg>
+</div>
+
+<div class="brand">
+ARCAIDRON
+</div>
+
+<div class="sub">
+🔒 Rede privada criptografada • Sem lupa pública • Sem rastreamento
+</div>
+
+<div class="panel">
+
+<div class="tabs">
+<button id="loginTab" class="active">Entrar</button>
+<button id="registerTab">Criar conta</button>
+</div>
+
+<input id="username" class="input" placeholder="Seu nome privado" autocomplete="username">
+
+<input id="password" class="input" type="password" placeholder="Sua senha" autocomplete="current-password">
+
+<select id="avatar" class="select">
+<option>🛡️</option>
+<option>👤</option>
+<option>😎</option>
+<option>🔥</option>
+<option>👑</option>
+<option>🚀</option>
+<option>🐺</option>
+<option>🦅</option>
+<option>🔐</option>
+<option>💎</option>
+</select>
+
+<button id="authBtn" class="btn full">
+⚡ Entrar
+</button>
+
+<p id="loginError" class="error"></p>
+
+</div>
+
+<p class="hint">
+As mensagens e arquivos são criptografados no navegador antes de sair do aparelho.
+</p>
+
+</div>
+
+</section>
+
+<main id="appScreen" class="screen app hidden">
+
+<aside class="side">
+
+<div class="profile">
+
+<div id="meAvatar" class="avatar">
+🛡️
+</div>
+
+<div>
+<div class="sideTitle">ARCAIDRON</div>
+<div id="meText" class="hint">desconectado</div>
+</div>
+
+</div>
+
+<div class="navBtns">
+
+<button id="showChatBtn" class="btn secondary">
+Chat privado
+</button>
+
+<button id="showInfoBtn" class="btn secondary">
+Segurança
+</button>
+
+</div>
+
+<section id="chatSetup" class="panel">
+
+<h3 style="margin-top:0">
+Abrir conversa privada
+</h3>
+
+<p class="hint">
+Digite o nome exato da pessoa. O Arcaidron não mostra lista pública de usuários.
+</p>
+
+<input id="otherUser" class="input" placeholder="Nome exato do usuário">
+
+<p class="hint">
+Digite a chave privada combinada entre vocês. Os dois precisam usar a mesma chave.
+</p>
+
+<input id="chatKey" class="input" type="password" placeholder="Chave privada compartilhada">
+
+<button id="openChatBtn" class="btn full">
+🔐 Abrir ala segura
+</button>
+
+<div class="statusRow">
+<span id="targetDot" class="dot"></span>
+<span id="targetStatus" class="hint">Status aparece somente depois da chave válida.</span>
+</div>
+
+<div class="privateNote">
+<p class="hint">
+Não existe busca pública, lista de contatos, seguidores, amigos ou exploração de usuários.
+</p>
+</div>
+
+</section>
+
+<section id="securityBox" class="panel hidden" style="margin-top:14px">
+
+<h3 style="margin-top:0">
+Proteção do Arcaidron
+</h3>
+
+<div class="securityList">
+
+<div class="securityItem">
+✅ Login com senha protegida no servidor.
+</div>
+
+<div class="securityItem">
+✅ Mensagens criptografadas no navegador com AES-GCM.
+</div>
+
+<div class="securityItem">
+✅ Chave privada não é enviada para o servidor.
+</div>
+
+<div class="securityItem">
+✅ Conversa abre somente com nome exato + mesma chave.
+</div>
+
+<div class="securityItem">
+✅ Mensagens expiram automaticamente em 1 hora.
+</div>
+
+<div class="securityItem">
+✅ Arquivos, imagens e áudios também são criptografados antes do envio.
+</div>
+
+<div class="securityItem">
+✅ Chamadas de voz e vídeo usam WebRTC entre os usuários.
+</div>
+
+</div>
+
+</section>
+
+</aside>
+
+<section class="main">
+
+<header class="top">
+
+<div class="peer">
+
+<span id="peerDot" class="dot"></span>
+
+<div>
+<div id="peerName" class="peerName">Nenhuma conversa aberta</div>
+<div id="peerStatus" class="hint">offline</div>
+</div>
+
+</div>
+
+<div class="topActions">
+
+<button id="voiceBtn" class="iconBtn">
+☎️ Voz
+</button>
+
+<button id="videoBtn" class="iconBtn">
+🎥 Vídeo
+</button>
+
+<button id="clearLocalBtn" class="iconBtn">
+🧹 Limpar tela
+</button>
+
+<button id="logoutBtn" class="iconBtn">
+Sair
+</button>
+
+</div>
+
+</header>
+
+<div id="messages" class="messages">
+
+<div class="empty">
+<h3>ARCAIDRON privado</h3>
+<p>Abra uma conversa usando nome exato e chave compartilhada.</p>
+</div>
+
+</div>
+
+<div id="typing" class="typing"></div>
+
+<div id="replyBox" class="replyBox hidden">
+
+<span id="replyText" class="hint">
+Respondendo mensagem...
+</span>
+
+<button id="cancelReplyBtn" class="iconBtn">
+Cancelar
+</button>
+
+</div>
+
+<footer class="composer">
+
+<div class="emojiBox">
+<button>😀</button>
+<button>😂</button>
+<button>🔥</button>
+<button>❤️</button>
+<button>👑</button>
+<button>🚀</button>
+<button>🛡️</button>
+<button>🔒</button>
+<button>✅</button>
+<button>🙏</button>
+</div>
+
+<div class="attachMenu">
+
+<label>
+📎 Arquivo
+<input id="fileInput" type="file" hidden>
+</label>
+
+<label>
+🖼️ Foto
+<input id="imageInput" type="file" accept="image/*" hidden>
+</label>
+
+<label>
+🎧 Áudio
+<input id="audioInput" type="file" accept="audio/*" hidden>
+</label>
+
+</div>
+
+<div class="sendLine">
+
+<input id="messageInput" class="input" placeholder="Digite uma mensagem privada...">
+
+<button id="sendBtn" class="btn">
+Enviar
+</button>
+
+</div>
+
+</footer>
+
+</section>
+
+</main>
+
+<div id="videoPane" class="videoPane hidden">
+
+<div class="videoGrid">
+
+<video id="localVideo" autoplay muted playsinline></video>
+
+<video id="remoteVideo" autoplay playsinline></video>
+
+</div>
+
+<div class="callControls">
+
+<button id="flipCameraBtn" class="iconBtn">
+🔄 Virar câmera
+</button>
+
+<button id="muteBtn" class="iconBtn">
+🎙️ Mudo
+</button>
+
+<button id="endCallBtn" class="iconBtn">
+❌ Encerrar
+</button>
+
+</div>
+
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script>
+if("serviceWorker" in navigator){
+window.addEventListener("load",function(){
+navigator.serviceWorker.register("/sw.js").catch(function(){});
+});
+}
+
+const $ = function(id){
+return document.getElementById(id);
+};
+
+const encoder = new TextEncoder();
+
+const decoder = new TextDecoder();
+
+let authMode = "login";
+
+let token = localStorage.getItem("arcaidron_token") || "";
+
+let currentUser = localStorage.getItem("arcaidron_username") || "";
+
+let currentAvatar = localStorage.getItem("arcaidron_avatar") || "🛡️";
+
+let socket = null;
+
+let currentRoom = "";
+
+let peerName = "";
+
+let currentKeyText = "";
+
+let cryptoKey = null;
+
+let replyTo = "";
+
+let typingTimer = null;
+
+let peerConnection = null;
+
+let localStream = null;
+
+let usingFront = true;
+
+let muted = false;
+
+const rtcConfig = {
+iceServers:[
+{
+urls:"stun:stun.l.google.com:19302"
+}
+]
+};
+
+function toast(message){
+
+$("toast").textContent = message;
+
+$("toast").classList.remove("hidden");
+
+setTimeout(function(){
+
+$("toast").classList.add("hidden");
+
+},3000);
+
+}
+
+function setLoginError(message){
+
+$("loginError").textContent = message || "";
+
+}
+
+function cleanUsername(name){
+
+return String(name || "")
+.trim()
+.toLowerCase()
+.replace(/[^a-z0-9_.-]/g,"")
+.slice(0,32);
+
+}
+
+function timeNow(ts){
+
+const date = ts ? new Date(ts) : new Date();
+
+return date.toLocaleTimeString("pt-BR",{
+hour:"2-digit",
+minute:"2-digit"
+});
+
+}
+
+function escapeHtml(text){
+
+return String(text || "")
+.replace(/[&<>'"]/g,function(char){
+
+return {
+"&":"&amp;",
+"<":"&lt;",
+">":"&gt;",
+"'":"&#39;",
+'"':"&quot;"
+}[char];
+
+});
+
+}
+
+function bufferToBase64(buffer){
+
+const bytes = new Uint8Array(buffer);
+
+let binary = "";
+
+for(let i = 0; i < bytes.byteLength; i++){
+
+binary += String.fromCharCode(bytes[i]);
+
+}
+
+return btoa(binary);
+
+}
+
+function base64ToBuffer(base64){
+
+const binary = atob(base64);
+
+const bytes = new Uint8Array(binary.length);
+
+for(let i = 0; i < binary.length; i++){
+
+bytes[i] = binary.charCodeAt(i);
+
+}
+
+return bytes.buffer;
+
+}
+
+async function sha256(text){
+
+const hash = await crypto.subtle.digest(
+"SHA-256",
+encoder.encode(text)
+);
+
+return bufferToBase64(hash);
+
+}
+
+async function createCryptoKey(secret){
+
+const material = await crypto.subtle.importKey(
+"raw",
+encoder.encode(secret),
+"PBKDF2",
+false,
+["deriveKey"]
+);
+
+const key = await crypto.subtle.deriveKey(
+{
+name:"PBKDF2",
+salt:encoder.encode("ARCAIDRON-v1"),
+iterations:250000,
+hash:"SHA-256"
+},
+material,
+{
+name:"AES-GCM",
+length:256
+},
+false,
+["encrypt","decrypt"]
+);
+
+return key;
+
+}
+
+async function encryptText(text){
+
+const iv = crypto.getRandomValues(new Uint8Array(12));
+
+const encrypted = await crypto.subtle.encrypt(
+{
+name:"AES-GCM",
+iv:iv
+},
+cryptoKey,
+encoder.encode(text)
+);
+
+return {
+iv:bufferToBase64(iv),
+cipher:bufferToBase64(encrypted)
+};
+
+}
+
+async function decryptText(cipher,iv){
+
+try{
+
+const decrypted = await crypto.subtle.decrypt(
+{
+name:"AES-GCM",
+iv:base64ToBuffer(iv)
+},
+cryptoKey,
+base64ToBuffer(cipher)
+);
+
+return decoder.decode(decrypted);
+
+}catch(error){
+
+return "🔒 Mensagem protegida por outra chave";
+
+}
+
+}
+
+async function encryptFile(file){
+
+const iv = crypto.getRandomValues(new Uint8Array(12));
+
+const buffer = await file.arrayBuffer();
+
+const encrypted = await crypto.subtle.encrypt(
+{
+name:"AES-GCM",
+iv:iv
+},
+cryptoKey,
+buffer
+);
+
+return {
+iv:bufferToBase64(iv),
+cipher:bufferToBase64(encrypted),
+fileName:file.name,
+fileMime:file.type || "application/octet-stream"
+};
+
+}
+
+async function decryptFile(message){
+
+try{
+
+const decrypted = await crypto.subtle.decrypt(
+{
+name:"AES-GCM",
+iv:base64ToBuffer(message.iv)
+},
+cryptoKey,
+base64ToBuffer(message.cipher)
+);
+
+const blob = new Blob(
+[decrypted],
+{
+type:message.fileMime || "application/octet-stream"
+}
+);
+
+return URL.createObjectURL(blob);
+
+}catch(error){
+
+return null;
+
+}
+
+}
+
+async function api(path,body){
+
+const response = await fetch(path,{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer " + token
+},
+body:JSON.stringify(body || {})
+});
+
+return response.json();
+
+}
+
+function showAuth(){
+
+$("authScreen").classList.remove("hidden");
+
+$("appScreen").classList.add("hidden");
+
+}
+
+function showApp(){
+
+$("authScreen").classList.add("hidden");
+
+$("appScreen").classList.remove("hidden");
+
+$("meAvatar").textContent = currentAvatar;
+
+$("meText").textContent = currentAvatar + " " + currentUser;
+
+connectSocket();
+
+if("Notification" in window){
+
+Notification.requestPermission().catch(function(){});
+
+}
+
+}
+
+$("loginTab").onclick = function(){
+
+authMode = "login";
+
+$("loginTab").classList.add("active");
+
+$("registerTab").classList.remove("active");
+
+$("authBtn").textContent = "⚡ Entrar";
+
+setLoginError("");
+
+};
+
+$("registerTab").onclick = function(){
+
+authMode = "register";
+
+$("registerTab").classList.add("active");
+
+$("loginTab").classList.remove("active");
+
+$("authBtn").textContent = "🛡️ Criar conta";
+
+setLoginError("");
+
+};
+
+$("authBtn").onclick = async function(){
+
+const username = cleanUsername($("username").value);
+
+const password = $("password").value;
+
+const avatar = $("avatar").value;
+
+if(!username || !password){
+
+setLoginError("Digite nome e senha.");
+
+return;
+
+}
+
+const result = await api("/api/" + authMode,{
+username:username,
+password:password,
+avatar:avatar
+});
+
+if(result.error){
+
+setLoginError(result.error);
+
+return;
+
+}
+
+token = result.token;
+
+currentUser = result.username;
+
+currentAvatar = result.avatar || avatar || "🛡️";
+
+localStorage.setItem("arcaidron_token",token);
+
+localStorage.setItem("arcaidron_username",currentUser);
+
+localStorage.setItem("arcaidron_avatar",currentAvatar);
+
+showApp();
+
+};
+
+function connectSocket(){
+
+if(socket){
+
+socket.disconnect();
+
+}
+
+socket = io({
+auth:{
+token:token
+}
+});
+
+socket.on("connect_error",function(){
+
+toast("Sessão expirada. Entre novamente.");
+
+localStorage.clear();
+
+showAuth();
+
+});
+
+socket.on("presence:update",function(data){
+
+if(data.username === peerName){
+
+setPeerStatus(data.status);
+
+}
+
+});
+
+socket.on("room:history",async function(list){
+
+$("messages").innerHTML = "";
+
+if(!list || list.length === 0){
+
+$("messages").innerHTML =
+'<div class="empty"><h3>Ala segura aberta</h3><p>Comece a conversa. Tudo aqui expira em 1 hora.</p></div>';
+
+return;
+
+}
+
+for(const message of list){
+
+await addMessage(message);
+
+}
+
+});
+
+socket.on("message:new",async function(message){
+
+await addMessage(message);
+
+if(message.from !== currentUser){
+
+notify("Nova mensagem","Mensagem recebida no ARCAIDRON");
+
+}
+
+});
+
+socket.on("message:edited",async function(data){
+
+await updateEditedMessage(data);
+
+});
+
+socket.on("message:deleted",function(data){
+
+markDeleted(data.id);
+
+});
+
+socket.on("message:seen",function(data){
+
+updateSeen(data.id);
+
+});
+
+socket.on("message:expired",function(){
+
+toast("Mensagens antigas foram autodestruídas.");
+
+});
+
+socket.on("typing",function(data){
+
+if(data.username !== currentUser){
+
+$("typing").textContent = data.typing ? data.username + " está digitando..." : "";
+
+}
+
+});
+
+socket.on("call:signal",handleCallSignal);
+
+}
+
+function notify(title,body){
+
+if("Notification" in window && Notification.permission === "granted"){
+
+new Notification(title,{
+body:body
+});
+
+}
+
+}
+
+function setPeerStatus(status){
+
+$("peerStatus").textContent = status;
+
+$("targetStatus").textContent = peerName ? peerName + " " + status : "Status aparece somente depois da chave válida.";
+
+$("peerDot").classList.toggle("online",status === "online");
+
+$("targetDot").classList.toggle("online",status === "online");
+
+}
+
+$("showChatBtn").onclick = function(){
+
+$("chatSetup").classList.remove("hidden");
+
+$("securityBox").classList.add("hidden");
+
+};
+
+$("showInfoBtn").onclick = function(){
+
+$("securityBox").classList.toggle("hidden");
+
+};
+
+$("logoutBtn").onclick = function(){
+
+localStorage.clear();
+
+location.reload();
+
+};
+
+$("openChatBtn").onclick = async function(){
+
+const target = cleanUsername($("otherUser").value);
+
+const key = $("chatKey").value;
+
+if(!target || !key){
+
+toast("Digite o nome exato e a chave privada.");
+
+return;
+
+}
+
+currentKeyText = key;
+
+cryptoKey = await createCryptoKey(key);
+
+const sharedKeyHash = await sha256(key);
+
+const result = await api("/api/open-chat",{
+target:target,
+sharedKeyHash:sharedKeyHash
+});
+
+if(result.error){
+
+toast("Usuário ou chave inválidos. Nenhum dado foi revelado.");
+
+return;
+
+}
+
+currentRoom = result.roomId;
+
+peerName = result.peer.username;
+
+$("peerName").textContent = (result.peer.avatar || "👤") + " " + peerName;
+
+setPeerStatus(result.status);
+
+socket.emit("room:join",{
+roomId:currentRoom
+});
+
+toast("Ala segura aberta.");
+
+};
+
+function clearEmpty(){
+
+const empty = $("messages").querySelector(".empty");
+
+if(empty){
+
+empty.remove();
+
+}
+
+}
+
+async function addMessage(message){
+
+clearEmpty();
+
+const div = document.createElement("div");
+
+div.className = "bubble " + (message.from === currentUser ? "mine" : "");
+
+div.id = "msg_" + message.id;
+
+if(message.deleted){
+
+div.classList.add("deleted");
+
+}
+
+let body = "";
+
+if(message.deleted){
+
+body = "Mensagem apagada para todos";
+
+}else if(message.type === "file" || message.type === "image" || message.type === "audio"){
+
+const url = await decryptFile(message);
+
+if(!url){
+
+body = "🔒 Arquivo protegido por outra chave";
+
+}else if(message.type === "image"){
+
+body = '<img class="media" src="' + url + '">';
+
+}else if(message.type === "audio"){
+
+body = '<audio controls src="' + url + '"></audio>';
+
+}else{
+
+body =
+'<a class="fileLink" href="' +
+url +
+'" download="' +
+escapeHtml(message.fileName || "arquivo") +
+'">📎 ' +
+escapeHtml(message.fileName || "arquivo") +
+"</a>";
+
+}
+
+}else{
+
+body = escapeHtml(
+await decryptText(message.cipher,message.iv)
+);
+
+}
+
+let html = "";
+
+html += '<div class="msgTop">';
+
+html += '<span class="msgName">' + (message.avatar || "🛡️") + " " + escapeHtml(message.from) + "</span>";
+
+html += '<span class="msgTime">' + timeNow(message.createdAt) + "</span>";
+
+html += "</div>";
+
+if(message.replyTo){
+
+html += '<div class="replyPreview">Respondendo mensagem anterior</div>';
+
+}
+
+html += '<div class="msgBody">' + body;
+
+if(message.edited){
+
+html += " <small>(editada)</small>";
+
+}
+
+html += "</div>";
+
+if(message.from === currentUser){
+
+html += '<div class="seen" id="seen_' + message.id + '">✓ enviada</div>';
+
+}
+
+html += '<div class="msgActions">';
+
+html += '<button data-act="reply">Responder</button>';
+
+if(message.from === currentUser){
+
+html += '<button data-act="edit">Editar</button>';
+
+html += '<button data-act="delete">Apagar para todos</button>';
+
+}
+
+html += "</div>";
+
+div.innerHTML = html;
+
+const replyButton = div.querySelector('[data-act="reply"]');
+
+if(replyButton){
+
+replyButton.onclick = function(){
+
+const text = div.querySelector(".msgBody").innerText.slice(0,80);
+
+startReply(message.id,text);
+
+};
+
+}
+
+const editButton = div.querySelector('[data-act="edit"]');
+
+if(editButton){
+
+editButton.onclick = function(){
+
+const text = div.querySelector(".msgBody").innerText;
+
+editMessage(message.id,text);
+
+};
+
+}
+
+const deleteButton = div.querySelector('[data-act="delete"]');
+
+if(deleteButton){
+
+deleteButton.onclick = function(){
+
+deleteMessage(message.id);
+
+};
+
+}
+
+$("messages").appendChild(div);
+
+$("messages").scrollTop = $("messages").scrollHeight;
+
+if(message.from !== currentUser){
+
+socket.emit("message:seen",{
+roomId:currentRoom,
+id:message.id
+});
+
+}
+
+}
+
+function startReply(id,text){
+
+replyTo = id;
+
+$("replyText").textContent = "Respondendo: " + text;
+
+$("replyBox").classList.remove("hidden");
+
+$("messageInput").focus();
+
+}
+
+$("cancelReplyBtn").onclick = function(){
+
+replyTo = "";
+
+$("replyBox").classList.add("hidden");
+
+};
+
+async function editMessage(id,oldText){
+
+const novo = prompt(
+"Editar mensagem:",
+oldText.replace("(editada)","").trim()
+);
+
+if(!novo){
+
+return;
+
+}
+
+const encrypted = await encryptText(novo);
+
+socket.emit("message:edit",{
+roomId:currentRoom,
+id:id,
+cipher:encrypted.cipher,
+iv:encrypted.iv
+});
+
+}
+
+function deleteMessage(id){
+
+if(!confirm("Apagar mensagem para todos?")){
+
+return;
+
+}
+
+socket.emit("message:delete",{
+roomId:currentRoom,
+id:id
+});
+
+}
+
+async function updateEditedMessage(data){
+
+const element = $("msg_" + data.id);
+
+if(!element){
+
+return;
+
+}
+
+const text = await decryptText(data.cipher,data.iv);
+
+element.querySelector(".msgBody").innerHTML =
+escapeHtml(text) + " <small>(editada)</small>";
+
+}
+
+function markDeleted(id){
+
+const element = $("msg_" + id);
+
+if(!element){
+
+return;
+
+}
+
+element.classList.add("deleted");
+
+element.querySelector(".msgBody").textContent =
+"Mensagem apagada para todos";
+
+}
+
+function updateSeen(id){
+
+const element = $("seen_" + id);
+
+if(element){
+
+element.textContent = "✅ visualizada";
+
+}
+
+}
+
+$("sendBtn").onclick = sendText;
+
+$("messageInput").onkeydown = function(event){
+
+if(event.key === "Enter"){
+
+sendText();
+
+}
+
+};
+
+$("messageInput").oninput = function(){
+
+if(!currentRoom){
+
+return;
+
+}
+
+socket.emit("typing",{
+roomId:currentRoom,
+typing:true
+});
+
+clearTimeout(typingTimer);
+
+typingTimer = setTimeout(function(){
+
+socket.emit("typing",{
+roomId:currentRoom,
+typing:false
+});
+
+},900);
+
+};
+
+async function sendText(){
+
+if(!currentRoom){
+
+toast("Abra uma conversa primeiro.");
+
+return;
+
+}
+
+const text = $("messageInput").value.trim();
+
+if(!text){
+
+return;
+
+}
+
+const encrypted = await encryptText(text);
+
+socket.emit("message:send",{
+roomId:currentRoom,
+type:"text",
+replyTo:replyTo,
+cipher:encrypted.cipher,
+iv:encrypted.iv
+});
+
+$("messageInput").value = "";
+
+replyTo = "";
+
+$("replyBox").classList.add("hidden");
+
+}
+
+document.querySelectorAll(".emojiBox button").forEach(function(button){
+
+button.onclick = function(){
+
+$("messageInput").value += button.textContent;
+
+$("messageInput").focus();
+
+};
+
+});
+
+async function sendSelectedFile(file,type){
+
+if(!currentRoom){
+
+toast("Abra uma conversa primeiro.");
+
+return;
+
+}
+
+if(!file){
+
+return;
+
+}
+
+if(file.size > 22 * 1024 * 1024){
+
+toast("Arquivo muito grande. Use até 22MB neste protótipo.");
+
+return;
+
+}
+
+const encrypted = await encryptFile(file);
+
+socket.emit("message:send",{
+roomId:currentRoom,
+type:type,
+replyTo:replyTo,
+cipher:encrypted.cipher,
+iv:encrypted.iv,
+fileName:encrypted.fileName,
+fileMime:encrypted.fileMime
+});
+
+replyTo = "";
+
+$("replyBox").classList.add("hidden");
+
+}
+
+$("fileInput").onchange = function(event){
+
+sendSelectedFile(event.target.files[0],"file").then(function(){
+
+event.target.value = "";
+
+});
+
+};
+
+$("imageInput").onchange = function(event){
+
+sendSelectedFile(event.target.files[0],"image").then(function(){
+
+event.target.value = "";
+
+});
+
+};
+
+$("audioInput").onchange = function(event){
+
+sendSelectedFile(event.target.files[0],"audio").then(function(){
+
+event.target.value = "";
+
+});
+
+};
+
+$("clearLocalBtn").onclick = function(){
+
+$("messages").innerHTML =
+'<div class="empty"><h3>Tela limpa somente neste aparelho</h3><p>As mensagens ainda expiram automaticamente em 1 hora.</p></div>';
+
+};
+
+async function startCall(video){
+
+if(!currentRoom){
+
+toast("Abra uma conversa.");
+
+return;
+
+}
+
+$("videoPane").classList.remove("hidden");
+
+localStream = await navigator.mediaDevices.getUserMedia({
+audio:true,
+video:video ? {
+facingMode:usingFront ? "user" : "environment"
+} : false
+});
+
+$("localVideo").srcObject = localStream;
+
+peerConnection = new RTCPeerConnection(rtcConfig);
+
+localStream.getTracks().forEach(function(track){
+
+peerConnection.addTrack(track,localStream);
+
+});
+
+peerConnection.ontrack = function(event){
+
+$("remoteVideo").srcObject = event.streams[0];
+
+};
+
+peerConnection.onicecandidate = function(event){
+
+if(event.candidate){
+
+socket.emit("call:signal",{
+roomId:currentRoom,
+type:"ice",
+candidate:event.candidate
+});
+
+}
+
+};
+
+const offer = await peerConnection.createOffer();
+
+await peerConnection.setLocalDescription(offer);
+
+socket.emit("call:signal",{
+roomId:currentRoom,
+type:"offer",
+offer:offer,
+video:video
+});
+
+}
+
+async function handleCallSignal(data){
+
+if(!currentRoom || data.roomId !== currentRoom){
+
+return;
+
+}
+
+if(data.type === "offer"){
+
+$("videoPane").classList.remove("hidden");
+
+localStream = await navigator.mediaDevices.getUserMedia({
+audio:true,
+video:data.video ? {
+facingMode:usingFront ? "user" : "environment"
+} : false
+});
+
+$("localVideo").srcObject = localStream;
+
+peerConnection = new RTCPeerConnection(rtcConfig);
+
+localStream.getTracks().forEach(function(track){
+
+peerConnection.addTrack(track,localStream);
+
+});
+
+peerConnection.ontrack = function(event){
+
+$("remoteVideo").srcObject = event.streams[0];
+
+};
+
+peerConnection.onicecandidate = function(event){
+
+if(event.candidate){
+
+socket.emit("call:signal",{
+roomId:currentRoom,
+type:"ice",
+candidate:event.candidate
+});
+
+}
+
+};
+
+await peerConnection.setRemoteDescription(data.offer);
+
+const answer = await peerConnection.createAnswer();
+
+await peerConnection.setLocalDescription(answer);
+
+socket.emit("call:signal",{
+roomId:currentRoom,
+type:"answer",
+answer:answer
+});
+
+}
+
+if(data.type === "answer" && peerConnection){
+
+await peerConnection.setRemoteDescription(data.answer);
+
+}
+
+if(data.type === "ice" && peerConnection){
+
+try{
+
+await peerConnection.addIceCandidate(data.candidate);
+
+}catch(error){}
+
+}
+
+if(data.type === "hang"){
+
+endCall(false);
+
+}
+
+}
+
+function endCall(send){
+
+if(send === undefined){
+
+send = true;
+
+}
+
+if(send && currentRoom){
+
+socket.emit("call:signal",{
+roomId:currentRoom,
+type:"hang"
+});
+
+}
+
+if(peerConnection){
+
+peerConnection.close();
+
+}
+
+peerConnection = null;
+
+if(localStream){
+
+localStream.getTracks().forEach(function(track){
+
+track.stop();
+
+});
+
+}
+
+localStream = null;
+
+$("localVideo").srcObject = null;
+
+$("remoteVideo").srcObject = null;
+
+$("videoPane").classList.add("hidden");
+
+}
+
+$("voiceBtn").onclick = function(){
+
+startCall(false);
+
+};
+
+$("videoBtn").onclick = function(){
+
+startCall(true);
+
+};
+
+$("endCallBtn").onclick = function(){
+
+endCall(true);
+
+};
+
+$("flipCameraBtn").onclick = async function(){
+
+usingFront = !usingFront;
+
+if(localStream){
+
+endCall(false);
+
+await startCall(true);
+
+}
+
+};
+
+$("muteBtn").onclick = function(){
+
+muted = !muted;
+
+if(localStream){
+
+localStream.getAudioTracks().forEach(function(track){
+
+track.enabled = !muted;
+
+});
+
+}
+
+$("muteBtn").textContent = muted ? "🔇 Ativar áudio" : "🎙️ Mudo";
+
+};
+
+if(token && currentUser){
+
+showApp();
+
+}else{
+
+showAuth();
+
+}
+</script>
+
+</body>
+</html>
