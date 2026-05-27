@@ -1,0 +1,104 @@
+Corrija e melhore o Arcaidron mantendo máxima privacidade.
+
+PARTE 1 — CORRIGIR BUG DA ÁREA PRIVADA
+
+Quando eu digito o nome privado da pessoa/sala e a senha/chave privada, o sistema está dizendo “usuário não encontrado”.
+
+Isso está errado para o Arcaidron.
+
+O Arcaidron não deve depender de lista pública de usuários nem buscar usuário cadastrado para iniciar conversa privada.
+
+A lógica correta deve ser:
+
+- A conversa privada deve funcionar por nome privado da sala/conversa + senha/chave compartilhada.
+- Se a sala/conversa privada ainda não existir, o sistema deve criar automaticamente.
+- Se já existir, deve entrar normalmente.
+- Não deve mostrar “usuário não encontrado”.
+- Não deve revelar se uma pessoa existe ou não existe.
+- Não deve mostrar contatos, amigos ou usuários de outra pessoa.
+- O nome privado e a senha/chave devem gerar uma sala segura e privada.
+- Duas pessoas que digitarem o mesmo nome privado e a mesma senha/chave devem cair na mesma conversa.
+- Se digitarem senha/chave diferente, devem cair em outra sala privada separada ou receber erro genérico sem revelar dados.
+- Remova qualquer validação pública que procure usuário pelo nome.
+- Mantenha máxima privacidade.
+- Depois teste o login e a entrada na conversa privada.
+
+PARTE 2 — MODERNIZAR VÍDEO, VOZ E FOTO ESTILO WHATSAPP
+
+Quero melhorar a parte de mídia e chamada do Arcaidron para ficar parecida com WhatsApp/Messenger, mas mantendo o estilo privado e futurista do Arcaidron.
+
+Adicionar/ajustar:
+
+- Botão de chamada de vídeo dentro da conversa.
+- Botão de chamada de voz dentro da conversa.
+- Quando clicar em chamada de vídeo, abrir chamada privada entre as duas pessoas usando WebRTC.
+- A chamada deve funcionar parecido com WhatsApp:
+  - botão aceitar chamada;
+  - botão recusar chamada;
+  - botão encerrar chamada;
+  - botão mutar microfone;
+  - botão ligar/desligar câmera;
+  - botão trocar câmera frontal/traseira;
+  - mini vídeo do próprio usuário no canto;
+  - vídeo da outra pessoa em destaque.
+- O vídeo não deve ocupar a tela inteira de forma feia.
+- O vídeo deve ficar em um formato moderno, limpo e responsivo.
+- Em celular, o layout deve parecer uma chamada moderna de aplicativo de mensagem.
+- A pessoa deve poder escolher câmera frontal ou traseira.
+- A pessoa deve poder trocar câmera durante a chamada.
+- Adicionar chamada somente por voz, sem câmera, igual WhatsApp.
+- Na chamada de voz, mostrar tela bonita com avatar/foto de perfil, nome privado da sala/conversa e botões de microfone e encerrar.
+
+PARTE 3 — FOTO E CÂMERA NO CHAT
+
+Adicionar função de foto/imagem no mesmo estilo do WhatsApp:
+
+- Botão de câmera/foto perto do campo de mensagem.
+- Permitir escolher imagem da galeria.
+- Permitir tirar foto pela câmera.
+- Permitir escolher câmera frontal ou traseira.
+- Mostrar pré-visualização antes de enviar.
+- Enviar a foto dentro da conversa em formato bonito.
+- Ao clicar na foto enviada, abrir visualização maior.
+- Manter privacidade: imagens pertencem somente à sala privada correta.
+
+PARTE 4 — PERFIL COM FOTO
+
+Melhorar o perfil do usuário:
+
+- Cada usuário pode adicionar foto de perfil opcional.
+- Se não adicionar foto, mostrar avatar com inicial do nome.
+- Mostrar foto/avatar nas mensagens e no topo da conversa.
+- Permitir trocar/remover foto de perfil.
+
+PARTE 5 — FEED / NOTÍCIAS DO DIA A DIA
+
+Melhorar o feed do Arcaidron:
+
+- Criar área de feed/notícias onde o usuário possa publicar textos, avisos, novidades e notícias do dia a dia.
+- Permitir postar texto e imagem no feed.
+- Mostrar as postagens em cards modernos.
+- Cada postagem deve mostrar autor, data/hora e conteúdo.
+- Adicionar botão de lixeira em cada postagem do próprio usuário.
+- O usuário só pode apagar as próprias postagens.
+- Ao tocar na lixeira, pedir confirmação antes de apagar.
+- Depois de apagada, a postagem deve sumir do feed.
+- Não permitir que um usuário apague postagem de outro usuário.
+- Manter visual bonito, moderno e responsivo.
+- Manter privacidade dos usuários.
+
+PARTE 6 — ESTABILIDADE
+
+Corrigir qualquer bug de sessão:
+
+- Não voltar sozinho para login.
+- Manter usuário logado após atualizar página.
+- Reconectar automaticamente se a internet oscilar.
+- Só sair se o usuário clicar em sair.
+- Manter compatibilidade com Render.
+- Garantir que npm install e npm start funcionem no Render.
+- Testar mensagens, fotos, voz, vídeo, login, feed, lixeira e sala privada.
+
+IMPORTANTE:
+
+O Arcaidron é um app de conversa privada e criptografada. A privacidade é prioridade máxima. Não criar lista pública de usuários. Não revelar se usuário existe. Não mostrar contatos de outras pessoas. Não mostrar histórico de outros usuários.
