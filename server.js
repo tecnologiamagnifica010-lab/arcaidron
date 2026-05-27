@@ -1,606 +1,377 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const sqlite3 = require("sqlite3").verbose();
-const { v4: uuidv4 } = require("uuid");
-const crypto = require("crypto");
-const path = require("path");
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  maxHttpBufferSize: 1e8,
-  cors: { origin: "*", methods: ["GET", "POST"] }
+  maxHttpBufferSize: 25 * 1024 * 1024,
+  cors: { origin: '*' }
 });
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.static("public"));
+const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+const MESSAGE_TTL_MS = 60 * 60 * 1000;
 
-const db = new sqlite3.Database("./arcaidron.db");
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(express.json({ limit: '30mb' }));
+app.use(rateLimit({ windowMs: 60 * 1000, max: 160 }));
+app.use(express.static(__dirname));
 
-const onlineUsers = {};
-const userLastSeen = {};
-const userSockets = {};
-const tokenToUser = {};
+const users = new Map();
+const socketsByUser = new Map();
+const chats = new Map();
 
-function hashPassword(password) {
-  return crypto.createHash("sha256").update("ARCAIDRON_SALT_" + password).digest("hex");
+function cleanUsername(name) {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_.-]/g, '')
+    .slice(0, 32);
 }
 
-function generateToken(username) {
-  return crypto.createHash("sha256").update(username + "_" + Date.now() + "_" + uuidv4()).digest("hex");
+function makeToken(username) {
+  return jwt.sign({ username }, JWT_SECRET, { expiresIn: '7d' });
 }
 
-function horaBrasil() {
-  return new Date().toLocaleTimeString("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
-
-function dataHoraBrasil() {
-  return new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
-}
-
-function safeText(value) {
-  return (value || "").toString().trim();
-}
-
-function normalize(value) {
-  return safeText(value).toLowerCase();
-}
-
-function addColumnSafe(table, column, definition) {
-  db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`, () => {});
-}
-
-function emitError(socket, message) {
-  socket.emit("error_msg", message);
-}
-
-function criarChatId(userA, userB, key) {
-  const keyHash = crypto.createHash("sha256").update(key).digest("hex").slice(0, 16);
-  return [normalize(userA), normalize(userB)].sort().join("__") + "__" + keyHash;
-}
-
-function marcarOnline(socket, username, avatarUrl) {
-  const key = normalize(username);
-  socket.username = username;
-  socket.avatarUrl = avatarUrl || null;
-  onlineUsers[key] = true;
-  userLastSeen[key] = Date.now();
-  userSockets[key] = socket.id;
-}
-
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE,
-      password TEXT,
-      avatar TEXT DEFAULT '👤',
-      avatarUrl TEXT DEFAULT NULL,
-      displayName TEXT DEFAULT NULL,
-      bio TEXT DEFAULT '',
-      status TEXT DEFAULT 'Disponível',
-      createdAt TEXT DEFAULT ''
-    )
-  `);
-
-  addColumnSafe("users", "avatar", "TEXT DEFAULT '👤'");
-  addColumnSafe("users", "avatarUrl", "TEXT DEFAULT NULL");
-  addColumnSafe("users", "displayName", "TEXT DEFAULT NULL");
-  addColumnSafe("users", "bio", "TEXT DEFAULT ''");
-  addColumnSafe("users", "status", "TEXT DEFAULT 'Disponível'");
-  addColumnSafe("users", "createdAt", "TEXT DEFAULT ''");
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS messages (
-      id TEXT PRIMARY KEY,
-      chatId TEXT,
-      username TEXT,
-      avatar TEXT,
-      avatarUrl TEXT DEFAULT NULL,
-      type TEXT,
-      text TEXT,
-      media TEXT,
-      time TEXT,
-      seenBy TEXT DEFAULT '',
-      replyTo TEXT DEFAULT '',
-      deleted TEXT DEFAULT 'false'
-    )
-  `);
-
-  addColumnSafe("messages", "avatarUrl", "TEXT DEFAULT NULL");
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS posts (
-      id TEXT PRIMARY KEY,
-      username TEXT,
-      avatar TEXT,
-      text TEXT,
-      media TEXT,
-      mediaType TEXT,
-      time TEXT
-    )
-  `);
-
-  db.run(`CREATE TABLE IF NOT EXISTS likes (postId TEXT, username TEXT)`);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS unread_counts (
-      username TEXT,
-      chatId TEXT,
-      count INTEGER DEFAULT 0,
-      PRIMARY KEY (username, chatId)
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS comments (
-      id TEXT PRIMARY KEY,
-      postId TEXT,
-      username TEXT,
-      avatar TEXT,
-      text TEXT,
-      time TEXT
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS notifications (
-      id TEXT PRIMARY KEY,
-      username TEXT,
-      text TEXT,
-      time TEXT,
-      readed TEXT DEFAULT 'false'
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS reactions (
-      message_id TEXT,
-      username TEXT,
-      emoji TEXT,
-      PRIMARY KEY (message_id, username, emoji)
-    )
-  `);
-});
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-app.get("/health", (req, res) => {
-  res.json({ ok: true, app: "ARCAIDRON", time: dataHoraBrasil() });
-});
-
-app.post("/api/upload-avatar", (req, res) => {
-  const { token, imageData } = req.body;
-  const username = tokenToUser[token];
-  if (!username || !imageData) {
-    return res.status(401).json({ error: "Unauthorized" });
+function verifyToken(token) {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch {
+    return null;
   }
-  db.run(
-    "UPDATE users SET avatarUrl=? WHERE LOWER(username)=LOWER(?)",
-    [imageData, username],
-    (err) => {
-      if (err) return res.status(500).json({ error: "DB error" });
-      res.json({ avatarUrl: imageData });
-    }
-  );
+}
+
+function privateChatId(a, b, sharedKeyHash) {
+  const pair = [a, b].sort().join('::');
+  return crypto
+    .createHash('sha256')
+    .update(pair + '::' + sharedKeyHash)
+    .digest('hex');
+}
+
+function getStatus(username) {
+  return socketsByUser.has(username) ? 'online' : 'offline';
+}
+
+function publicUser(username) {
+  const user = users.get(username);
+  return user ? { username: user.username, avatar: user.avatar } : null;
+}
+
+function authHttp(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.replace('Bearer ', '');
+  const data = verifyToken(token);
+
+  if (!data || !users.has(data.username)) {
+    return res.status(401).json({ error: 'Sessão inválida.' });
+  }
+
+  req.user = data.username;
+  next();
+}
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get("/api/me", (req, res) => {
-  const token = req.headers.authorization?.replace("Bearer ", "");
-  const username = tokenToUser[token];
-  if (!username) return res.status(401).json({ error: "Not authenticated" });
-  db.get("SELECT * FROM users WHERE LOWER(username)=LOWER(?)", [username], (err, row) => {
-    if (!row) return res.status(404).json({ error: "User not found" });
-    res.json({
-      username: row.username,
-      displayName: row.displayName || row.username,
-      avatarUrl: row.avatarUrl || null,
-      bio: row.bio || "",
-      status: row.status || "Disponível"
-    });
+app.post('/api/register', async (req, res) => {
+  const username = cleanUsername(req.body.username);
+  const password = String(req.body.password || '');
+  const avatar = String(req.body.avatar || '🛡️').slice(0, 4);
+
+  if (username.length < 3) {
+    return res.json({ error: 'Nome precisa ter pelo menos 3 caracteres.' });
+  }
+
+  if (password.length < 6) {
+    return res.json({ error: 'Senha precisa ter pelo menos 6 caracteres.' });
+  }
+
+  if (users.has(username)) {
+    return res.json({ error: 'Esse nome já existe.' });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  users.set(username, {
+    username,
+    avatar,
+    passwordHash,
+    createdAt: Date.now()
+  });
+
+  res.json({
+    ok: true,
+    token: makeToken(username),
+    username,
+    avatar
   });
 });
 
-function enviarFeed(target) {
-  db.all("SELECT * FROM posts ORDER BY rowid DESC", [], (err, posts) => {
-    if (err) return;
-    db.all("SELECT * FROM likes", [], (err2, likes) => {
-      if (err2) return;
-      db.all("SELECT * FROM comments", [], (err3, comments) => {
-        if (err3) return;
-        const feed = (posts || []).map(post => ({
-          ...post,
-          likes: (likes || []).filter(l => l.postId === post.id).length,
-          likedBy: (likes || []).filter(l => l.postId === post.id).map(l => l.username),
-          comments: (comments || []).filter(c => c.postId === post.id)
-        }));
-        target.emit("feed_update", feed);
-      });
+app.post('/api/login', async (req, res) => {
+  const username = cleanUsername(req.body.username);
+  const password = String(req.body.password || '');
+  const user = users.get(username);
+
+  if (!user) {
+    return res.json({ error: 'Login ou senha incorretos.' });
+  }
+
+  const ok = await bcrypt.compare(password, user.passwordHash);
+
+  if (!ok) {
+    return res.json({ error: 'Login ou senha incorretos.' });
+  }
+
+  res.json({
+    ok: true,
+    token: makeToken(username),
+    username,
+    avatar: user.avatar
+  });
+});
+
+app.post('/api/open-chat', authHttp, (req, res) => {
+  const me = req.user;
+  const target = cleanUsername(req.body.target);
+  const sharedKeyHash = String(req.body.sharedKeyHash || '');
+
+  if (!target || !sharedKeyHash) {
+    return res.json({ error: 'Informe usuário e chave.' });
+  }
+
+  if (target === me) {
+    return res.json({ error: 'Você não pode abrir conversa com você mesmo.' });
+  }
+
+  const targetUser = users.get(target);
+
+  if (!targetUser) {
+    return res.json({ error: 'Usuário ou chave inválidos.' });
+  }
+
+  const roomId = privateChatId(me, target, sharedKeyHash);
+
+  if (!chats.has(roomId)) {
+    chats.set(roomId, {
+      roomId,
+      members: [me, target],
+      messages: [],
+      createdAt: Date.now()
     });
+  }
+
+  res.json({
+    ok: true,
+    roomId,
+    peer: publicUser(target),
+    status: getStatus(target)
+  });
+});
+
+function requireSocketAuth(socket, next) {
+  const token = socket.handshake.auth?.token;
+  const data = verifyToken(token);
+
+  if (!data || !users.has(data.username)) {
+    return next(new Error('Não autorizado'));
+  }
+
+  socket.username = data.username;
+  next();
+}
+
+io.use(requireSocketAuth);
+
+function emitPresence(username) {
+  io.emit('presence:update', {
+    username,
+    status: getStatus(username)
   });
 }
 
-function criarNotificacao(username, text) {
-  if (!username || !text) return;
-  db.run(
-    "INSERT INTO notifications (id,username,text,time,readed) VALUES (?,?,?,?,?)",
-    [uuidv4(), username, text, dataHoraBrasil(), "false"]
-  );
+function removeExpiredMessages(roomId) {
+  const chat = chats.get(roomId);
+
+  if (!chat) return;
+
+  const now = Date.now();
+  const before = chat.messages.length;
+
+  chat.messages = chat.messages.filter(msg => {
+    return now - msg.createdAt < MESSAGE_TTL_MS;
+  });
+
+  if (chat.messages.length !== before) {
+    io.to(roomId).emit('message:expired');
+  }
 }
 
 setInterval(() => {
-  Object.keys(userLastSeen).forEach(username => {
-    if (Date.now() - userLastSeen[username] > 60000) {
-      delete onlineUsers[username];
-      delete userSockets[username];
-    }
-  });
-}, 10000);
+  for (const roomId of chats.keys()) {
+    removeExpiredMessages(roomId);
+  }
+}, 60 * 1000);
 
-io.on("connection", socket => {
-  socket.emit("server_ready", { ok: true, message: "ARCAIDRON conectado" });
+io.on('connection', socket => {
+  const username = socket.username;
 
-  socket.on("auth_token", ({ token }) => {
-    const username = tokenToUser[token];
-    if (!username) {
-      socket.emit("token_invalid");
-      return;
-    }
-    db.get("SELECT * FROM users WHERE LOWER(username)=LOWER(?)", [username], (err, row) => {
-      if (!row) { socket.emit("token_invalid"); return; }
-      marcarOnline(socket, row.username, row.avatarUrl || null);
-      socket.emit("login_ok", {
-        username: row.username,
-        displayName: row.displayName || row.username,
-        avatarUrl: row.avatarUrl || null,
-        bio: row.bio || "",
-        status: row.status || "Disponível",
-        token
-      });
-    });
-  });
-
-  socket.on("heartbeat", () => {
-    if (!socket.username) return;
-    const key = normalize(socket.username);
-    onlineUsers[key] = true;
-    userLastSeen[key] = Date.now();
-    userSockets[key] = socket.id;
-  });
-
-  // Search for a user — returns exists+online without revealing more
-  socket.on("search_user", ({ username }) => {
-    if (!socket.username) return;
-    username = safeText(username);
-    if (!username) return;
-    if (normalize(username) === normalize(socket.username)) {
-      socket.emit("user_search_result", { found: false });
-      return;
-    }
-    db.get(
-      "SELECT username, displayName, avatarUrl FROM users WHERE LOWER(username)=LOWER(?)",
-      [username],
-      (err, row) => {
-        if (!row) {
-          socket.emit("user_search_result", { found: false });
-        } else {
-          const isOnline = !!onlineUsers[normalize(row.username)];
-          socket.emit("user_search_result", {
-            found: true,
-            username: row.username,
-            displayName: row.displayName || row.username,
-            avatarUrl: row.avatarUrl || null,
-            online: isOnline
-          });
-        }
-      }
-    );
-  });
-
-  socket.on("create_account", ({ username, password, avatar, avatarUrl }) => {
-    username = safeText(username);
-    password = safeText(password);
-    avatar = avatar || "👤";
-    if (!username || !password) { emitError(socket, "Digite nome e senha."); return; }
-
-    db.get("SELECT * FROM users WHERE LOWER(username)=LOWER(?)", [username], (err, row) => {
-      if (err) { emitError(socket, "Erro no banco de dados."); return; }
-      if (row) { emitError(socket, "Usuário já existe. Use Entrar."); return; }
-
-      const hashedPw = hashPassword(password);
-      db.run(
-        "INSERT INTO users (username,password,avatar,avatarUrl,displayName,bio,status,createdAt) VALUES (?,?,?,?,?,?,?,?)",
-        [username, hashedPw, avatar, avatarUrl || null, username, "", "Disponível", dataHoraBrasil()],
-        (err2) => {
-          if (err2) { emitError(socket, "Erro ao criar conta."); return; }
-          loginSuccess(socket, username, avatar, avatarUrl, "");
-        }
-      );
-    });
-  });
-
-  socket.on("login", ({ username, password }) => {
-    username = safeText(username);
-    password = safeText(password);
-    if (!username || !password) { emitError(socket, "Digite nome e senha."); return; }
-
-    const hashedPw = hashPassword(password);
-    db.get(
-      "SELECT * FROM users WHERE LOWER(username)=LOWER(?) AND (password=? OR password=?)",
-      [username, hashedPw, password],
-      (err, row) => {
-        if (err) { emitError(socket, "Erro no banco de dados."); return; }
-        if (!row) { emitError(socket, "Login inválido. Verifique nome e senha."); return; }
-
-        if (row.password === password && row.password !== hashedPw) {
-          db.run("UPDATE users SET password=? WHERE username=?", [hashedPw, row.username]);
-        }
-
-        loginSuccess(socket, row.username, row.avatar || "👤", row.avatarUrl || null, row.bio || "");
-      }
-    );
-  });
-
-  function loginSuccess(socket, username, avatar, avatarUrl, bio) {
-    marcarOnline(socket, username, avatarUrl);
-    const token = generateToken(username);
-    tokenToUser[token] = username;
-    socket.emit("login_ok", {
-      username,
-      displayName: username,
-      avatarUrl,
-      avatar,
-      bio,
-      status: "Disponível",
-      token
-    });
+  if (!socketsByUser.has(username)) {
+    socketsByUser.set(username, new Set());
   }
 
-  socket.on("update_profile", ({ bio, status, displayName, avatarUrl }) => {
-    if (!socket.username) return;
-    db.run(
-      "UPDATE users SET bio=?, status=?, displayName=?, avatarUrl=? WHERE username=?",
-      [safeText(bio), safeText(status) || "Disponível", safeText(displayName) || socket.username, avatarUrl || null, socket.username],
-      () => {
-        socket.avatarUrl = avatarUrl || null;
-        socket.emit("profile_updated", {
-          bio: safeText(bio),
-          status: safeText(status) || "Disponível",
-          displayName: safeText(displayName) || socket.username,
-          avatarUrl: avatarUrl || null
-        });
-      }
-    );
+  socketsByUser.get(username).add(socket.id);
+  emitPresence(username);
+
+  socket.on('room:join', ({ roomId }) => {
+    const chat = chats.get(roomId);
+
+    if (!chat || !chat.members.includes(username)) return;
+
+    socket.join(roomId);
+    removeExpiredMessages(roomId);
+
+    socket.emit('room:history', chats.get(roomId).messages);
   });
 
-  // Open private chat: uses username + shared key; no user existence check
-  socket.on("open_private_chat", ({ otherUser, key }) => {
-    if (!socket.username) { emitError(socket, "Você precisa entrar primeiro."); return; }
-    otherUser = safeText(otherUser);
-    key = safeText(key);
-    if (!otherUser || !key) { emitError(socket, "Digite o nome e a chave."); return; }
-    if (normalize(otherUser) === normalize(socket.username)) {
-      emitError(socket, "Você não pode conversar consigo mesmo.");
-      return;
+  socket.on('typing', ({ roomId, typing }) => {
+    const chat = chats.get(roomId);
+
+    if (!chat || !chat.members.includes(username)) return;
+
+    socket.to(roomId).emit('typing', {
+      username,
+      typing: !!typing
+    });
+  });
+
+  socket.on('message:send', data => {
+    const chat = chats.get(data.roomId);
+
+    if (!chat || !chat.members.includes(username)) return;
+
+    const message = {
+      id: crypto.randomUUID(),
+      roomId: data.roomId,
+      from: username,
+      avatar: users.get(username)?.avatar || '🛡️',
+      type: data.type || 'text',
+      cipher: String(data.cipher || ''),
+      iv: String(data.iv || ''),
+      fileName: String(data.fileName || ''),
+      fileMime: String(data.fileMime || ''),
+      replyTo: String(data.replyTo || ''),
+      edited: false,
+      deleted: false,
+      seenBy: [],
+      createdAt: Date.now()
+    };
+
+    chat.messages.push(message);
+
+    io.to(data.roomId).emit('message:new', message);
+  });
+
+  socket.on('message:edit', data => {
+    const chat = chats.get(data.roomId);
+
+    if (!chat || !chat.members.includes(username)) return;
+
+    const msg = chat.messages.find(m => {
+      return m.id === data.id && m.from === username;
+    });
+
+    if (!msg || msg.deleted) return;
+
+    msg.cipher = String(data.cipher || '');
+    msg.iv = String(data.iv || '');
+    msg.edited = true;
+    msg.editedAt = Date.now();
+
+    io.to(data.roomId).emit('message:edited', {
+      id: msg.id,
+      cipher: msg.cipher,
+      iv: msg.iv,
+      editedAt: msg.editedAt
+    });
+  });
+
+  socket.on('message:delete', data => {
+    const chat = chats.get(data.roomId);
+
+    if (!chat || !chat.members.includes(username)) return;
+
+    const msg = chat.messages.find(m => {
+      return m.id === data.id && m.from === username;
+    });
+
+    if (!msg) return;
+
+    msg.deleted = true;
+    msg.cipher = '';
+    msg.iv = '';
+    msg.fileName = '';
+    msg.fileMime = '';
+
+    io.to(data.roomId).emit('message:deleted', {
+      id: msg.id
+    });
+  });
+
+  socket.on('message:seen', data => {
+    const chat = chats.get(data.roomId);
+
+    if (!chat || !chat.members.includes(username)) return;
+
+    const msg = chat.messages.find(m => m.id === data.id);
+
+    if (!msg || msg.from === username) return;
+
+    if (!msg.seenBy.includes(username)) {
+      msg.seenBy.push(username);
     }
 
-    const chatId = criarChatId(socket.username, otherUser, key);
-    socket.join(chatId);
-    socket.currentChat = chatId;
-    socket.currentOtherUser = otherUser;
-    socket.currentKey = key;
+    io.to(data.roomId).emit('message:seen', {
+      id: msg.id,
+      seenBy: msg.seenBy
+    });
+  });
 
-    // Reset unread count when opening chat
-    db.run(
-      "DELETE FROM unread_counts WHERE username=? AND chatId=?",
-      [normalize(socket.username), chatId],
-      () => { socket.emit("unread_update", { chatId, count: 0 }); }
-    );
+  socket.on('call:signal', data => {
+    const chat = chats.get(data.roomId);
 
-    db.all(
-      "SELECT m.*, u.avatarUrl as senderAvatarUrl FROM messages m LEFT JOIN users u ON LOWER(m.username)=LOWER(u.username) WHERE m.chatId=? AND m.deleted!='true' ORDER BY m.rowid ASC",
-      [chatId],
-      (err, rows) => {
-        const messages = rows || [];
-        if (messages.length === 0) {
-          socket.emit("chat_opened", { chatId, otherUser, messages });
-          return;
-        }
-        db.all(
-          "SELECT message_id, username, emoji FROM reactions WHERE message_id IN (" + messages.map(() => "?").join(",") + ")",
-          messages.map(m => m.id),
-          (err2, rxRows) => {
-            const rxMap = {};
-            (rxRows || []).forEach(r => {
-              if (!rxMap[r.message_id]) rxMap[r.message_id] = {};
-              if (!rxMap[r.message_id][r.emoji]) rxMap[r.message_id][r.emoji] = [];
-              rxMap[r.message_id][r.emoji].push(r.username);
-            });
-            messages.forEach(m => { m.reactions = rxMap[m.id] || {}; });
-            socket.emit("chat_opened", { chatId, otherUser, messages });
-          }
-        );
+    if (!chat || !chat.members.includes(username)) return;
+
+    socket.to(data.roomId).emit('call:signal', {
+      ...data,
+      from: username
+    });
+  });
+
+  socket.on('disconnect', () => {
+    const set = socketsByUser.get(username);
+
+    if (set) {
+      set.delete(socket.id);
+
+      if (set.size === 0) {
+        socketsByUser.delete(username);
       }
-    );
+    }
+
+    emitPresence(username);
   });
+});
 
-  socket.on("send_message", data => {
-    if (!socket.currentChat) { emitError(socket, "Abra conversa primeiro."); return; }
-    const msg = {
-      id: uuidv4(),
-      chatId: socket.currentChat,
-      username: socket.username,
-      avatar: socket.avatar || "👤",
-      avatarUrl: socket.avatarUrl || null,
-      type: data.type || "text",
-      text: data.text || "",
-      media: data.media || "",
-      time: horaBrasil(),
-      seenBy: "",
-      replyTo: data.replyTo || "",
-      deleted: "false"
-    };
-
-    db.run(
-      "INSERT INTO messages (id,chatId,username,avatar,avatarUrl,type,text,media,time,seenBy,replyTo,deleted) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-      [msg.id, msg.chatId, msg.username, msg.avatar, msg.avatarUrl, msg.type, msg.text, msg.media, msg.time, msg.seenBy, msg.replyTo, msg.deleted],
-      () => {
-        io.to(socket.currentChat).emit("new_message", msg);
-
-        const otherUser = socket.currentOtherUser;
-        if (otherUser) {
-          const otherKey = normalize(otherUser);
-          const otherSocketId = userSockets[otherKey];
-          const otherSock = otherSocketId ? io.sockets.sockets.get(otherSocketId) : null;
-          const otherIsHere = otherSock && otherSock.currentChat === socket.currentChat;
-
-          if (!otherIsHere) {
-            db.run(
-              `INSERT INTO unread_counts (username, chatId, count) VALUES (?, ?, 1)
-               ON CONFLICT(username, chatId) DO UPDATE SET count = count + 1`,
-              [otherKey, socket.currentChat],
-              () => {
-                if (otherSock) {
-                  db.get(
-                    "SELECT count FROM unread_counts WHERE username=? AND chatId=?",
-                    [otherKey, socket.currentChat],
-                    (err, row) => {
-                      if (row) otherSock.emit("unread_update", { chatId: socket.currentChat, count: row.count });
-                    }
-                  );
-                }
-              }
-            );
-            criarNotificacao(otherUser, socket.username + " enviou uma mensagem.");
-          }
-        }
-      }
-    );
-  });
-
-  socket.on("delete_message", ({ id }) => {
-    if (!id) return;
-    db.get("SELECT * FROM messages WHERE id=?", [id], (err, msg) => {
-      if (err || !msg) return;
-      db.run("UPDATE messages SET deleted='true' WHERE id=?", [id], () => {
-        io.to(msg.chatId).emit("remove_message", id);
-      });
-    });
-  });
-
-  socket.on("react_message", ({ messageId, emoji }) => {
-    if (!socket.username || !messageId || !emoji) return;
-    const username = socket.username;
-    db.get(
-      "SELECT * FROM reactions WHERE message_id=? AND username=? AND emoji=?",
-      [messageId, username, emoji],
-      (err, existing) => {
-        const done = () => {
-          db.all(
-            "SELECT username, emoji FROM reactions WHERE message_id=?",
-            [messageId],
-            (err2, rows) => {
-              const grouped = {};
-              (rows || []).forEach(r => {
-                if (!grouped[r.emoji]) grouped[r.emoji] = [];
-                grouped[r.emoji].push(r.username);
-              });
-              db.get("SELECT chatId FROM messages WHERE id=?", [messageId], (err3, msg) => {
-                if (msg) io.to(msg.chatId).emit("message_reaction", { messageId, reactions: grouped });
-              });
-            }
-          );
-        };
-        if (existing) {
-          db.run("DELETE FROM reactions WHERE message_id=? AND username=? AND emoji=?", [messageId, username, emoji], done);
-        } else {
-          db.run("INSERT OR REPLACE INTO reactions (message_id, username, emoji) VALUES (?,?,?)", [messageId, username, emoji], done);
-        }
-      }
-    );
-  });
-
-  socket.on("clear_chat", () => {
-    if (!socket.currentChat) return;
-    db.run("UPDATE messages SET deleted='true' WHERE chatId=?", [socket.currentChat], () => {
-      io.to(socket.currentChat).emit("chat_cleared");
-    });
-  });
-
-  socket.on("mark_seen", ({ id }) => {
-    if (!socket.currentChat || !socket.username) return;
-    db.get("SELECT * FROM messages WHERE id=? AND chatId=?", [id, socket.currentChat], (err, msg) => {
-      if (!msg || msg.username === socket.username) return;
-      db.run("UPDATE messages SET seenBy=? WHERE id=?", [socket.username, id], () => {
-        io.to(socket.currentChat).emit("message_seen", { id, seenBy: socket.username });
-      });
-    });
-  });
-
-  socket.on("typing", () => {
-    if (!socket.currentChat) return;
-    socket.to(socket.currentChat).emit("typing", socket.username + " está digitando...");
-  });
-
-  // Feed
-  socket.on("create_post", ({ text, media, mediaType }) => {
-    if (!socket.username) return;
-    const post = {
-      id: uuidv4(),
-      username: socket.username,
-      avatar: socket.avatar || "👤",
-      text: safeText(text),
-      media: media || "",
-      mediaType: mediaType || "text",
-      time: dataHoraBrasil()
-    };
-    db.run(
-      "INSERT INTO posts (id,username,avatar,text,media,mediaType,time) VALUES (?,?,?,?,?,?,?)",
-      [post.id, post.username, post.avatar, post.text, post.media, post.mediaType, post.time],
-      () => { enviarFeed(io); }
-    );
-  });
-
-  socket.on("delete_post", ({ postId }) => {
-    if (!socket.username || !postId) return;
-    db.get("SELECT * FROM posts WHERE id=?", [postId], (err, post) => {
-      if (!post) return;
-      if (normalize(post.username) !== normalize(socket.username)) return; // ownership check
-      db.run("DELETE FROM posts WHERE id=?", [postId], () => {
-        db.run("DELETE FROM likes WHERE postId=?", [postId], () => {
-          db.run("DELETE FROM comments WHERE postId=?", [postId], () => {
-            enviarFeed(io);
-          });
-        });
-      });
-    });
-  });
-
-  socket.on("like_post", ({ postId }) => {
-    if (!socket.username) return;
-    db.get("SELECT * FROM likes WHERE postId=? AND username=?", [postId, socket.username], (err, row) => {
-      if (row) {
-        db.run("DELETE FROM likes WHERE postId=? AND username=?", [postId, socket.username], () => { enviarFeed(io); });
-      } else {
-        db.run("INSERT INTO likes (postId,username) VALUES (?,?)", [postId, socket.username], () => { enviarFeed(io); });
-      }
-    });
-  });
-
-  socket.on("comment_post", ({ postId, text }) => {
-    if (!socket.username || !safeText(text)) return;
-    const comment = {
-      id: uuidv4(), postId,
-      username: socket.username, avatar: socket.avatar || "👤",
-      text: safeText(text), time: horaBrasil()
-    };
-    db.run(
-      "INSERT INTO cooments (id, postId, username, avatar, text, ti me) VALUES (?,?, ?, ?, ?,?)",
+server.listen(PORT, () => {
+  console.log('ARCAIDRON ativo na porta ' + PORT);
+});
