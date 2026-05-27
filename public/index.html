@@ -609,29 +609,11 @@ socket.emit("heartbeat");
 
 socket.on("users_list",list=>{
 
-usersCache = Array.isArray(list)
-? list
-: [];
+usersCache = list;
 
 verificarPessoa();
 
 });
-
-function pegarNomeUsuario(u){
-
-if(typeof u === "string"){
-return u;
-}
-
-return (
-u.username ||
-u.name ||
-u.user ||
-u.nome ||
-""
-);
-
-}
 
 function verificarPessoa(){
 
@@ -651,12 +633,9 @@ return;
 }
 
 const pessoa =
-usersCache.find(u =>
-
-pegarNomeUsuario(u)
-.toLowerCase()
-.includes(nome.toLowerCase())
-
+usersCache.find(
+u=>u.name.toLowerCase()===
+nome.toLowerCase()
 );
 
 if(!pessoa){
@@ -668,21 +647,15 @@ return;
 
 }
 
-const nomePessoa =
-pegarNomeUsuario(pessoa);
-
-if(
-typeof pessoa === "object" &&
-pessoa.online
-){
+if(pessoa.online){
 
 status.innerText =
-"🟢 " + nomePessoa + " online";
+"🟢 " + pessoa.name + " online";
 
 }else{
 
 status.innerText =
-"✅ " + nomePessoa + " encontrado";
+"⚫ " + pessoa.name + " offline";
 
 }
 
