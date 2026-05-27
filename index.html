@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>ARCAIDRON</title>
 <meta name="theme-color" content="#07111f">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="ARCAIDRON">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="/manifest.json">
 <script src="/socket.io/socket.io.js"></script>
 
@@ -15,7 +12,7 @@
 :root{--bg:#050914;--panel:#07111f;--bubble:#14233b;--mine:#075e54;--mine2:#0b776a;--line:#223654;--text:#eef6ff;--muted:#8da3bd;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--shadow:0 22px 80px rgba(0,0,0,.45)}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;font-family:Arial,system-ui,sans-serif;background:var(--bg);color:var(--text)}
-body{background:radial-gradient(circle at 55% 25%,rgba(59,130,246,.18),transparent 32%),radial-gradient(circle at 30% 80%,rgba(34,197,94,.11),transparent 30%),var(--bg);overflow:hidden}
+body{overflow:hidden;background:radial-gradient(circle at 55% 25%,rgba(59,130,246,.18),transparent 32%),radial-gradient(circle at 30% 80%,rgba(34,197,94,.11),transparent 30%),var(--bg)}
 button,input,select{font:inherit}
 button{cursor:pointer}
 .hidden{display:none!important}
@@ -106,10 +103,10 @@ button{cursor:pointer}
 @media(max-width:860px){
 body{overflow:hidden}
 .app{grid-template-columns:1fr}
-.sidebar{height:auto;max-height:310px;border-right:0;border-bottom:1px solid var(--line)}
+.sidebar{height:100vh;border-right:0;border-bottom:0}
 .app.fullChat .sidebar{display:none!important}
-.chat{height:calc(100vh - 310px);min-height:450px}
-.app.fullChat .chat{height:100vh;min-height:100vh}
+.chat{display:none;height:100vh;min-height:100vh}
+.app.fullChat .chat{display:grid}
 .bubble{max-width:88%}
 .chatHeader{height:64px}
 .headerActions{gap:5px}
@@ -130,7 +127,7 @@ body{overflow:hidden}
 </svg>
 </div>
 <div class="brand">ARCAIDRON</div>
-<div class="sub">Chat privado criptografado • Voz • Vídeo • Mensagens temporárias</div>
+<div class="sub">Chat privado criptografado • Voz • Vídeo</div>
 <div class="panel">
 <div class="tabs">
 <button id="loginTab" class="active">Entrar</button>
@@ -144,7 +141,6 @@ body{overflow:hidden}
 <button id="authBtn" class="btn full">⚡ Entrar</button>
 <p id="loginError" class="error"></p>
 </div>
-<p class="small">A chave da conversa não é enviada ao servidor.</p>
 </div>
 </section>
 
@@ -170,8 +166,7 @@ body{overflow:hidden}
 <div class="safeList">
 <div class="safeItem">✅ Mensagens criptografadas no navegador.</div>
 <div class="safeItem">✅ Arquivos criptografados antes do envio.</div>
-<div class="safeItem">✅ Mensagens autodestruídas em 1 hora.</div>
-<div class="safeItem">✅ Ligações por WebRTC com microfone e câmera.</div>
+<div class="safeItem">✅ Chamadas diretas para usuário online.</div>
 </div>
 </div>
 </aside>
@@ -263,9 +258,7 @@ body{overflow:hidden}
 <div id="toast" class="toast hidden"></div>
 
 <script>
-if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}
-
-const $ = function(id){return document.getElementById(id);};
+const $ = id => document.getElementById(id);
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -289,65 +282,83 @@ let pendingOffer = null;
 let pendingOfferVideo = false;
 let callBusy = false;
 
-const rtcConfig = {iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"},{urls:"stun:stun2.l.google.com:19302"}]};
+const rtcConfig = {
+iceServers:[
+{urls:"stun:stun.l.google.com:19302"},
+{urls:"stun:stun1.l.google.com:19302"},
+{urls:"stun:stun2.l.google.com:19302"}
+]
+};
 
-function toast(text){$("toast").textContent=text;$("toast").classList.remove("hidden");setTimeout(function(){$("toast").classList.add("hidden");},2800);}
+function toast(text){$("toast").textContent=text;$("toast").classList.remove("hidden");setTimeout(()=>$("toast").classList.add("hidden"),2800);}
 function cleanUsername(name){return String(name||"").trim().toLowerCase().replace(/[^a-z0-9_.-]/g,"").slice(0,32);}
-function escapeHtml(text){return String(text||"").replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c];});}
+function escapeHtml(text){return String(text||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
 function timeNow(ts){return new Date(ts||Date.now()).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});}
-function bufferToBase64(buffer){const bytes=new Uint8Array(buffer);let binary="";for(let i=0;i<bytes.length;i++){binary+=String.fromCharCode(bytes[i]);}return btoa(binary);}
-function base64ToBuffer(base64){const binary=atob(base64);const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++){bytes[i]=binary.charCodeAt(i);}return bytes.buffer;}
+function bufferToBase64(buffer){const bytes=new Uint8Array(buffer);let binary="";for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);return btoa(binary);}
+function base64ToBuffer(base64){const binary=atob(base64);const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes.buffer;}
 async function sha256(text){const hash=await crypto.subtle.digest("SHA-256",encoder.encode(text));return bufferToBase64(hash);}
 async function createCryptoKey(secret){const material=await crypto.subtle.importKey("raw",encoder.encode(secret),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt:encoder.encode("ARCAIDRON-v1"),iterations:250000,hash:"SHA-256"},material,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);}
-async function encryptText(text){const iv=crypto.getRandomValues(new Uint8Array(12));const encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},cryptoKey,encoder.encode(text));return {iv:bufferToBase64(iv),cipher:bufferToBase64(encrypted)};}
-async function decryptText(cipher,iv){try{const decrypted=await crypto.subtle.decrypt({name:"AES-GCM",iv:base64ToBuffer(iv)},cryptoKey,base64ToBuffer(cipher));return decoder.decode(decrypted);}catch(e){return "🔒 Mensagem protegida por outra chave";}}
-async function encryptFile(file){const iv=crypto.getRandomValues(new Uint8Array(12));const encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},cryptoKey,await file.arrayBuffer());return {iv:bufferToBase64(iv),cipher:bufferToBase64(encrypted),fileName:file.name,fileMime:file.type||"application/octet-stream"};}
-async function decryptFile(message){try{const decrypted=await crypto.subtle.decrypt({name:"AES-GCM",iv:base64ToBuffer(message.iv)},cryptoKey,base64ToBuffer(message.cipher));return URL.createObjectURL(new Blob([decrypted],{type:message.fileMime||"application/octet-stream"}));}catch(e){return null;}}
+async function encryptText(text){const iv=crypto.getRandomValues(new Uint8Array(12));const encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv},cryptoKey,encoder.encode(text));return {iv:bufferToBase64(iv),cipher:bufferToBase64(encrypted)};}
+async function decryptText(cipher,iv){try{const decrypted=await crypto.subtle.decrypt({name:"AES-GCM",iv:base64ToBuffer(iv)},cryptoKey,base64ToBuffer(cipher));return decoder.decode(decrypted);}catch{return "🔒 Mensagem protegida por outra chave";}}
+async function encryptFile(file){const iv=crypto.getRandomValues(new Uint8Array(12));const encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv},cryptoKey,await file.arrayBuffer());return {iv:bufferToBase64(iv),cipher:bufferToBase64(encrypted),fileName:file.name,fileMime:file.type||"application/octet-stream"};}
+async function decryptFile(message){try{const decrypted=await crypto.subtle.decrypt({name:"AES-GCM",iv:base64ToBuffer(message.iv)},cryptoKey,base64ToBuffer(message.cipher));return URL.createObjectURL(new Blob([decrypted],{type:message.fileMime||"application/octet-stream"}));}catch{return null;}}
 async function api(path,body){const response=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(body||{})});return response.json();}
 
 function showAuth(){$("authScreen").classList.remove("hidden");$("appScreen").classList.add("hidden");}
 function showApp(){$("authScreen").classList.add("hidden");$("appScreen").classList.remove("hidden");$("meAvatar").textContent=currentAvatar;$("meText").textContent=currentAvatar+" "+currentUser;connectSocket();}
+function enterFullChat(){$("appScreen").classList.add("fullChat");document.querySelector(".sidebar").classList.add("hidden");$("backBtn").classList.remove("hidden");}
+function exitFullChat(){$("appScreen").classList.remove("fullChat");document.querySelector(".sidebar").classList.remove("hidden");$("backBtn").classList.add("hidden");}
 
-function enterFullChat(){
-$("appScreen").classList.add("fullChat");
-document.querySelector(".sidebar").classList.add("hidden");
-$("backBtn").classList.remove("hidden");
-}
+$("loginTab").onclick=()=>{authMode="login";$("loginTab").classList.add("active");$("registerTab").classList.remove("active");$("authBtn").textContent="⚡ Entrar";$("loginError").textContent="";};
+$("registerTab").onclick=()=>{authMode="register";$("registerTab").classList.add("active");$("loginTab").classList.remove("active");$("authBtn").textContent="🛡️ Criar conta";$("loginError").textContent="";};
 
-function exitFullChat(){
-$("appScreen").classList.remove("fullChat");
-document.querySelector(".sidebar").classList.remove("hidden");
-$("backBtn").classList.add("hidden");
-}
-
-$("loginTab").onclick=function(){authMode="login";$("loginTab").classList.add("active");$("registerTab").classList.remove("active");$("authBtn").textContent="⚡ Entrar";$("loginError").textContent="";};
-$("registerTab").onclick=function(){authMode="register";$("registerTab").classList.add("active");$("loginTab").classList.remove("active");$("authBtn").textContent="🛡️ Criar conta";$("loginError").textContent="";};
-$("authBtn").onclick=async function(){const username=cleanUsername($("username").value);const password=$("password").value;const avatar=$("avatar").value;if(!username||!password){$("loginError").textContent="Digite nome e senha.";return;}const result=await api("/api/"+authMode,{username:username,password:password,avatar:avatar});if(result.error){$("loginError").textContent=result.error;return;}token=result.token;currentUser=result.username;currentAvatar=result.avatar||avatar||"🛡️";localStorage.setItem("arcaidron_token",token);localStorage.setItem("arcaidron_username",currentUser);localStorage.setItem("arcaidron_avatar",currentAvatar);showApp();};
+$("authBtn").onclick=async()=>{
+const username=cleanUsername($("username").value);
+const password=$("password").value;
+const avatar=$("avatar").value;
+if(!username||!password){$("loginError").textContent="Digite nome e senha.";return;}
+const result=await api("/api/"+authMode,{username,password,avatar});
+if(result.error){$("loginError").textContent=result.error;return;}
+token=result.token;
+currentUser=result.username;
+currentAvatar=result.avatar||avatar||"🛡️";
+localStorage.setItem("arcaidron_token",token);
+localStorage.setItem("arcaidron_username",currentUser);
+localStorage.setItem("arcaidron_avatar",currentAvatar);
+showApp();
+};
 
 function connectSocket(){
-if(socket){socket.disconnect();}
-socket=io({auth:{token:token}});
-socket.on("connect_error",function(){toast("Sessão expirada. Entre novamente.");localStorage.clear();showAuth();});
-socket.on("presence:update",function(data){if(data.username===peerUser){setPeerStatus(data.status);}});
-socket.on("room:history",async function(messages){$("messages").innerHTML="";if(!messages||messages.length===0){$("messages").innerHTML='<div class="empty"><h3>Ala segura aberta</h3><p>As mensagens aparecem aqui, em tela cheia.</p></div>';return;}for(const msg of messages){await addMessage(msg);}});
-socket.on("message:new",async function(message){await addMessage(message);});
-socket.on("message:edited",async function(data){await updateEditedMessage(data);});
-socket.on("message:deleted",function(data){markDeleted(data.id);});
-socket.on("message:seen",function(data){updateSeen(data.id);});
-socket.on("message:expired",function(){toast("Mensagens antigas foram autodestruídas.");});
-socket.on("typing",function(data){if(data.username!==currentUser){$("typing").textContent=data.typing?"digitando...":"";}});
+if(socket) socket.disconnect();
+socket=io({auth:{token}});
+
+socket.on("connect_error",()=>{toast("Sessão expirada. Entre novamente.");localStorage.clear();showAuth();});
+socket.on("presence:update",data=>{if(data.username===peerUser)setPeerStatus(data.status);});
+
+socket.on("room:history",async messages=>{
+$("messages").innerHTML="";
+if(!messages||messages.length===0){$("messages").innerHTML='<div class="empty"><h3>Ala segura aberta</h3><p>As mensagens aparecem aqui.</p></div>';return;}
+for(const msg of messages) await addMessage(msg);
+});
+
+socket.on("message:new",addMessage);
+socket.on("message:edited",updateEditedMessage);
+socket.on("message:deleted",data=>markDeleted(data.id));
+socket.on("message:seen",data=>updateSeen(data.id));
+socket.on("message:expired",()=>toast("Mensagens antigas foram autodestruídas."));
+socket.on("typing",data=>{if(data.username!==currentUser)$("typing").textContent=data.typing?"digitando...":"";});
 socket.on("call:signal",handleCallSignal);
 }
 
 function setPeerStatus(status){$("peerStatus").textContent=status;$("targetStatus").textContent=peerUser?peerUser+" "+status:"Status aparece depois da chave válida.";$("targetDot").classList.toggle("online",status==="online");}
 
-$("openChatBtn").onclick=async function(){
+$("openChatBtn").onclick=async()=>{
 const target=cleanUsername($("otherUser").value);
 const key=$("chatKey").value;
 if(!target||!key){toast("Digite o nome exato e a chave privada.");return;}
 cryptoKey=await createCryptoKey(key);
 const sharedKeyHash=await sha256(key);
-const result=await api("/api/open-chat",{target:target,sharedKeyHash:sharedKeyHash});
+const result=await api("/api/open-chat",{target,sharedKeyHash});
 if(result.error){toast("Usuário ou chave inválidos.");return;}
 currentRoom=result.roomId;
 peerUser=result.peer.username;
@@ -360,73 +371,147 @@ enterFullChat();
 toast("Conversa segura aberta.");
 };
 
-$("backBtn").onclick=function(){exitFullChat();};
-$("logoutBtn").onclick=function(){localStorage.clear();location.reload();};
-$("clearBtn").onclick=function(){$("messages").innerHTML='<div class="empty"><h3>Tela limpa</h3><p>Isso limpa apenas sua tela.</p></div>';};
+$("backBtn").onclick=exitFullChat;
+$("logoutBtn").onclick=()=>{localStorage.clear();location.reload();};
+$("clearBtn").onclick=()=>{$("messages").innerHTML='<div class="empty"><h3>Tela limpa</h3><p>Isso limpa apenas sua tela.</p></div>';};
 
-function clearEmpty(){const empty=$("messages").querySelector(".empty");if(empty){empty.remove();}}
+function clearEmpty(){const empty=$("messages").querySelector(".empty");if(empty)empty.remove();}
 
 async function addMessage(message){
 clearEmpty();
 const div=document.createElement("div");
 div.className="bubble "+(message.from===currentUser?"mine":"");
 div.id="msg_"+message.id;
-if(message.deleted){div.classList.add("deleted");}
+if(message.deleted)div.classList.add("deleted");
+
 let body="";
 if(message.deleted){body="Mensagem apagada para todos";}
 else if(message.type==="file"||message.type==="image"||message.type==="audio"){
 const url=await decryptFile(message);
-if(!url){body="🔒 Arquivo protegido por outra chave";}
-else if(message.type==="image"){body='<img class="media" src="'+url+'">';}
-else if(message.type==="audio"){body='<audio controls src="'+url+'"></audio>';}
-else{body='<a class="fileLink" href="'+url+'" download="'+escapeHtml(message.fileName||"arquivo")+'">📎 '+escapeHtml(message.fileName||"arquivo")+"</a>";}
-}else{body=escapeHtml(await decryptText(message.cipher,message.iv));}
+if(!url)body="🔒 Arquivo protegido por outra chave";
+else if(message.type==="image")body='<img class="media" src="'+url+'">';
+else if(message.type==="audio")body='<audio controls src="'+url+'"></audio>';
+else body='<a class="fileLink" href="'+url+'" download="'+escapeHtml(message.fileName||"arquivo")+'">📎 '+escapeHtml(message.fileName||"arquivo")+"</a>";
+}else{
+body=escapeHtml(await decryptText(message.cipher,message.iv));
+}
+
 let html="";
-if(message.replyTo){html+='<div class="replyPreview">Respondendo mensagem anterior</div>';}
-html+='<div class="msgBody">'+body;
-if(message.edited){html+=' <small>(editada)</small>';}
-html+='</div><div class="msgMeta"><span>'+timeNow(message.createdAt)+'</span>';
-if(message.from===currentUser){html+='<span id="seen_'+message.id+'">✓</span>';}
+if(message.replyTo)html+='<div class="replyPreview">Respondendo mensagem anterior</div>';
+html+='<div class="msgBody">'+body+(message.edited?' <small>(editada)</small>':'')+'</div>';
+html+='<div class="msgMeta"><span>'+timeNow(message.createdAt)+'</span>';
+if(message.from===currentUser)html+='<span id="seen_'+message.id+'">✓</span>';
 html+='</div><div class="msgActions"><button data-act="reply">Responder</button>';
-if(message.from===currentUser){html+='<button data-act="edit">Editar</button><button data-act="delete">Apagar</button>';}
+if(message.from===currentUser)html+='<button data-act="edit">Editar</button><button data-act="delete">Apagar</button>';
 html+='</div>';
+
 div.innerHTML=html;
-const replyBtn=div.querySelector('[data-act="reply"]');if(replyBtn){replyBtn.onclick=function(){startReply(message.id,div.querySelector(".msgBody").innerText.slice(0,80));};}
-const editBtn=div.querySelector('[data-act="edit"]');if(editBtn){editBtn.onclick=function(){editMessage(message.id,div.querySelector(".msgBody").innerText);};}
-const delBtn=div.querySelector('[data-act="delete"]');if(delBtn){delBtn.onclick=function(){deleteMessage(message.id);};}
+
+const replyBtn=div.querySelector('[data-act="reply"]');
+if(replyBtn)replyBtn.onclick=()=>startReply(message.id,div.querySelector(".msgBody").innerText.slice(0,80));
+
+const editBtn=div.querySelector('[data-act="edit"]');
+if(editBtn)editBtn.onclick=()=>editMessage(message.id,div.querySelector(".msgBody").innerText);
+
+const delBtn=div.querySelector('[data-act="delete"]');
+if(delBtn)delBtn.onclick=()=>deleteMessage(message.id);
+
 $("messages").appendChild(div);
 $("messages").scrollTop=$("messages").scrollHeight;
-if(message.from!==currentUser){socket.emit("message:seen",{roomId:currentRoom,id:message.id});}
+
+if(message.from!==currentUser)socket.emit("message:seen",{roomId:currentRoom,id:message.id});
 }
 
 function startReply(id,text){replyTo=id;$("replyText").textContent="Respondendo: "+text;$("replyBox").classList.remove("hidden");$("messageInput").focus();}
-$("cancelReplyBtn").onclick=function(){replyTo="";$("replyBox").classList.add("hidden");};
-async function editMessage(id,oldText){const novo=prompt("Editar mensagem:",oldText.replace("(editada)","").trim());if(!novo){return;}const encrypted=await encryptText(novo);socket.emit("message:edit",{roomId:currentRoom,id:id,cipher:encrypted.cipher,iv:encrypted.iv});}
-function deleteMessage(id){if(!confirm("Apagar mensagem para todos?")){return;}socket.emit("message:delete",{roomId:currentRoom,id:id});}
-async function updateEditedMessage(data){const element=$("msg_"+data.id);if(!element){return;}const text=await decryptText(data.cipher,data.iv);element.querySelector(".msgBody").innerHTML=escapeHtml(text)+" <small>(editada)</small>";}
-function markDeleted(id){const element=$("msg_"+id);if(!element){return;}element.classList.add("deleted");element.querySelector(".msgBody").textContent="Mensagem apagada para todos";}
-function updateSeen(id){const el=$("seen_"+id);if(el){el.textContent="✓✓";}}
+$("cancelReplyBtn").onclick=()=>{replyTo="";$("replyBox").classList.add("hidden");};
+
+async function editMessage(id,oldText){
+const novo=prompt("Editar mensagem:",oldText.replace("(editada)","").trim());
+if(!novo)return;
+const encrypted=await encryptText(novo);
+socket.emit("message:edit",{roomId:currentRoom,id,cipher:encrypted.cipher,iv:encrypted.iv});
+}
+
+function deleteMessage(id){if(confirm("Apagar mensagem para todos?"))socket.emit("message:delete",{roomId:currentRoom,id});}
+async function updateEditedMessage(data){const element=$("msg_"+data.id);if(!element)return;const text=await decryptText(data.cipher,data.iv);element.querySelector(".msgBody").innerHTML=escapeHtml(text)+" <small>(editada)</small>";}
+function markDeleted(id){const element=$("msg_"+id);if(!element)return;element.classList.add("deleted");element.querySelector(".msgBody").textContent="Mensagem apagada para todos";}
+function updateSeen(id){const el=$("seen_"+id);if(el)el.textContent="✓✓";}
 
 $("sendBtn").onclick=sendText;
-$("messageInput").onkeydown=function(event){if(event.key==="Enter"){sendText();}};
-$("messageInput").oninput=function(){if(!currentRoom){return;}socket.emit("typing",{roomId:currentRoom,typing:true});clearTimeout(typingTimer);typingTimer=setTimeout(function(){socket.emit("typing",{roomId:currentRoom,typing:false});},900);};
+$("messageInput").onkeydown=e=>{if(e.key==="Enter")sendText();};
+$("messageInput").oninput=()=>{if(!currentRoom)return;socket.emit("typing",{roomId:currentRoom,typing:true});clearTimeout(typingTimer);typingTimer=setTimeout(()=>socket.emit("typing",{roomId:currentRoom,typing:false}),900);};
 
-async function sendText(){if(!currentRoom){toast("Abra uma conversa primeiro.");return;}const text=$("messageInput").value.trim();if(!text){return;}const encrypted=await encryptText(text);socket.emit("message:send",{roomId:currentRoom,type:"text",replyTo:replyTo,cipher:encrypted.cipher,iv:encrypted.iv});$("messageInput").value="";replyTo="";$("replyBox").classList.add("hidden");}
+async function sendText(){
+if(!currentRoom){toast("Abra uma conversa primeiro.");return;}
+const text=$("messageInput").value.trim();
+if(!text)return;
+const encrypted=await encryptText(text);
+socket.emit("message:send",{roomId:currentRoom,type:"text",replyTo,cipher:encrypted.cipher,iv:encrypted.iv});
+$("messageInput").value="";
+replyTo="";
+$("replyBox").classList.add("hidden");
+}
 
-$("fileBtn").onclick=function(){$("fileInput").click();};
-$("photoBtn").onclick=function(){$("imageInput").click();};
-$("audioBtn").onclick=function(){$("audioInput").click();};
+$("fileBtn").onclick=()=>$("fileInput").click();
+$("photoBtn").onclick=()=>$("imageInput").click();
+$("audioBtn").onclick=()=>$("audioInput").click();
 
-async function sendFile(file,type){if(!currentRoom){toast("Abra uma conversa primeiro.");return;}if(!file){return;}if(file.size>22*1024*1024){toast("Arquivo muito grande. Use até 22MB.");return;}const encrypted=await encryptFile(file);socket.emit("message:send",{roomId:currentRoom,type:type,replyTo:replyTo,cipher:encrypted.cipher,iv:encrypted.iv,fileName:encrypted.fileName,fileMime:encrypted.fileMime});replyTo="";$("replyBox").classList.add("hidden");}
-$("fileInput").onchange=function(e){sendFile(e.target.files[0],"file").then(function(){e.target.value="";});};
-$("imageInput").onchange=function(e){sendFile(e.target.files[0],"image").then(function(){e.target.value="";});};
-$("audioInput").onchange=function(e){sendFile(e.target.files[0],"audio").then(function(){e.target.value="";});};
+async function sendFile(file,type){
+if(!currentRoom){toast("Abra uma conversa primeiro.");return;}
+if(!file)return;
+if(file.size>22*1024*1024){toast("Arquivo muito grande. Use até 22MB.");return;}
+const encrypted=await encryptFile(file);
+socket.emit("message:send",{roomId:currentRoom,type,replyTo,cipher:encrypted.cipher,iv:encrypted.iv,fileName:encrypted.fileName,fileMime:encrypted.fileMime});
+replyTo="";
+$("replyBox").classList.add("hidden");
+}
 
-function showCallWindow(video){$("callWindow").classList.remove("hidden");currentCallVideo=video;if(video){$("videoGrid").classList.remove("hidden");$("audioOnlyBox").classList.add("hidden");$("flipBtn").classList.remove("hidden");}else{$("videoGrid").classList.add("hidden");$("audioOnlyBox").classList.remove("hidden");$("flipBtn").classList.add("hidden");}}
+$("fileInput").onchange=e=>sendFile(e.target.files[0],"file").then(()=>e.target.value="");
+$("imageInput").onchange=e=>sendFile(e.target.files[0],"image").then(()=>e.target.value="");
+$("audioInput").onchange=e=>sendFile(e.target.files[0],"audio").then(()=>e.target.value="");
+
+function setIncomingPeer(data){
+if(data.from){
+peerUser=data.from;
+peerAvatar=data.fromAvatar||"👤";
+$("peerAvatar").textContent=peerAvatar;
+$("peerName").textContent=peerUser;
+$("peerStatus").textContent="online";
+}
+if(data.roomId){
+currentRoom=data.roomId;
+socket.emit("room:join",{roomId:currentRoom});
+}
+}
+
+function showCallWindow(video){
+$("callWindow").classList.remove("hidden");
+currentCallVideo=video;
+if(video){$("videoGrid").classList.remove("hidden");$("audioOnlyBox").classList.add("hidden");$("flipBtn").classList.remove("hidden");}
+else{$("videoGrid").classList.add("hidden");$("audioOnlyBox").classList.remove("hidden");$("flipBtn").classList.add("hidden");}
+}
+
 function hideIncoming(){$("incomingCall").classList.add("hidden");}
-function showIncoming(video){pendingOfferVideo=video;$("incomingAvatar").textContent=peerAvatar||"👤";$("incomingTitle").textContent=video?"Chamada de vídeo":"Chamada de voz";$("incomingSub").textContent=peerUser+" está chamando no ARCAIDRON";$("incomingCall").classList.remove("hidden");}
-async function createPeer(){peerConnection=new RTCPeerConnection(rtcConfig);peerConnection.ontrack=function(event){$("remoteVideo").srcObject=event.streams[0];};peerConnection.onicecandidate=function(event){if(event.candidate&&currentRoom){socket.emit("call:signal",{roomId:currentRoom,type:"ice",candidate:event.candidate});}};peerConnection.onconnectionstatechange=function(){if(!peerConnection){return;}if(peerConnection.connectionState==="connected"){toast("Chamada conectada.");}if(["failed","disconnected"].includes(peerConnection.connectionState)){toast("A chamada caiu ou a rede bloqueou a conexão.");}};}
-async function getMedia(video){return navigator.mediaDevices.getUserMedia({audio:true,video:video?{facingMode:usingFrontCamera?"user":"environment"}:false});}
+
+function showIncoming(video){
+pendingOfferVideo=video;
+$("incomingAvatar").textContent=peerAvatar||"👤";
+$("incomingTitle").textContent=video?"Chamada de vídeo":"Chamada de voz";
+$("incomingSub").textContent=(peerUser||"Usuário")+" está chamando no ARCAIDRON";
+$("incomingCall").classList.remove("hidden");
+enterFullChat();
+}
+
+async function createPeer(){
+peerConnection=new RTCPeerConnection(rtcConfig);
+peerConnection.ontrack=e=>{$("remoteVideo").srcObject=e.streams[0];};
+peerConnection.onicecandidate=e=>{if(e.candidate&&currentRoom)socket.emit("call:signal",{roomId:currentRoom,type:"ice",candidate:e.candidate});};
+peerConnection.onconnectionstatechange=()=>{if(!peerConnection)return;if(peerConnection.connectionState==="connected")toast("Chamada conectada.");if(["failed","disconnected"].includes(peerConnection.connectionState))toast("A chamada caiu ou a rede bloqueou a conexão.");};
+}
+
+async function getMedia(video){
+return navigator.mediaDevices.getUserMedia({audio:true,video:video?{facingMode:usingFrontCamera?"user":"environment"}:false});
+}
 
 async function startCall(video){
 if(!currentRoom){toast("Abra uma conversa primeiro.");return;}
@@ -437,16 +522,20 @@ showCallWindow(video);
 localStream=await getMedia(video);
 $("localVideo").srcObject=localStream;
 await createPeer();
-localStream.getTracks().forEach(function(track){peerConnection.addTrack(track,localStream);});
+localStream.getTracks().forEach(track=>peerConnection.addTrack(track,localStream));
 const offer=await peerConnection.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:video});
 await peerConnection.setLocalDescription(offer);
-socket.emit("call:signal",{roomId:currentRoom,type:"offer",offer:offer,video:video});
+socket.emit("call:signal",{roomId:currentRoom,type:"offer",offer,video});
 toast(video?"Chamando vídeo...":"Chamando voz...");
-}catch(error){callBusy=false;endCall(false);toast("Permita câmera/microfone no navegador.");}
+}catch{
+callBusy=false;
+endCall(false);
+toast("Permita câmera/microfone no navegador.");
+}
 }
 
 async function answerCall(){
-if(!pendingOffer){return;}
+if(!pendingOffer)return;
 try{
 hideIncoming();
 callBusy=true;
@@ -454,35 +543,51 @@ showCallWindow(pendingOfferVideo);
 localStream=await getMedia(pendingOfferVideo);
 $("localVideo").srcObject=localStream;
 await createPeer();
-localStream.getTracks().forEach(function(track){peerConnection.addTrack(track,localStream);});
+localStream.getTracks().forEach(track=>peerConnection.addTrack(track,localStream));
 await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
 const answer=await peerConnection.createAnswer();
 await peerConnection.setLocalDescription(answer);
-socket.emit("call:signal",{roomId:currentRoom,type:"answer",answer:answer});
+socket.emit("call:signal",{roomId:currentRoom,type:"answer",answer});
 pendingOffer=null;
-}catch(error){declineCall();toast("Não foi possível atender. Verifique permissões.");}
+}catch{
+declineCall();
+toast("Não foi possível atender. Verifique permissões.");
+}
 }
 
-function declineCall(){hideIncoming();pendingOffer=null;if(currentRoom){socket.emit("call:signal",{roomId:currentRoom,type:"decline"});}callBusy=false;}
-
-async function handleCallSignal(data){
-if(!currentRoom||data.roomId!==currentRoom){return;}
-if(data.type==="offer"){if(callBusy){socket.emit("call:signal",{roomId:currentRoom,type:"busy"});return;}pendingOffer=data.offer;showIncoming(!!data.video);return;}
-if(data.type==="answer"&&peerConnection){await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));return;}
-if(data.type==="ice"&&peerConnection){try{await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));}catch(e){}return;}
-if(data.type==="decline"){toast("Chamada recusada.");endCall(false);return;}
-if(data.type==="busy"){toast("Usuário está em outra chamada.");endCall(false);return;}
-if(data.type==="hang"){toast("Chamada encerrada.");endCall(false);return;}
-}
-
-function endCall(send){
-if(send===undefined){send=true;}
-if(send&&currentRoom){socket.emit("call:signal",{roomId:currentRoom,type:"hang"});}
+function declineCall(){
 hideIncoming();
 pendingOffer=null;
-if(peerConnection){peerConnection.close();}
+if(currentRoom)socket.emit("call:signal",{roomId:currentRoom,type:"decline"});
+callBusy=false;
+}
+
+async function handleCallSignal(data){
+if(data.type==="offer"){
+if(callBusy){socket.emit("call:signal",{roomId:data.roomId,type:"busy"});return;}
+setIncomingPeer(data);
+pendingOffer=data.offer;
+showIncoming(!!data.video);
+return;
+}
+
+if(data.roomId!==currentRoom)return;
+
+if(data.type==="answer"&&peerConnection){await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));return;}
+if(data.type==="ice"&&peerConnection){try{await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));}catch{}return;}
+if(data.type==="decline"){toast("Chamada recusada.");endCall(false);return;}
+if(data.type==="busy"){toast("Usuário está em outra chamada.");endCall(false);return;}
+if(data.type==="offline"){toast("Usuário offline.");endCall(false);return;}
+if(data.type==="hang"){toast("Chamada encerrada.");endCall(false);}
+}
+
+function endCall(send=true){
+if(send&&currentRoom)socket.emit("call:signal",{roomId:currentRoom,type:"hang"});
+hideIncoming();
+pendingOffer=null;
+if(peerConnection)peerConnection.close();
 peerConnection=null;
-if(localStream){localStream.getTracks().forEach(function(track){track.stop();});}
+if(localStream)localStream.getTracks().forEach(track=>track.stop());
 localStream=null;
 $("localVideo").srcObject=null;
 $("remoteVideo").srcObject=null;
@@ -492,15 +597,35 @@ muted=false;
 $("muteBtn").textContent="🎙️ Mudo";
 }
 
-$("voiceBtn").onclick=function(){startCall(false);};
-$("videoBtn").onclick=function(){startCall(true);};
-$("acceptCallBtn").onclick=function(){answerCall();};
-$("declineCallBtn").onclick=function(){declineCall();};
-$("endCallBtn").onclick=function(){endCall(true);};
-$("muteBtn").onclick=function(){muted=!muted;if(localStream){localStream.getAudioTracks().forEach(function(track){track.enabled=!muted;});}$("muteBtn").textContent=muted?"🔇 Ativar áudio":"🎙️ Mudo";};
-$("flipBtn").onclick=async function(){if(!currentCallVideo||!localStream||!peerConnection){return;}usingFrontCamera=!usingFrontCamera;try{const newStream=await getMedia(true);const newVideoTrack=newStream.getVideoTracks()[0];const oldVideoTrack=localStream.getVideoTracks()[0];const sender=peerConnection.getSenders().find(function(s){return s.track&&s.track.kind==="video";});if(sender&&newVideoTrack){await sender.replaceTrack(newVideoTrack);}if(oldVideoTrack){oldVideoTrack.stop();localStream.removeTrack(oldVideoTrack);}localStream.addTrack(newVideoTrack);$("localVideo").srcObject=localStream;newStream.getAudioTracks().forEach(function(track){track.stop();});}catch(e){toast("Não foi possível virar a câmera.");}};
+$("voiceBtn").onclick=()=>startCall(false);
+$("videoBtn").onclick=()=>startCall(true);
+$("acceptCallBtn").onclick=answerCall;
+$("declineCallBtn").onclick=declineCall;
+$("endCallBtn").onclick=()=>endCall(true);
 
-if(token&&currentUser){showApp();}else{showAuth();}
+$("muteBtn").onclick=()=>{
+muted=!muted;
+if(localStream)localStream.getAudioTracks().forEach(track=>track.enabled=!muted);
+$("muteBtn").textContent=muted?"🔇 Ativar áudio":"🎙️ Mudo";
+};
+
+$("flipBtn").onclick=async()=>{
+if(!currentCallVideo||!localStream||!peerConnection)return;
+usingFrontCamera=!usingFrontCamera;
+try{
+const newStream=await getMedia(true);
+const newVideoTrack=newStream.getVideoTracks()[0];
+const oldVideoTrack=localStream.getVideoTracks()[0];
+const sender=peerConnection.getSenders().find(s=>s.track&&s.track.kind==="video");
+if(sender&&newVideoTrack)await sender.replaceTrack(newVideoTrack);
+if(oldVideoTrack){oldVideoTrack.stop();localStream.removeTrack(oldVideoTrack);}
+localStream.addTrack(newVideoTrack);
+$("localVideo").srcObject=localStream;
+newStream.getAudioTracks().forEach(track=>track.stop());
+}catch{toast("Não foi possível virar a câmera.");}
+};
+
+if(token&&currentUser)showApp();else showAuth();
 </script>
 </body>
 </html>
