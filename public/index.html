@@ -882,14 +882,46 @@ fileMime:file.type||"application/octet-stream"
 };
 }
 
-async function decryptFile(message){
-try{
-const decrypted=await crypto.subtle.decrypt({name:"AES-GCM",iv:base64ToBuffer(message.iv)},cryptoKey,base64ToBuffer(message.cipher));
-return URL.createObjectURL(new Blob([decrypted],{type:message.fileMime||"application/octet-stream"}));
-}catch{
-return null;
-}
-}
+  async function decryptFile(message){
+  try{
+  const decrypted=await crypto.subtle.decrypt(
+  {name:"AES-GCM",iv:base64ToBuffer(message.iv)},
+  cryptoKey,
+  base64ToBuffer(message.cipher)
+  );
+
+  const blob=new Blob([decrypted],{
+  type:message.fileMime||"application/octet-stream"
+  });
+
+  return {
+  url:URL.createObjectURL(blob),
+  name:message.fileName||"arquivo-arcaidron",
+  mime:message.fileMime||"application/octet-stream"
+  };
+
+  }catch{
+  return null;
+  }
+  }
+
+  function downloadFile(url,name){
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=name||"arquivo-arcaidron";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  }
+
+  function downloadFile(url,name){
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=name||"arquivo-arcaidron";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  }
 
 async function api(path,body){
 const response=await fetch(path,{
@@ -1147,19 +1179,25 @@ let body="";
 if(message.deleted){
 body="Mensagem apagada para todos";
 }else if(message.type==="file"||message.type==="image"||message.type==="audio"||message.type==="voice"){
-const url=await decryptFile(message);
+  const file=await decryptFile(message);
 
-if(!url){
-body="🔒 Arquivo protegido por outra chave";
-}else if(message.type==="image"){
-body='<img class="media" src="'+url+'">';
-}else if(message.type==="audio"||message.type==="voice"){
-body='<audio controls src="'+url+'"></audio>';
-}else if((message.fileMime||"").startsWith("video/")){
-body='<video class="media" controls src="'+url+'"></video>';
-}else{
-body='<a class="fileLink" href="'+url+'" download="'+escapeHtml(message.fileName||"arquivo")+'">📎 '+escapeHtml(message.fileName||"arquivo")+"</a>";
-}
+  if(!file){
+  body="🔒 Arquivo protegido por outra chave";
+  }else{
+  const safeName=escapeHtml(file.name);
+  const downloadBtn=
+  '<button class="fileLink" onclick="downloadFile(\''+file.url+'\',\''+safeName+'\')">⬇️ Baixar '+safeName+'</button>';
+
+  if(message.type==="image"){
+  body='<img class="media" src="'+file.url+'">'+downloadBtn;
+  }else if(message.type==="audio"||message.type==="voice"){
+  body='<audio controls src="'+file.url+'"></audio>'+downloadBtn;
+  }else if((message.fileMime||"").startsWith("video/")){
+  body='<video class="media" controls src="'+file.url+'"></video>'+downloadBtn;
+  }else{
+  body=downloadBtn;
+  }
+  }
 }else{
 body=escapeHtml(await decryptText(message.cipher,message.iv));
 }
@@ -1514,10 +1552,10 @@ localStream.getTracks().forEach(track=>{
 peerConnection.addTrack(track,localStream);
 });
 
-const offer=await peerConnection.createOffer({
-offerToReceiveAudio:true,
-offerToReceiveVideo:video
-});
+  const offer=await peerConnection.createOffer({
+  offerToReceiveAudio:true,
+  offerToReceiveVideo:true
+  });
 
 await peerConnection.setLocalDescription(offer);
 
@@ -1553,6 +1591,14 @@ await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer
 const answer=await peerConnection.createAnswer();
 
 await peerConnection.setLocalDescription(answer);
+  setTimeout(()=>{
+  const remoteAudio=$("remoteAudio");
+  if(remoteAudio){
+  remoteAudio.muted=false;
+  remoteAudio.volume=1;
+  remoteAudio.play().catch(()=>{});
+  }
+  },500);
 
 socket.emit("call:signal",{roomId:currentRoom,type:"answer",answer});
 
