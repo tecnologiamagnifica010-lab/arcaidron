@@ -997,10 +997,55 @@ socket.on("message:new",addMessage);
 socket.on("message:edited",updateEditedMessage);
 socket.on("message:deleted",data=>markDeleted(data.id));
 socket.on("message:seen",data=>updateSeen(data.id));
+  socket.on("message:delivered",data=>{
+  const el=$("seen_"+data.id);
+  if(el && el.textContent!=="✓✓"){
+  el.textContent="✓✓";
+  }
+  });
 socket.on("message:expired",()=>toast("Mensagens antigas foram autodestruídas."));
 socket.on("typing",data=>{
 if(data.username!==currentUser)$("typing").textContent=data.typing?"digitando...":"";
 });
+  socket.on("presence:update",data=>{
+
+  if(data.username!==peerUser)return;
+
+  if(data.status==="online"){
+
+  setPeerStatus("online");
+  return;
+
+  }
+
+  if(data.lastSeen){
+
+  const d=new Date(data.lastSeen);
+
+  $("peerStatus").textContent=
+  "visto por último às "+
+  d.toLocaleTimeString("pt-BR",{
+  hour:"2-digit",
+  minute:"2-digit"
+  });
+
+  $("targetStatus").textContent=
+  peerUser+
+  " visto por último às "+
+  d.toLocaleTimeString("pt-BR",{
+  hour:"2-digit",
+  minute:"2-digit"
+  });
+
+  $("targetDot").classList.remove("online");
+
+  return;
+
+  }
+
+  setPeerStatus("offline");
+
+  });
 socket.on("call:signal",handleCallSignal);
 }
 
@@ -1036,7 +1081,36 @@ peerAvatar=result.peer.avatar||"👤";
 $("peerAvatar").textContent=peerAvatar;
 $("peerName").textContent=peerUser;
 
-setPeerStatus(result.status);
+  if(result.status==="online"){
+
+  setPeerStatus("online");
+
+  }else if(result.lastSeen){
+
+  const d=new Date(result.lastSeen);
+
+  $("peerStatus").textContent=
+  "visto por último às "+
+  d.toLocaleTimeString("pt-BR",{
+  hour:"2-digit",
+  minute:"2-digit"
+  });
+
+  $("targetStatus").textContent=
+  peerUser+
+  " visto por último às "+
+  d.toLocaleTimeString("pt-BR",{
+  hour:"2-digit",
+  minute:"2-digit"
+  });
+
+  $("targetDot").classList.remove("online");
+
+  }else{
+
+  setPeerStatus("offline");
+
+  }
 
 socket.emit("room:join",{roomId:currentRoom});
 enterFullChat();
@@ -1164,10 +1238,14 @@ element.classList.add("deleted");
 element.querySelector(".msgBody").textContent="Mensagem apagada para todos";
 }
 
-function updateSeen(id){
-const el=$("seen_"+id);
-if(el)el.textContent="✓✓";
-}
+  function updateSeen(id){
+  const el=$("seen_"+id);
+
+  if(el){
+  el.textContent="✓✓";
+  el.style.color="#60a5fa";
+  }
+  }
 
 $("sendBtn").onclick=sendText;
 
