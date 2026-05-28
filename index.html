@@ -3,17 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
 <title>ARCAIDRON</title>
-
 <meta name="theme-color" content="#07111f">
-
 <link rel="manifest" href="/manifest.json">
-
 <script src="/socket.io/socket.io.js"></script>
 
 <style>
-
 :root{
 --bg:#050914;
 --panel:#07111f;
@@ -28,11 +23,7 @@
 --red:#ef4444;
 --shadow:0 22px 80px rgba(0,0,0,.45);
 }
-
-*{
-box-sizing:border-box
-}
-
+*{box-sizing:border-box}
 html,body{
 margin:0;
 height:100%;
@@ -40,43 +31,24 @@ font-family:Arial,system-ui,sans-serif;
 background:var(--bg);
 color:var(--text);
 }
-
 body{
 overflow:hidden;
-background:
-radial-gradient(circle at 55% 25%,rgba(59,130,246,.18),transparent 32%),
-radial-gradient(circle at 30% 80%,rgba(34,197,94,.11),transparent 30%),
-var(--bg);
+background:radial-gradient(circle at 55% 25%,rgba(59,130,246,.18),transparent 32%),radial-gradient(circle at 30% 80%,rgba(34,197,94,.11),transparent 30%),var(--bg);
 }
-
-button,input,select{
-font:inherit
-}
-
-button{
-cursor:pointer
-}
-
-.hidden{
-display:none!important
-}
-
-.screen{
-height:100%;
-width:100%
-}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.screen{height:100%;width:100%}
 
 .authScreen{
 display:grid;
 place-items:center;
 padding:22px;
 }
-
 .authCard{
 width:min(430px,94vw);
 text-align:center;
 }
-
 .logo{
 width:72px;
 height:72px;
@@ -88,12 +60,7 @@ background:linear-gradient(145deg,#101f38,#06101f);
 box-shadow:0 0 35px rgba(59,130,246,.55);
 border:1px solid rgba(96,165,250,.25);
 }
-
-.logo svg{
-width:40px;
-height:40px
-}
-
+.logo svg{width:40px;height:40px}
 .brand{
 font-size:34px;
 font-weight:900;
@@ -101,13 +68,11 @@ letter-spacing:-1px;
 color:#60a5fa;
 text-shadow:0 0 20px rgba(96,165,250,.55);
 }
-
 .sub{
 font-size:14px;
 color:var(--muted);
 margin:8px 0 24px;
 }
-
 .panel{
 background:rgba(10,22,39,.88);
 border:1px solid var(--line);
@@ -116,7 +81,6 @@ padding:22px;
 box-shadow:var(--shadow);
 backdrop-filter:blur(16px);
 }
-
 .tabs{
 display:grid;
 grid-template-columns:1fr 1fr;
@@ -126,7 +90,6 @@ border-radius:18px;
 background:#050d19;
 margin-bottom:18px;
 }
-
 .tabs button{
 border:0;
 padding:13px;
@@ -135,12 +98,10 @@ background:transparent;
 color:var(--muted);
 font-weight:800;
 }
-
 .tabs button.active{
 background:#13243d;
 color:white;
 }
-
 .input,.select{
 width:100%;
 border:1px solid var(--line);
@@ -151,12 +112,10 @@ padding:15px;
 outline:none;
 margin-top:10px;
 }
-
 .input:focus,.select:focus{
 border-color:var(--blue);
 box-shadow:0 0 0 4px rgba(59,130,246,.16);
 }
-
 .btn{
 border:0;
 border-radius:16px;
@@ -165,1384 +124,1533 @@ font-weight:900;
 background:linear-gradient(135deg,#2563eb,#60a5fa);
 color:white;
 }
+.btn.full{width:100%;margin-top:12px}
+.btn.dark{background:#102033;border:1px solid var(--line)}
+.error{min-height:18px;font-size:13px;color:#fecaca}
 
-.btn.full{
-width:100%;
-margin-top:12px
+.app{
+height:100%;
+display:grid;
+grid-template-columns:340px 1fr;
 }
-
-.btn.dark{
-background:#102033;
-border:1px solid var(--line)
+.app.fullChat{grid-template-columns:1fr}
+.sidebar{
+height:100%;
+overflow:auto;
+background:rgba(4,12,25,.85);
+border-right:1px solid var(--line);
+padding:16px;
 }
-
-.error{
-min-height:18px;
+.meBox{
+display:flex;
+align-items:center;
+gap:12px;
+margin-bottom:16px;
+}
+.avatar{
+width:46px;
+height:46px;
+border-radius:17px;
+display:grid;
+place-items:center;
+font-size:24px;
+background:#12243d;
+border:1px solid var(--line);
+}
+.sideBrand{
+font-size:23px;
+font-weight:900;
+color:#60a5fa;
+}
+.small{
+font-size:12px;
+color:var(--muted);
+line-height:1.45;
+}
+.setup{margin-top:14px}
+.statusLine{
+display:flex;
+align-items:center;
+gap:8px;
+margin-top:12px;
+}
+.dot{
+width:10px;
+height:10px;
+border-radius:99px;
+background:#64748b;
+}
+.dot.online{
+background:var(--green);
+box-shadow:0 0 12px var(--green);
+}
+.safeList{
+display:grid;
+gap:8px;
+margin-top:12px;
+}
+.safeItem{
 font-size:13px;
-color:#fecaca
+padding:10px;
+border:1px solid var(--line);
+background:#081424;
+border-radius:14px;
 }
+.chat{
+height:100%;
+display:grid;
+grid-template-rows:auto 1fr auto;
+min-width:0;
+}
+.chatHeader{
+height:68px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:12px;
+padding:10px 14px;
+background:#07111f;
+border-bottom:1px solid var(--line);
+}
+.peerBox{
+display:flex;
+align-items:center;
+gap:11px;
+min-width:0;
+}
+.peerAvatar{
+width:43px;
+height:43px;
+border-radius:50%;
+display:grid;
+place-items:center;
+font-size:22px;
+background:#102033;
+border:1px solid var(--line);
+}
+.peerInfo{min-width:0}
+.peerName{
+font-size:16px;
+font-weight:900;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+}
+.peerStatus{
+font-size:12px;
+color:var(--muted);
+margin-top:3px;
+}
+.headerActions{
+display:flex;
+align-items:center;
+gap:8px;
+}
+.circleBtn{
+width:42px;
+height:42px;
+border-radius:50%;
+border:1px solid var(--line);
+background:#102033;
+color:white;
+font-size:18px;
+display:grid;
+place-items:center;
+}
+.messagesWrap{
+position:relative;
+overflow:hidden;
+background:linear-gradient(rgba(5,9,20,.82),rgba(5,9,20,.82)),radial-gradient(circle at 40% 20%,rgba(96,165,250,.12),transparent 30%);
+}
+.messages{
+height:100%;
+overflow:auto;
+padding:18px 18px 12px;
+display:flex;
+flex-direction:column;
+gap:8px;
+}
+.empty{
+margin:auto;
+text-align:center;
+color:var(--muted);
+max-width:340px;
+}
+.empty h3{color:white;margin-bottom:5px}
+.bubble{
+max-width:min(76%,760px);
+padding:8px 9px 6px;
+border-radius:14px 14px 14px 4px;
+background:var(--bubble);
+box-shadow:0 8px 25px rgba(0,0,0,.18);
+word-break:break-word;
+position:relative;
+}
+.bubble.mine{
+align-self:flex-end;
+background:linear-gradient(145deg,var(--mine),var(--mine2));
+border-radius:14px 14px 4px 14px;
+}
+.bubble.deleted{
+opacity:.72;
+font-style:italic;
+}
+.replyPreview{
+font-size:12px;
+color:#dbeafe;
+border-left:3px solid #60a5fa;
+background:rgba(0,0,0,.18);
+padding:6px 8px;
+border-radius:8px;
+margin-bottom:5px;
+}
+.msgBody{
+font-size:15px;
+line-height:1.38;
+white-space:pre-wrap;
+padding-right:4px;
+}
+.msgMeta{
+display:flex;
+align-items:center;
+justify-content:flex-end;
+gap:4px;
+font-size:10px;
+color:rgba(238,246,255,.75);
+margin-top:4px;
+user-select:none;
+}
+.msgActions{
+display:none;
+gap:6px;
+flex-wrap:wrap;
+margin-top:6px;
+}
+.bubble:hover .msgActions{display:flex}
+.msgActions button{
+border:0;
+background:rgba(0,0,0,.22);
+color:white;
+border-radius:9px;
+padding:6px 8px;
+font-size:11px;
+}
+.media{
+max-width:100%;
+border-radius:12px;
+margin-top:5px;
+background:#020617;
+}
+.fileLink{
+display:inline-flex;
+align-items:center;
+gap:8px;
+color:white;
+text-decoration:none;
+border:1px solid rgba(255,255,255,.18);
+border-radius:12px;
+padding:10px;
+background:rgba(0,0,0,.18);
+}
+.typing{
+height:18px;
+font-size:12px;
+color:var(--muted);
+padding:0 16px;
+background:#07111f;
+}
+.replyBox{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:10px;
+background:#0d1a2d;
+border-top:1px solid var(--line);
+padding:9px 12px;
+}
+.replyText{
+font-size:12px;
+color:#dbeafe;
+overflow:hidden;
+white-space:nowrap;
+text-overflow:ellipsis;
+}
+.composer{
+background:#07111f;
+border-top:1px solid var(--line);
+padding:9px;
+display:flex;
+gap:8px;
+align-items:center;
+}
+.clipBtn,.micBtn{
+width:45px;
+height:45px;
+border-radius:50%;
+border:1px solid var(--line);
+background:#102033;
+color:white;
+font-size:20px;
+display:grid;
+place-items:center;
+flex:0 0 auto;
+}
+.sendRow{
+display:flex;
+gap:8px;
+align-items:center;
+flex:1;
+}
+.sendRow .input{
+margin:0;
+flex:1;
+border-radius:22px;
+}
+.sendBtn{
+width:45px;
+height:45px;
+border-radius:50%;
+border:0;
+background:#22c55e;
+color:white;
+font-size:18px;
+display:grid;
+place-items:center;
+flex:0 0 auto;
+}
+.micBtn.recording{
+background:#ef4444;
+animation:pulseMic 1s infinite;
+}
+@keyframes pulseMic{
+0%{box-shadow:0 0 0 0 rgba(239,68,68,.45)}
+70%{box-shadow:0 0 0 16px rgba(239,68,68,0)}
+100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}
+}
+.toast{
+position:fixed;
+z-index:20;
+left:50%;
+bottom:24px;
+transform:translateX(-50%);
+background:#102033;
+border:1px solid var(--line);
+box-shadow:var(--shadow);
+border-radius:15px;
+padding:12px 16px;
+max-width:90vw;
+}
+.callOverlay{
+position:fixed;
+z-index:30;
+inset:0;
+background:rgba(2,6,23,.92);
+display:grid;
+place-items:center;
+padding:16px;
+}
+.callCard{
+width:min(430px,94vw);
+background:#081424;
+border:1px solid var(--line);
+border-radius:28px;
+padding:26px;
+box-shadow:var(--shadow);
+text-align:center;
+}
+.callAvatar{
+width:92px;
+height:92px;
+margin:0 auto 16px;
+border-radius:50%;
+background:#102033;
+display:grid;
+place-items:center;
+font-size:44px;
+border:1px solid var(--line);
+box-shadow:0 0 28px rgba(59,130,246,.22);
+}
+.callTitle{
+font-size:22px;
+font-weight:900;
+margin-bottom:6px;
+}
+.callSub{
+font-size:14px;
+color:var(--muted);
+margin-bottom:22px;
+}
+.callButtons{
+display:flex;
+justify-content:center;
+gap:14px;
+flex-wrap:wrap;
+}
+.callBtn{
+width:64px;
+height:64px;
+border-radius:50%;
+border:0;
+color:white;
+font-size:26px;
+display:grid;
+place-items:center;
+}
+.callBtn.green{background:#22c55e}
+.callBtn.red{background:#ef4444}
 
+.callWindow{
+position:fixed;
+z-index:25;
+inset:0;
+background:#000;
+display:grid;
+grid-template-rows:1fr auto;
+}
+.callWindow.hidden{display:none!important}
+.remoteVideoFull{
+width:100%;
+height:100%;
+object-fit:cover;
+background:#000;
+}
+.localVideoSmall{
+position:absolute;
+right:16px;
+top:84px;
+width:118px;
+height:170px;
+object-fit:cover;
+border-radius:16px;
+border:2px solid rgba(255,255,255,.85);
+background:#111;
+box-shadow:0 10px 30px rgba(0,0,0,.45);
+z-index:2;
+}
+.audioOnlyScreen{
+display:grid;
+place-items:center;
+height:100%;
+background:radial-gradient(circle at center,rgba(34,197,94,.18),transparent 35%),#020617;
+}
+.audioPulse{
+width:130px;
+height:130px;
+border-radius:50%;
+display:grid;
+place-items:center;
+font-size:58px;
+background:#102033;
+border:1px solid var(--line);
+animation:pulse 1.5s infinite;
+}
+@keyframes pulse{
+0%{box-shadow:0 0 0 0 rgba(34,197,94,.42)}
+70%{box-shadow:0 0 0 26px rgba(34,197,94,0)}
+100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}
+}
+.callControls{
+position:absolute;
+left:0;
+right:0;
+bottom:24px;
+display:flex;
+justify-content:center;
+gap:14px;
+flex-wrap:wrap;
+z-index:3;
+}
+.callControl{
+border:1px solid rgba(255,255,255,.18);
+background:rgba(16,32,51,.82);
+color:white;
+border-radius:999px;
+padding:12px 16px;
+font-weight:800;
+}
+.callControl.end{
+background:#ef4444;
+border-color:#ef4444;
+}
+.remoteAudio{
+position:absolute;
+width:1px;
+height:1px;
+opacity:.01;
+pointer-events:none;
+}
+@media(max-width:860px){
+body{overflow:hidden}
+.app{grid-template-columns:1fr}
+.sidebar{
+height:100vh;
+border-right:0;
+border-bottom:0;
+}
+.app.fullChat .sidebar{display:none!important}
+.chat{
+display:none;
+height:100vh;
+min-height:100vh;
+}
+.app.fullChat .chat{display:grid}
+.bubble{max-width:88%}
+.chatHeader{height:64px}
+.headerActions{gap:5px}
+.circleBtn{width:39px;height:39px}
+.localVideoSmall{
+width:96px;
+height:140px;
+top:76px;
+right:10px;
+}
+.callControls{
+bottom:16px;
+gap:8px;
+}
+.callControl{
+padding:10px 12px;
+font-size:13px;
+}
+}
 </style>
 </head>
+
 <body>
-  <section id="authScreen" class="screen authScreen">
-
-  <div class="authCard">
-
-  <div class="logo">
-
-  <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.9">
-
-  <path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/>
-
-  <path d="M9 12l2 2 4-5"/>
-
-  </svg>
-
-  </div>
-
-  <div class="brand">
-  ARCAIDRON
-  </div>
-
-  <div class="sub">
-  Chat privado criptografado • Voz • Vídeo
-  </div>
-
-  <div class="panel">
-
-  <div class="tabs">
-
-  <button id="loginTab" class="active">
-  Entrar
-  </button>
-
-  <button id="registerTab">
-  Criar conta
-  </button>
-
-  </div>
-
-  <input
-  id="username"
-  class="input"
-  placeholder="@usuario">
-
-  <input
-  id="email"
-  class="input"
-  type="email"
-  placeholder="Seu e-mail">
-
-  <input
-  id="phone"
-  class="input"
-  placeholder="Seu telefone">
-
-  <input
-  id="password"
-  class="input"
-  type="password"
-  placeholder="Sua senha">
-
-  <select id="avatar" class="select">
-
-  <option>🛡️</option>
-  <option>👤</option>
-  <option>😎</option>
-  <option>🔥</option>
-  <option>👑</option>
-  <option>🚀</option>
-  <option>🐺</option>
-  <option>🦅</option>
-  <option>🔐</option>
-  <option>💎</option>
-
-  </select>
-
-  <button id="authBtn" class="btn full">
-  ⚡ Entrar
-  </button>
-
-  <p id="loginError" class="error"></p>
-
-  <div
-  id="recoveryBox"
-  class="hidden"
-  style="
-  margin-top:14px;
-  padding:14px;
-  border-radius:16px;
-  background:#081424;
-  border:1px solid #223654;
-  text-align:left;
-  ">
-
-  <div style="font-weight:900;margin-bottom:8px">
-  🔑 Recovery Key
-  </div>
-
-  <div
-  id="recoveryText"
-  style="
-  word-break:break-word;
-  font-size:14px;
-  color:#93c5fd;
-  ">
-
-  </div>
-
-  <div
-  style="
-  margin-top:10px;
-  font-size:12px;
-  color:#94a3b8;
-  ">
-
-  Guarde essa chave.
-  Ela recupera sua conta.
-
-  </div>
-
-  </div>
-
-  </div>
-
-  </div>
-
-  </section>
-
-  <main id="appScreen" class="screen app hidden">
-
-  <aside class="sidebar">
-
-  <div class="meBox">
-
-  <div id="meAvatar" class="avatar">
-  🛡️
-  </div>
-
-  <div>
-
-  <div class="sideBrand">
-  ARCAIDRON
-  </div>
-
-  <div id="meText" class="small">
-  desconectado
-  </div>
-
-  </div>
-
-  </div>
-
-  <div class="panel setup">
-
-  <h3 style="margin-top:0">
-  Contatos ARCAIDRON
-  </h3>
-
-  <p class="small">
-  Converse com pessoas da sua agenda usando ARCAIDRON.
-  </p>
-
-  <button id="loadContactsBtn" class="btn full">
-  📱 Carregar contatos
-  </button>
-
-  <input
-  id="searchUserInput"
-  class="input"
-  placeholder="Buscar @usuario">
-
-  <div id="contactsList" class="safeList"></div>
-
-  <div class="safeList">
-
-  <div class="safeItem">
-  ✅ Contatos privados e criptografados.
-  </div>
-
-  <div class="safeItem">
-  ✅ Online e visto por último.
-  </div>
-
-  <div class="safeItem">
-  ✅ Chamadas privadas protegidas.
-  </div>
-
-  </div>
-
-  </div>
-
-  </aside>
-
-  <section class="chat">
-
-  <header class="chatHeader">
-
-  <div class="peerBox">
-
-  <div id="peerAvatar" class="peerAvatar">
-  🔒
-  </div>
-
-  <div class="peerInfo">
-
-  <div id="peerName" class="peerName">
-  Nenhuma conversa
-  </div>
-
-  <div id="peerStatus" class="peerStatus">
-  offline
-  </div>
-
-  </div>
-
-  </div>
-
-  <div class="headerActions">
-
-  <button
-  id="backBtn"
-  class="circleBtn hidden"
-  title="Nova conversa">
-
-  ☰
-
-  </button>
-
-  <button
-  id="voiceBtn"
-  class="circleBtn"
-  title="Ligação de voz">
-
-  📞
-
-  </button>
-
-  <button
-  id="videoBtn"
-  class="circleBtn"
-  title="Ligação de vídeo">
-
-  🎥
-
-  </button>
-
-  <button
-  id="clearBtn"
-  class="circleBtn"
-  title="Limpar tela">
-
-  🧹
-
-  </button>
-
-  <button
-  id="logoutBtn"
-  class="circleBtn"
-  title="Sair">
-
-  ↩
-
-  </button>
-
-  </div>
-
-  </header>
-    <div class="messagesWrap">
-
-    <div id="messages" class="messages">
-
-    <div class="empty">
-
-    <h3>
-    Conversa privada
-    </h3>
-
-    <p>
-    Selecione alguém dos seus contatos.
-    </p>
-
-    </div>
-
-    </div>
-
-    </div>
-
-    <div id="typing" class="typing"></div>
-
-    <div
-    id="replyBox"
-    class="replyBox hidden">
-
-    <span
-    id="replyText"
-    class="replyText">
-
-    Respondendo...
-
-    </span>
-
-    <button
-    id="cancelReplyBtn"
-    class="btn dark"
-    style="padding:7px 10px">
-
-    Cancelar
-
-    </button>
-
-    </div>
-
-    <footer class="composer">
-
-    <button
-    id="clipBtn"
-    class="clipBtn"
-    type="button"
-    title="Enviar arquivo">
-
-    📎
-
-    </button>
-
-    <input
-    id="fileInput"
-    type="file"
-    hidden
-    multiple
-    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar">
-
-    <div class="sendRow">
-
-    <input
-    id="messageInput"
-    class="input"
-    placeholder="Mensagem">
-
-    <button
-    id="sendBtn"
-    class="sendBtn">
-
-    ➤
-
-    </button>
-
-    </div>
-
-    <button
-    id="recordBtn"
-    class="micBtn"
-    type="button"
-    title="Segure para gravar áudio">
-
-    🎙️
-
-    </button>
-
-    </footer>
-
-    </section>
-
-    </main>
-
-    <section
-    id="incomingCall"
-    class="callOverlay hidden">
-
-    <div class="callCard">
-
-    <div
-    id="incomingAvatar"
-    class="callAvatar">
-
-    👤
-
-    </div>
-
-    <div
-    id="incomingTitle"
-    class="callTitle">
-
-    Chamada recebida
-
-    </div>
-
-    <div
-    id="incomingSub"
-    class="callSub">
-
-    Ligação privada do ARCAIDRON
-
-    </div>
-
-    <div class="callButtons">
-
-    <button
-    id="acceptCallBtn"
-    class="callBtn green">
-
-    📞
-
-    </button>
-
-    <button
-    id="declineCallBtn"
-    class="callBtn red">
-
-    ✕
-
-    </button>
-
-    </div>
-
-    </div>
-
-    </section>
-
-    <section
-    id="callWindow"
-    class="callWindow hidden">
-
-    <div
-    id="audioOnlyBox"
-    class="audioOnlyScreen hidden">
-
-    <div class="audioPulse">
-
-    📞
-
-    </div>
-
-    </div>
-
-    <video
-    id="remoteVideo"
-    class="remoteVideoFull hidden"
-    autoplay
-    playsinline>
-
-    </video>
-
-    <video
-    id="localVideo"
-    class="localVideoSmall hidden"
-    autoplay
-    muted
-    playsinline>
-
-    </video>
-
-    <audio
-    id="remoteAudio"
-    class="remoteAudio"
-    autoplay
-    playsinline>
-
-    </audio>
-
-    <div class="callControls">
-
-    <button
-    id="muteBtn"
-    class="callControl">
-
-    🎙️ Mudo
-
-    </button>
-
-    <button
-    id="flipBtn"
-    class="callControl">
-
-    🔄 Câmera
-
-    </button>
-
-    <button
-    id="speakerBtn"
-    class="callControl">
-
-    🔊 Som
-
-    </button>
-
-    <button
-    id="endCallBtn"
-    class="callControl end">
-
-    ❌ Encerrar
-
-    </button>
-
-    </div>
-
-    </section>
-
-    <div
-    id="toast"
-    class="toast hidden">
-
-    </div>
-
-    <script>
-
-    const $ = id => document.getElementById(id);
-
-    const encoder = new TextEncoder();
-
-    const decoder = new TextDecoder();
-
-    let authMode = "login";
-
-    let token =
-    localStorage.getItem("arcaidron_token") || "";
-
-    let currentUser =
-    localStorage.getItem("arcaidron_username") || "";
-
-    let currentAvatar =
-    localStorage.getItem("arcaidron_avatar") || "🛡️";
-
-    let socket = null;
-
-    let currentRoom = "";
-
-    let peerUser = "";
-
-    let peerAvatar = "👤";
-
-    let cryptoKey = null;
-
-    let replyTo = "";
-
-    let typingTimer = null;
-
-    function toast(text){
-
-    $("toast").textContent = text;
-
-    $("toast").classList.remove("hidden");
-
-    setTimeout(()=>{
-
-    $("toast").classList.add("hidden");
-
-    },2800);
-
-    }
-
-    function cleanUsername(name){
-
-    return String(name || "")
-    .trim()
-    .toLowerCase()
-    .replace(/^@/,"")
-    .replace(/[^a-z0-9_.-]/g,"")
-    .slice(0,32);
-
-    }
-
-    async function sha256(text){
-
-    const hash =
-    await crypto.subtle.digest(
-    "SHA-256",
-    encoder.encode(text)
-    );
-
-    return btoa(
-    String.fromCharCode(
-    ...new Uint8Array(hash)
-    )
-    );
-
-    }
-
-    async function createCryptoKey(secret){
-
-    const material =
-    await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    "PBKDF2",
-    false,
-    ["deriveKey"]
-    );
-
-    return crypto.subtle.deriveKey(
-    {
-    name:"PBKDF2",
-    salt:encoder.encode("ARCAIDRON-v2"),
-    iterations:250000,
-    hash:"SHA-256"
-    },
-    material,
-    {
-    name:"AES-GCM",
-    length:256
-    },
-    false,
-    ["encrypt","decrypt"]
-    );
-
-    }
-
-    async function api(path,body){
-
-    const response = await fetch(path,{
-    method:"POST",
-    headers:{
-    "Content-Type":"application/json",
-    "Authorization":"Bearer "+token
-    },
-    body:JSON.stringify(body || {})
-    });
-
-    return response.json();
-
-    }
-      function connectSocket(){
-
-      socket = io({
-      auth:{token}
-      });
-
-      socket.on("connect",()=>{
-
-      $("meText").textContent =
-      "@"+currentUser+" online";
-
-      });
-
-      socket.on("presence:update",data=>{
-
-      if(data.username !== peerUser) return;
-
-      if(data.status === "online"){
-
-      $("peerStatus").textContent = "online";
-
-      }else if(data.lastSeen){
-
-      const d = new Date(data.lastSeen);
-
-      $("peerStatus").textContent =
-      "visto por último às " +
-      d.toLocaleTimeString("pt-BR",{
-      hour:"2-digit",
-      minute:"2-digit"
-      });
-
-      }else{
-
-      $("peerStatus").textContent = "offline";
-
-      }
-
-      });
-
-      socket.on("room:history",messages=>{
-
-      $("messages").innerHTML = "";
-
-      for(const msg of messages){
-
-      renderMessage(msg);
-
-      }
-
-      scrollBottom();
-
-      });
-
-      socket.on("message:new",msg=>{
-
-      renderMessage(msg);
-
-      scrollBottom();
-
-      if(msg.from !== currentUser){
-
-      socket.emit("message:seen",{
-      roomId:currentRoom,
-      id:msg.id
-      });
-
-      }
-
-      });
-
-      socket.on("message:seen",data=>{
-
-      updateSeen(data.id);
-
-      });
-
-      socket.on("typing",data=>{
-
-      if(data.username !== peerUser) return;
-
-      $("typing").textContent =
-      data.typing
-      ? "digitando..."
-      : "";
-
-      });
-
-      socket.on("recording",data=>{
-
-      if(data.username !== peerUser) return;
-
-      $("typing").textContent =
-      data.recording
-      ? "gravando áudio..."
-      : "";
-
-      });
-
-      }
-
-      function scrollBottom(){
-
-      setTimeout(()=>{
-
-      $("messages").scrollTop =
-      $("messages").scrollHeight;
-
-      },50);
-
-      }
-
-      function enterFullChat(){
-
-      $("messages").innerHTML = "";
-
-      $("appScreen").classList.remove("hidden");
-
-      $("authScreen").classList.add("hidden");
-
-      }
-
-      async function openPrivateChat(target){
-
-      const key =
-      "ARCAIDRON_DYNAMIC_KEY_" +
-      [currentUser,target]
-      .sort()
-      .join("_");
-
-      cryptoKey =
-      await createCryptoKey(key);
-
-      const sharedKeyHash =
-      await sha256(key);
-
-      const result =
-      await api("/api/open-chat",{
-      target,
-      sharedKeyHash
-      });
-
-      if(result.error){
-
-      toast(result.error);
-      return;
-
-      }
-
-      currentRoom = result.roomId;
-
-      peerUser = result.peer.username;
-
-      peerAvatar =
-      result.peer.avatar || "👤";
-
-      $("peerAvatar").textContent =
-      peerAvatar;
-
-      $("peerName").textContent =
-      "@" + peerUser;
-
-      if(result.status === "online"){
-
-      $("peerStatus").textContent =
-      "online";
-
-      }else if(result.lastSeen){
-
-      const d = new Date(result.lastSeen);
-
-      $("peerStatus").textContent =
-      "visto por último às " +
-      d.toLocaleTimeString("pt-BR",{
-      hour:"2-digit",
-      minute:"2-digit"
-      });
-
-      }else{
-
-      $("peerStatus").textContent =
-      "offline";
-
-      }
-
-      socket.emit("room:join",{
-      roomId:currentRoom
-      });
-
-      enterFullChat();
-
-      toast("Conversa segura aberta.");
-
-      }
-
-      $("loadContactsBtn").onclick =
-      async()=>{
-
-      if(
-      typeof AndroidBridge === "undefined" ||
-      !AndroidBridge.getContacts
-      ){
-
-      toast(
-      "Disponível apenas no APK Android."
-      );
-
-      return;
-
-      }
-
-      try{
-
-      const raw =
-      AndroidBridge.getContacts();
-
-      const contacts =
-      JSON.parse(raw || "[]");
-
-      const result =
-      await api(
-      "/api/contacts/lookup",
-      {contacts}
-      );
-
-      renderContacts(
-      result.contacts || []
-      );
-
-      }catch(e){
-
-      toast(
-      "Erro ao carregar contatos."
-      );
-
-      }
-
-      };
-
-      function renderContacts(list){
-
-      const container =
-      $("contactsList");
-
-      container.innerHTML = "";
-
-      if(!list.length){
-
-      container.innerHTML = `
-      <div class="safeItem">
-      Nenhum contato encontrado.
-      </div>
-      `;
-
-      return;
-
-      }
-
-      for(const contact of list){
-
-      const div =
-      document.createElement("div");
-
-      div.className = "safeItem";
-
-      if(contact.registered){
-
-      div.innerHTML = `
-
-      <div style="
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px">
-
-      <div style="
-      display:flex;
-      align-items:center;
-      gap:10px">
-
-      <div style="font-size:22px">
-      ${contact.avatar || "👤"}
-      </div>
-
-      <div>
-
-      <div style="font-weight:800">
-      ${contact.name || contact.username}
-      </div>
-
-      <div class="small">
-      @${contact.username}
-      ${contact.status === "online"
-      ? "🟢 online"
-      : "⚫ offline"}
-      </div>
-
-      </div>
-
-      </div>
-
-      <button
-      class="btn dark openContactBtn">
-
-      Conversar
-
-      </button>
-
-      </div>
-      `;
-
-      div
-      .querySelector(".openContactBtn")
-      .onclick = ()=>{
-
-      openPrivateChat(
-      contact.username
-      );
-
-      };
-
-      }else{
-
-      div.innerHTML = `
-
-      <div style="
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px">
-
-      <div>
-
-      <div style="font-weight:800">
-      ${contact.name || "Contato"}
-      </div>
-
-      <div class="small">
-      Não usa ARCAIDRON
-      </div>
-
-      </div>
-
-      <button
-      class="btn dark inviteBtn">
-
-      Convidar
-
-      </button>
-
-      </div>
-      `;
-
-      div
-      .querySelector(".inviteBtn")
-      .onclick = ()=>{
-
-      const text =
-      "Baixe o ARCAIDRON: " +
-      location.origin;
-
-      if(navigator.share){
-
-      navigator.share({
-      title:"ARCAIDRON",
-      text
-      });
-
-      }else{
-
-      navigator.clipboard
-      .writeText(text);
-
-      toast("Convite copiado.");
-
-      }
-
-      };
-
-      }
-
-      container.appendChild(div);
-
-      }
-
-      }
-
-      async function encryptMessage(text){
-
-      const iv =
-      crypto.getRandomValues(
-      new Uint8Array(12)
-      );
-
-      const encrypted =
-      await crypto.subtle.encrypt(
-      {
-      name:"AES-GCM",
-      iv
-      },
-      cryptoKey,
-      encoder.encode(text)
-      );
-
-      return{
-      cipher:btoa(
-      String.fromCharCode(
-      ...new Uint8Array(encrypted)
-      )
-      ),
-      iv:btoa(
-      String.fromCharCode(...iv)
-      )
-      };
-
-      }
-
-      async function decryptMessage(cipher,iv){
-
-      try{
-
-      const decrypted =
-      await crypto.subtle.decrypt(
-      {
-      name:"AES-GCM",
-      iv:Uint8Array.from(
-      atob(iv),
-      x=>x.charCodeAt(0)
-      )
-      },
-      cryptoKey,
-      Uint8Array.from(
-      atob(cipher),
-      x=>x.charCodeAt(0)
-      )
-      );
-
-      return decoder.decode(decrypted);
-
-      }catch{
-
-      return "[mensagem protegida]";
-
-      }
-
-      }
-
-      async function renderMessage(msg){
-
-      if(msg.deleted) return;
-
-      const div =
-      document.createElement("div");
-
-      div.className =
-      msg.from === currentUser
-      ? "msg mine"
-      : "msg";
-
-      let text = "";
-
-      if(msg.type === "text"){
-
-      text =
-      await decryptMessage(
-      msg.cipher,
-      msg.iv
-      );
-
-      }else{
-
-      text =
-      "📎 Arquivo enviado";
-
-      }
-
-      div.innerHTML = `
-
-      <div class="bubble">
-
-      <div class="meta">
-
-      <span>
-      ${msg.avatar}
-      @${msg.from}
-      </span>
-
-      <span id="seen_${msg.id}">
-      ${msg.from === currentUser
-      ? "✓"
-      : ""}
-      </span>
-
-      </div>
-
-      <div class="text">
-      ${text}
-      </div>
-
-      </div>
-      `;
-
-      $("messages")
-      .appendChild(div);
-
-      }
-
-      function updateSeen(id){
-
-      const el = $("seen_"+id);
-
-      if(!el) return;
-
-      el.textContent = "✓✓";
-
-      el.style.color = "#60a5fa";
-
-      }
-
-      $("sendBtn").onclick =
-      async()=>{
-
-      const text =
-      $("messageInput").value.trim();
-
-      if(
-      !text ||
-      !currentRoom ||
-      !cryptoKey
-      )return;
-
-      const encrypted =
-      await encryptMessage(text);
-
-      socket.emit("message:send",{
-      roomId:currentRoom,
-      type:"text",
-      cipher:encrypted.cipher,
-      iv:encrypted.iv,
-      replyTo
-      });
-
-      $("messageInput").value = "";
-
-      };
-
-      $("messageInput")
-      .addEventListener("input",()=>{
-
-      if(!currentRoom) return;
-
-      socket.emit("typing",{
-      roomId:currentRoom,
-      typing:true
-      });
-
-      clearTimeout(typingTimer);
-
-      typingTimer =
-      setTimeout(()=>{
-
-      socket.emit("typing",{
-      roomId:currentRoom,
-      typing:false
-      });
-
-      },1200);
-
-      });
-
-      $("clipBtn").onclick = ()=>{
-
-      $("fileInput").click();
-
-      };
-
-      $("logoutBtn").onclick = ()=>{
-
-      localStorage.clear();
-
-      location.reload();
-
-      };
-
-      $("loginTab").onclick = ()=>{
-
-      authMode = "login";
-
-      $("loginTab")
-      .classList.add("active");
-
-      $("registerTab")
-      .classList.remove("active");
-
-      $("email").style.display = "none";
-
-      $("phone").style.display = "none";
-
-      $("avatar").style.display = "none";
-
-      $("authBtn").textContent =
-      "⚡ Entrar";
-
-      };
-
-      $("registerTab").onclick = ()=>{
-
-      authMode = "register";
-
-      $("registerTab")
-      .classList.add("active");
-
-      $("loginTab")
-      .classList.remove("active");
-
-      $("email").style.display = "block";
-
-      $("phone").style.display = "block";
-
-      $("avatar").style.display = "block";
-
-      $("authBtn").textContent =
-      "🚀 Criar conta";
-
-      };
-
-      $("authBtn").onclick =
-      async()=>{
-
-      const username =
-      cleanUsername(
-      $("username").value
-      );
-
-      const password =
-      $("password").value;
-
-      const email =
-      $("email").value;
-
-      const phone =
-      $("phone").value;
-
-      const avatar =
-      $("avatar").value;
-
-      $("loginError").textContent =
-      "";
-
-      let result;
-
-      if(authMode === "register"){
-
-      result = await api(
-      "/api/register",
-      {
-      username,
-      password,
-      email,
-      phone,
-      avatar
-      }
-      );
-
-      }else{
-
-      result = await api(
-      "/api/login",
-      {
-      username,
-      password
-      }
-      );
-
-      }
-
-      if(result.error){
-
-      $("loginError").textContent =
-      result.error;
-
-      return;
-
-      }
-
-      token = result.token;
-
-      currentUser = result.username;
-
-      currentAvatar =
-      result.avatar || "🛡️";
-
-      localStorage.setItem(
-      "arcaidron_token",
-      token
-      );
-
-      localStorage.setItem(
-      "arcaidron_username",
-      currentUser
-      );
-
-      localStorage.setItem(
-      "arcaidron_avatar",
-      currentAvatar
-      );
-
-      $("meAvatar").textContent =
-      currentAvatar;
-
-      if(result.recoveryKey){
-
-      $("recoveryBox")
-      .classList.remove("hidden");
-
-      $("recoveryText")
-      .textContent =
-      result.recoveryKey;
-
-      }
-
-      connectSocket();
-
-      enterFullChat();
-
-      };
-
-      if(token){
-
-      $("meAvatar").textContent =
-      currentAvatar;
-
-      connectSocket();
-
-      enterFullChat();
-
-      }
-
-      </script>
-
-      </body>
-      </html>
+<section id="authScreen" class="screen authScreen">
+<div class="authCard">
+<div class="logo">
+<svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.9">
+<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/>
+<path d="M9 12l2 2 4-5"/>
+</svg>
+</div>
+<div class="brand">ARCAIDRON</div>
+<div class="sub">Chat privado criptografado • Voz • Vídeo</div>
+
+<div class="panel">
+<div class="tabs">
+<button id="loginTab" class="active">Entrar</button>
+<button id="registerTab">Criar conta</button>
+</div>
+
+<input id="username" class="input" placeholder="Seu nome privado">
+<input id="password" class="input" type="password" placeholder="Sua senha">
+
+<select id="avatar" class="select">
+<option>🛡️</option>
+<option>👤</option>
+<option>😎</option>
+<option>🔥</option>
+<option>👑</option>
+<option>🚀</option>
+<option>🐺</option>
+<option>🦅</option>
+<option>🔐</option>
+<option>💎</option>
+</select>
+
+<button id="authBtn" class="btn full">⚡ Entrar</button>
+<p id="loginError" class="error"></p>
+</div>
+</div>
+</section>
+
+<main id="appScreen" class="screen app hidden">
+<aside class="sidebar">
+<div class="meBox">
+<div id="meAvatar" class="avatar">🛡️</div>
+<div>
+<div class="sideBrand">ARCAIDRON</div>
+<div id="meText" class="small">desconectado</div>
+</div>
+</div>
+
+<div class="panel setup">
+<h3 style="margin-top:0">Abrir conversa privada</h3>
+<p class="small">Digite o nome exato da pessoa e a chave combinada entre vocês.</p>
+
+<input id="otherUser" class="input" placeholder="Nome exato do usuário">
+<input id="chatKey" class="input" type="password" placeholder="Chave privada compartilhada">
+
+<button id="openChatBtn" class="btn full">🔐 Abrir conversa</button>
+
+<div class="statusLine">
+<span id="targetDot" class="dot"></span>
+<span id="targetStatus" class="small">Status aparece depois da chave válida.</span>
+</div>
+
+<div class="safeList">
+<div class="safeItem">✅ Mensagens criptografadas no navegador.</div>
+<div class="safeItem">✅ Clipe geral para arquivos, fotos, vídeos e documentos.</div>
+<div class="safeItem">✅ Chamadas com áudio e vídeo em tela única.</div>
+</div>
+</div>
+</aside>
+
+<section class="chat">
+<header class="chatHeader">
+<div class="peerBox">
+<div id="peerAvatar" class="peerAvatar">🔒</div>
+<div class="peerInfo">
+<div id="peerName" class="peerName">Nenhuma conversa</div>
+<div id="peerStatus" class="peerStatus">offline</div>
+</div>
+</div>
+
+<div class="headerActions">
+<button id="backBtn" class="circleBtn hidden" title="Nova conversa">☰</button>
+<button id="voiceBtn" class="circleBtn" title="Ligação de voz">📞</button>
+<button id="videoBtn" class="circleBtn" title="Ligação de vídeo">🎥</button>
+<button id="clearBtn" class="circleBtn" title="Limpar tela">🧹</button>
+<button id="logoutBtn" class="circleBtn" title="Sair">↩</button>
+</div>
+</header>
+
+<div class="messagesWrap">
+<div id="messages" class="messages">
+<div class="empty">
+<h3>Conversa privada</h3>
+<p>Abra uma conversa com nome exato + chave privada.</p>
+</div>
+</div>
+</div>
+
+<div id="typing" class="typing"></div>
+
+<div id="replyBox" class="replyBox hidden">
+<span id="replyText" class="replyText">Respondendo...</span>
+<button id="cancelReplyBtn" class="btn dark" style="padding:7px 10px">Cancelar</button>
+</div>
+
+<footer class="composer">
+<button id="clipBtn" class="clipBtn" type="button" title="Enviar arquivo">📎</button>
+<input id="fileInput" type="file" hidden multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar">
+
+<div class="sendRow">
+<input id="messageInput" class="input" placeholder="Mensagem">
+<button id="sendBtn" class="sendBtn">➤</button>
+</div>
+
+<button id="recordBtn" class="micBtn" type="button" title="Segure para gravar áudio">🎙️</button>
+</footer>
+</section>
+</main>
+
+<section id="incomingCall" class="callOverlay hidden">
+<div class="callCard">
+<div id="incomingAvatar" class="callAvatar">👤</div>
+<div id="incomingTitle" class="callTitle">Chamada recebida</div>
+<div id="incomingSub" class="callSub">Ligação privada do ARCAIDRON</div>
+<div class="callButtons">
+<button id="acceptCallBtn" class="callBtn green">📞</button>
+<button id="declineCallBtn" class="callBtn red">✕</button>
+</div>
+</div>
+</section>
+
+<section id="callWindow" class="callWindow hidden">
+<div id="audioOnlyBox" class="audioOnlyScreen hidden">
+<div class="audioPulse">📞</div>
+</div>
+
+<video id="remoteVideo" class="remoteVideoFull hidden" autoplay playsinline></video>
+<video id="localVideo" class="localVideoSmall hidden" autoplay muted playsinline></video>
+<audio id="remoteAudio" class="remoteAudio" autoplay playsinline></audio>
+
+<div class="callControls">
+<button id="muteBtn" class="callControl">🎙️ Mudo</button>
+<button id="flipBtn" class="callControl">🔄 Câmera</button>
+<button id="speakerBtn" class="callControl">🔊 Som</button>
+<button id="endCallBtn" class="callControl end">❌ Encerrar</button>
+</div>
+</section>
+
+<div id="toast" class="toast hidden"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+let authMode = "login";
+let token = localStorage.getItem("arcaidron_token") || "";
+let currentUser = localStorage.getItem("arcaidron_username") || "";
+let currentAvatar = localStorage.getItem("arcaidron_avatar") || "🛡️";
+
+let socket = null;
+let currentRoom = "";
+let peerUser = "";
+let peerAvatar = "👤";
+let cryptoKey = null;
+let replyTo = "";
+let typingTimer = null;
+
+let peerConnection = null;
+let localStream = null;
+let remoteStream = null;
+let currentCallVideo = false;
+let usingFrontCamera = true;
+let muted = false;
+let pendingOffer = null;
+let pendingOfferVideo = false;
+let callBusy = false;
+
+let mediaRecorder = null;
+let recordChunks = [];
+let recordStream = null;
+
+const rtcConfig = {
+iceServers:[
+{urls:"stun:stun.l.google.com:19302"},
+{urls:"stun:stun1.l.google.com:19302"},
+{urls:"stun:stun2.l.google.com:19302"}
+]
+};
+
+function toast(text){
+$("toast").textContent=text;
+$("toast").classList.remove("hidden");
+setTimeout(()=>$("toast").classList.add("hidden"),2800);
+}
+
+function cleanUsername(name){
+return String(name||"").trim().toLowerCase().replace(/[^a-z0-9_.-]/g,"").slice(0,32);
+}
+
+function escapeHtml(text){
+return String(text||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+
+function timeNow(ts){
+return new Date(ts||Date.now()).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+}
+
+function bufferToBase64(buffer){
+const bytes=new Uint8Array(buffer);
+let binary="";
+for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);
+return btoa(binary);
+}
+
+function base64ToBuffer(base64){
+const binary=atob(base64);
+const bytes=new Uint8Array(binary.length);
+for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+return bytes.buffer;
+}
+
+async function sha256(text){
+const hash=await crypto.subtle.digest("SHA-256",encoder.encode(text));
+return bufferToBase64(hash);
+}
+
+async function createCryptoKey(secret){
+const material=await crypto.subtle.importKey("raw",encoder.encode(secret),"PBKDF2",false,["deriveKey"]);
+return crypto.subtle.deriveKey(
+{name:"PBKDF2",salt:encoder.encode("ARCAIDRON-v1"),iterations:250000,hash:"SHA-256"},
+material,
+{name:"AES-GCM",length:256},
+false,
+["encrypt","decrypt"]
+);
+}
+
+async function encryptText(text){
+const iv=crypto.getRandomValues(new Uint8Array(12));
+const encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv},cryptoKey,encoder.encode(text));
+return {iv:bufferToBase64(iv),cipher:bufferToBase64(encrypted)};
+}
+
+async function decryptText(cipher,iv){
+try{
+const decrypted=await crypto.subtle.decrypt({name:"AES-GCM",iv:base64ToBuffer(iv)},cryptoKey,base64ToBuffer(cipher));
+return decoder.decode(decrypted);
+}catch{
+return "🔒 Mensagem protegida por outra chave";
+}
+}
+
+async function encryptFile(file){
+const iv=crypto.getRandomValues(new Uint8Array(12));
+const encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv},cryptoKey,await file.arrayBuffer());
+return {
+iv:bufferToBase64(iv),
+cipher:bufferToBase64(encrypted),
+fileName:file.name,
+fileMime:file.type||"application/octet-stream"
+};
+}
+
+async function decryptFile(message){
+try{
+const decrypted=await crypto.subtle.decrypt({name:"AES-GCM",iv:base64ToBuffer(message.iv)},cryptoKey,base64ToBuffer(message.cipher));
+return URL.createObjectURL(new Blob([decrypted],{type:message.fileMime||"application/octet-stream"}));
+}catch{
+return null;
+}
+}
+
+async function api(path,body){
+const response=await fetch(path,{
+method:"POST",
+headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+body:JSON.stringify(body||{})
+});
+return response.json();
+}
+
+function showAuth(){
+$("authScreen").classList.remove("hidden");
+$("appScreen").classList.add("hidden");
+}
+
+function showApp(){
+$("authScreen").classList.add("hidden");
+$("appScreen").classList.remove("hidden");
+$("meAvatar").textContent=currentAvatar;
+$("meText").textContent=currentAvatar+" "+currentUser;
+connectSocket();
+}
+
+function enterFullChat(){
+$("appScreen").classList.add("fullChat");
+document.querySelector(".sidebar").classList.add("hidden");
+$("backBtn").classList.remove("hidden");
+}
+
+function exitFullChat(){
+$("appScreen").classList.remove("fullChat");
+document.querySelector(".sidebar").classList.remove("hidden");
+$("backBtn").classList.add("hidden");
+}
+
+$("loginTab").onclick=()=>{
+authMode="login";
+$("loginTab").classList.add("active");
+$("registerTab").classList.remove("active");
+$("authBtn").textContent="⚡ Entrar";
+$("loginError").textContent="";
+};
+
+$("registerTab").onclick=()=>{
+authMode="register";
+$("registerTab").classList.add("active");
+$("loginTab").classList.remove("active");
+$("authBtn").textContent="🛡️ Criar conta";
+$("loginError").textContent="";
+};
+
+$("authBtn").onclick=async()=>{
+const username=cleanUsername($("username").value);
+const password=$("password").value;
+const avatar=$("avatar").value;
+
+if(!username||!password){
+$("loginError").textContent="Digite nome e senha.";
+return;
+}
+
+const result=await api("/api/"+authMode,{username,password,avatar});
+
+if(result.error){
+$("loginError").textContent=result.error;
+return;
+}
+
+token=result.token;
+currentUser=result.username;
+currentAvatar=result.avatar||avatar||"🛡️";
+
+localStorage.setItem("arcaidron_token",token);
+localStorage.setItem("arcaidron_username",currentUser);
+localStorage.setItem("arcaidron_avatar",currentAvatar);
+
+showApp();
+};
+
+function connectSocket(){
+if(socket) socket.disconnect();
+
+socket=io({auth:{token}});
+
+socket.on("connect_error",()=>{
+toast("Sessão expirada. Entre novamente.");
+localStorage.clear();
+showAuth();
+});
+
+socket.on("presence:update",data=>{
+if(data.username===peerUser)setPeerStatus(data.status);
+});
+
+socket.on("room:history",async messages=>{
+$("messages").innerHTML="";
+if(!messages||messages.length===0){
+$("messages").innerHTML='<div class="empty"><h3>Ala segura aberta</h3><p>As mensagens aparecem aqui.</p></div>';
+return;
+}
+for(const msg of messages) await addMessage(msg);
+});
+
+socket.on("message:new",addMessage);
+socket.on("message:edited",updateEditedMessage);
+socket.on("message:deleted",data=>markDeleted(data.id));
+socket.on("message:seen",data=>updateSeen(data.id));
+socket.on("message:expired",()=>toast("Mensagens antigas foram autodestruídas."));
+socket.on("typing",data=>{
+if(data.username!==currentUser)$("typing").textContent=data.typing?"digitando...":"";
+});
+socket.on("call:signal",handleCallSignal);
+}
+
+function setPeerStatus(status){
+$("peerStatus").textContent=status;
+$("targetStatus").textContent=peerUser?peerUser+" "+status:"Status aparece depois da chave válida.";
+$("targetDot").classList.toggle("online",status==="online");
+}
+
+$("openChatBtn").onclick=async()=>{
+const target=cleanUsername($("otherUser").value);
+const key=$("chatKey").value;
+
+if(!target||!key){
+toast("Digite o nome exato e a chave privada.");
+return;
+}
+
+cryptoKey=await createCryptoKey(key);
+const sharedKeyHash=await sha256(key);
+
+const result=await api("/api/open-chat",{target,sharedKeyHash});
+
+if(result.error){
+toast("Usuário ou chave inválidos.");
+return;
+}
+
+currentRoom=result.roomId;
+peerUser=result.peer.username;
+peerAvatar=result.peer.avatar||"👤";
+
+$("peerAvatar").textContent=peerAvatar;
+$("peerName").textContent=peerUser;
+
+setPeerStatus(result.status);
+
+socket.emit("room:join",{roomId:currentRoom});
+enterFullChat();
+toast("Conversa segura aberta.");
+};
+
+$("backBtn").onclick=exitFullChat;
+
+$("logoutBtn").onclick=()=>{
+localStorage.clear();
+location.reload();
+};
+
+$("clearBtn").onclick=()=>{
+$("messages").innerHTML='<div class="empty"><h3>Tela limpa</h3><p>Isso limpa apenas sua tela.</p></div>';
+};
+
+function clearEmpty(){
+const empty=$("messages").querySelector(".empty");
+if(empty)empty.remove();
+}
+
+async function addMessage(message){
+clearEmpty();
+
+const div=document.createElement("div");
+div.className="bubble "+(message.from===currentUser?"mine":"");
+div.id="msg_"+message.id;
+
+if(message.deleted)div.classList.add("deleted");
+
+let body="";
+
+if(message.deleted){
+body="Mensagem apagada para todos";
+}else if(message.type==="file"||message.type==="image"||message.type==="audio"||message.type==="voice"){
+const url=await decryptFile(message);
+
+if(!url){
+body="🔒 Arquivo protegido por outra chave";
+}else if(message.type==="image"){
+body='<img class="media" src="'+url+'">';
+}else if(message.type==="audio"||message.type==="voice"){
+body='<audio controls src="'+url+'"></audio>';
+}else if((message.fileMime||"").startsWith("video/")){
+body='<video class="media" controls src="'+url+'"></video>';
+}else{
+body='<a class="fileLink" href="'+url+'" download="'+escapeHtml(message.fileName||"arquivo")+'">📎 '+escapeHtml(message.fileName||"arquivo")+"</a>";
+}
+}else{
+body=escapeHtml(await decryptText(message.cipher,message.iv));
+}
+
+let html="";
+if(message.replyTo)html+='<div class="replyPreview">Respondendo mensagem anterior</div>';
+
+html+='<div class="msgBody">'+body+(message.edited?' <small>(editada)</small>':'')+'</div>';
+html+='<div class="msgMeta"><span>'+timeNow(message.createdAt)+'</span>';
+
+if(message.from===currentUser)html+='<span id="seen_'+message.id+'">✓</span>';
+
+html+='</div><div class="msgActions"><button data-act="reply">Responder</button>';
+
+if(message.from===currentUser){
+html+='<button data-act="edit">Editar</button><button data-act="delete">Apagar</button>';
+}
+
+html+='</div>';
+
+div.innerHTML=html;
+
+const replyBtn=div.querySelector('[data-act="reply"]');
+if(replyBtn)replyBtn.onclick=()=>startReply(message.id,div.querySelector(".msgBody").innerText.slice(0,80));
+
+const editBtn=div.querySelector('[data-act="edit"]');
+if(editBtn)editBtn.onclick=()=>editMessage(message.id,div.querySelector(".msgBody").innerText);
+
+const delBtn=div.querySelector('[data-act="delete"]');
+if(delBtn)delBtn.onclick=()=>deleteMessage(message.id);
+
+$("messages").appendChild(div);
+$("messages").scrollTop=$("messages").scrollHeight;
+
+if(message.from!==currentUser){
+socket.emit("message:seen",{roomId:currentRoom,id:message.id});
+}
+}
+
+function startReply(id,text){
+replyTo=id;
+$("replyText").textContent="Respondendo: "+text;
+$("replyBox").classList.remove("hidden");
+$("messageInput").focus();
+}
+
+$("cancelReplyBtn").onclick=()=>{
+replyTo="";
+$("replyBox").classList.add("hidden");
+};
+
+async function editMessage(id,oldText){
+const novo=prompt("Editar mensagem:",oldText.replace("(editada)","").trim());
+if(!novo)return;
+const encrypted=await encryptText(novo);
+socket.emit("message:edit",{roomId:currentRoom,id,cipher:encrypted.cipher,iv:encrypted.iv});
+}
+
+function deleteMessage(id){
+if(confirm("Apagar mensagem para todos?")){
+socket.emit("message:delete",{roomId:currentRoom,id});
+}
+}
+
+async function updateEditedMessage(data){
+const element=$("msg_"+data.id);
+if(!element)return;
+const text=await decryptText(data.cipher,data.iv);
+element.querySelector(".msgBody").innerHTML=escapeHtml(text)+" <small>(editada)</small>";
+}
+
+function markDeleted(id){
+const element=$("msg_"+id);
+if(!element)return;
+element.classList.add("deleted");
+element.querySelector(".msgBody").textContent="Mensagem apagada para todos";
+}
+
+function updateSeen(id){
+const el=$("seen_"+id);
+if(el)el.textContent="✓✓";
+}
+
+$("sendBtn").onclick=sendText;
+
+$("messageInput").onkeydown=e=>{
+if(e.key==="Enter")sendText();
+};
+
+$("messageInput").oninput=()=>{
+if(!currentRoom)return;
+socket.emit("typing",{roomId:currentRoom,typing:true});
+clearTimeout(typingTimer);
+typingTimer=setTimeout(()=>socket.emit("typing",{roomId:currentRoom,typing:false}),900);
+};
+
+async function sendText(){
+if(!currentRoom){
+toast("Abra uma conversa primeiro.");
+return;
+}
+
+const text=$("messageInput").value.trim();
+if(!text)return;
+
+const encrypted=await encryptText(text);
+
+socket.emit("message:send",{
+roomId:currentRoom,
+type:"text",
+replyTo,
+cipher:encrypted.cipher,
+iv:encrypted.iv
+});
+
+$("messageInput").value="";
+replyTo="";
+$("replyBox").classList.add("hidden");
+}
+
+$("clipBtn").onclick=()=>{
+$("fileInput").click();
+};
+
+$("fileInput").onchange=async e=>{
+const files=[...e.target.files];
+
+for(const file of files){
+await sendFile(file,detectFileType(file));
+}
+
+e.target.value="";
+};
+
+function detectFileType(file){
+if(file.type.startsWith("image/"))return "image";
+if(file.type.startsWith("audio/"))return "audio";
+return "file";
+}
+
+async function sendFile(file,type){
+if(!currentRoom){
+toast("Abra uma conversa primeiro.");
+return;
+}
+
+if(!file)return;
+
+if(file.size>22*1024*1024){
+toast("Arquivo muito grande. Use até 22MB.");
+return;
+}
+
+const encrypted=await encryptFile(file);
+
+socket.emit("message:send",{
+roomId:currentRoom,
+type,
+replyTo,
+cipher:encrypted.cipher,
+iv:encrypted.iv,
+fileName:encrypted.fileName,
+fileMime:encrypted.fileMime
+});
+
+replyTo="";
+$("replyBox").classList.add("hidden");
+}
+
+async function startRecording(){
+if(!currentRoom){
+toast("Abra uma conversa primeiro.");
+return;
+}
+
+try{
+recordStream=await navigator.mediaDevices.getUserMedia({audio:true});
+mediaRecorder=new MediaRecorder(recordStream);
+recordChunks=[];
+
+mediaRecorder.ondataavailable=e=>{
+if(e.data.size>0)recordChunks.push(e.data);
+};
+
+mediaRecorder.onstop=async()=>{
+const blob=new Blob(recordChunks,{type:"audio/webm"});
+const file=new File([blob],"audio-arcaidron.webm",{type:"audio/webm"});
+await sendFile(file,"voice");
+
+if(recordStream){
+recordStream.getTracks().forEach(t=>t.stop());
+recordStream=null;
+}
+
+$("recordBtn").classList.remove("recording");
+toast("Áudio enviado.");
+};
+
+mediaRecorder.start();
+$("recordBtn").classList.add("recording");
+toast("Gravando áudio...");
+}catch{
+toast("Não foi possível acessar o microfone.");
+}
+}
+
+function stopRecording(){
+if(mediaRecorder&&mediaRecorder.state==="recording"){
+mediaRecorder.stop();
+}
+}
+
+$("recordBtn").addEventListener("mousedown",startRecording);
+$("recordBtn").addEventListener("mouseup",stopRecording);
+$("recordBtn").addEventListener("mouseleave",stopRecording);
+
+$("recordBtn").addEventListener("touchstart",e=>{
+e.preventDefault();
+startRecording();
+});
+
+$("recordBtn").addEventListener("touchend",e=>{
+e.preventDefault();
+stopRecording();
+});
+
+function setIncomingPeer(data){
+if(data.from){
+peerUser=data.from;
+peerAvatar=data.fromAvatar||"👤";
+$("peerAvatar").textContent=peerAvatar;
+$("peerName").textContent=peerUser;
+$("peerStatus").textContent="online";
+}
+
+if(data.roomId){
+currentRoom=data.roomId;
+socket.emit("room:join",{roomId:currentRoom});
+}
+}
+
+function showCallWindow(video){
+$("callWindow").classList.remove("hidden");
+currentCallVideo=video;
+
+if(video){
+$("remoteVideo").classList.remove("hidden");
+$("localVideo").classList.remove("hidden");
+$("audioOnlyBox").classList.add("hidden");
+$("flipBtn").classList.remove("hidden");
+}else{
+$("remoteVideo").classList.add("hidden");
+$("localVideo").classList.add("hidden");
+$("audioOnlyBox").classList.remove("hidden");
+$("flipBtn").classList.add("hidden");
+}
+}
+
+function hideIncoming(){
+$("incomingCall").classList.add("hidden");
+}
+
+function showIncoming(video){
+pendingOfferVideo=video;
+$("incomingAvatar").textContent=peerAvatar||"👤";
+$("incomingTitle").textContent=video?"Chamada de vídeo":"Chamada de voz";
+$("incomingSub").textContent=(peerUser||"Usuário")+" está chamando no ARCAIDRON";
+$("incomingCall").classList.remove("hidden");
+enterFullChat();
+}
+
+async function createPeer(){
+peerConnection=new RTCPeerConnection(rtcConfig);
+remoteStream=new MediaStream();
+
+$("remoteVideo").srcObject=remoteStream;
+$("remoteAudio").srcObject=remoteStream;
+
+peerConnection.ontrack=e=>{
+e.streams[0].getTracks().forEach(track=>{
+remoteStream.addTrack(track);
+});
+
+$("remoteVideo").srcObject=remoteStream;
+$("remoteAudio").srcObject=remoteStream;
+
+$("remoteAudio").muted=false;
+$("remoteAudio").volume=1;
+
+$("remoteAudio").play().catch(()=>{});
+$("remoteVideo").play().catch(()=>{});
+};
+
+peerConnection.onicecandidate=e=>{
+if(e.candidate&&currentRoom){
+socket.emit("call:signal",{roomId:currentRoom,type:"ice",candidate:e.candidate});
+}
+};
+
+peerConnection.onconnectionstatechange=()=>{
+if(!peerConnection)return;
+
+if(peerConnection.connectionState==="connected"){
+toast("Chamada conectada.");
+$("remoteAudio").play().catch(()=>{});
+}
+
+if(["failed","disconnected"].includes(peerConnection.connectionState)){
+toast("A chamada caiu ou a rede bloqueou a conexão.");
+}
+};
+}
+
+async function getMedia(video){
+return navigator.mediaDevices.getUserMedia({
+audio:{
+echoCancellation:true,
+noiseSuppression:true,
+autoGainControl:true
+},
+video:video?{
+facingMode:usingFrontCamera?"user":"environment"
+}:false
+});
+}
+
+async function startCall(video){
+if(!currentRoom){
+toast("Abra uma conversa primeiro.");
+return;
+}
+
+if(callBusy){
+toast("Já existe uma ligação em andamento.");
+return;
+}
+
+try{
+callBusy=true;
+showCallWindow(video);
+
+localStream=await getMedia(video);
+$("localVideo").srcObject=localStream;
+
+await createPeer();
+
+localStream.getTracks().forEach(track=>{
+peerConnection.addTrack(track,localStream);
+});
+
+const offer=await peerConnection.createOffer({
+offerToReceiveAudio:true,
+offerToReceiveVideo:video
+});
+
+await peerConnection.setLocalDescription(offer);
+
+socket.emit("call:signal",{roomId:currentRoom,type:"offer",offer,video});
+
+toast(video?"Chamando vídeo...":"Chamando voz...");
+}catch{
+callBusy=false;
+endCall(false);
+toast("Permita câmera/microfone no navegador.");
+}
+}
+
+async function answerCall(){
+if(!pendingOffer)return;
+
+try{
+hideIncoming();
+callBusy=true;
+showCallWindow(pendingOfferVideo);
+
+localStream=await getMedia(pendingOfferVideo);
+$("localVideo").srcObject=localStream;
+
+await createPeer();
+
+localStream.getTracks().forEach(track=>{
+peerConnection.addTrack(track,localStream);
+});
+
+await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
+
+const answer=await peerConnection.createAnswer();
+
+await peerConnection.setLocalDescription(answer);
+
+socket.emit("call:signal",{roomId:currentRoom,type:"answer",answer});
+
+pendingOffer=null;
+
+setTimeout(()=>{
+$("remoteAudio").play().catch(()=>{});
+$("remoteVideo").play().catch(()=>{});
+},800);
+}catch{
+declineCall();
+toast("Não foi possível atender. Verifique permissões.");
+}
+}
+
+function declineCall(){
+hideIncoming();
+pendingOffer=null;
+
+if(currentRoom){
+socket.emit("call:signal",{roomId:currentRoom,type:"decline"});
+}
+
+callBusy=false;
+}
+
+async function handleCallSignal(data){
+if(data.type==="offer"){
+if(callBusy){
+socket.emit("call:signal",{roomId:data.roomId,type:"busy"});
+return;
+}
+
+setIncomingPeer(data);
+pendingOffer=data.offer;
+showIncoming(!!data.video);
+return;
+}
+
+if(data.roomId!==currentRoom)return;
+
+if(data.type==="answer"&&peerConnection){
+await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+setTimeout(()=>{
+$("remoteAudio").play().catch(()=>{});
+$("remoteVideo").play().catch(()=>{});
+},800);
+return;
+}
+
+if(data.type==="ice"&&peerConnection){
+try{
+await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+}catch{}
+return;
+}
+
+if(data.type==="decline"){
+toast("Chamada recusada.");
+endCall(false);
+return;
+}
+
+if(data.type==="busy"){
+toast("Usuário está em outra chamada.");
+endCall(false);
+return;
+}
+
+if(data.type==="offline"){
+toast("Usuário offline.");
+endCall(false);
+return;
+}
+
+if(data.type==="hang"){
+toast("Chamada encerrada.");
+endCall(false);
+}
+}
+
+function endCall(send=true){
+if(send&&currentRoom){
+socket.emit("call:signal",{roomId:currentRoom,type:"hang"});
+}
+
+hideIncoming();
+pendingOffer=null;
+
+if(peerConnection)peerConnection.close();
+peerConnection=null;
+
+if(localStream){
+localStream.getTracks().forEach(track=>track.stop());
+}
+
+localStream=null;
+remoteStream=null;
+
+$("localVideo").srcObject=null;
+$("remoteVideo").srcObject=null;
+$("remoteAudio").srcObject=null;
+
+$("callWindow").classList.add("hidden");
+
+callBusy=false;
+muted=false;
+$("muteBtn").textContent="🎙️ Mudo";
+}
+
+$("voiceBtn").onclick=()=>startCall(false);
+$("videoBtn").onclick=()=>startCall(true);
+$("acceptCallBtn").onclick=answerCall;
+$("declineCallBtn").onclick=declineCall;
+$("endCallBtn").onclick=()=>endCall(true);
+
+$("muteBtn").onclick=()=>{
+muted=!muted;
+
+if(localStream){
+localStream.getAudioTracks().forEach(track=>{
+track.enabled=!muted;
+});
+}
+
+$("muteBtn").textContent=muted?"🔇 Ativar áudio":"🎙️ Mudo";
+};
+
+$("speakerBtn").onclick=()=>{
+$("remoteAudio").muted=false;
+$("remoteAudio").volume=1;
+$("remoteAudio").play().catch(()=>toast("Toque na tela para liberar o áudio."));
+toast("Som ativado.");
+};
+
+$("flipBtn").onclick=async()=>{
+if(!currentCallVideo||!localStream||!peerConnection)return;
+
+usingFrontCamera=!usingFrontCamera;
+
+try{
+const newStream=await getMedia(true);
+const newVideoTrack=newStream.getVideoTracks()[0];
+const oldVideoTrack=localStream.getVideoTracks()[0];
+
+const sender=peerConnection.getSenders().find(s=>s.track&&s.track.kind==="video");
+
+if(sender&&newVideoTrack){
+await sender.replaceTrack(newVideoTrack);
+}
+
+if(oldVideoTrack){
+oldVideoTrack.stop();
+localStream.removeTrack(oldVideoTrack);
+}
+
+localStream.addTrack(newVideoTrack);
+$("localVideo").srcObject=localStream;
+
+newStream.getAudioTracks().forEach(track=>track.stop());
+}catch{
+toast("Não foi possível virar a câmera.");
+}
+};
+
+document.addEventListener("click",()=>{
+if($("remoteAudio").srcObject){
+$("remoteAudio").play().catch(()=>{});
+}
+},{once:false});
+
+if(token&&currentUser){
+showApp();
+}else{
+showAuth();
+}
+</script>
+</body>
+</html>
