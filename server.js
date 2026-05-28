@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
 const path = require('path');
+const { Pool } = require('pg');
 
 const app = express();
 const server = http.createServer(app);
@@ -19,6 +20,7 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const MESSAGE_TTL = 60 * 60 * 1000;
+const DATABASE_URL = process.env.DATABASE_URL || '';
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '30mb' }));
@@ -28,6 +30,99 @@ app.use(express.static(__dirname));
 const users = new Map();
 const chats = new Map();
 const onlineUsers = new Map();
+
+let pool = null;
+
+if (DATABASE_URL) {
+  pool = new Pool({
+    connectionString: DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
+  });
+}
+
+async function initDatabase() {
+  if (!pool) {
+    console.log('DATABASE_URL não configurada. Usando memória temporária.');
+    return;
+  }
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS arcaidron_users (
+      username TEXT PRIMARY KEY,
+      avatar TEXT NOT NULL DEFAULT '🛡️',
+      password_hash TEXT NOT NULL,
+      created_at BIGINT NOT NULL,
+      last_seen BIGINT
+    )
+  `);
+
+  const result = await pool.query(`
+    SELECT username, avatar, password_hash, created_at, last_seen
+    FROM arcaidron_users
+  `);
+
+  users.clear();
+
+  for (const row of result.rows) {
+    users.set(row.username, {
+      username: row.username,
+      avatar: row.avatar || '🛡️',
+      passwordHash: row.password_hash,
+      createdAt: Number(row.created_at),
+      lastSeen: row.last_seen ? Number(row.last_seen) : null
+    });
+  }
+
+  console.log('Usuários carregados do banco:', users.size);
+}
+
+async function saveUser(user) {
+  users.set(user.username, user);
+
+  if (!pool) return;
+
+  await pool.query(
+    `
+    INSERT INTO arcaidron_users
+      (username, avatar, password_hash, created_at, last_seen)
+    VALUES
+      ($1, $2, $3, $4, $5)
+    ON CONFLICT (username)
+    DO UPDATE SET
+      avatar = EXCLUDED.avatar,
+      password_hash = EXCLUDED.password_hash,
+      last_seen = EXCLUDED.last_seen
+    `,
+    [
+      user.username,
+      user.avatar || '🛡️',
+      user.passwordHash,
+      user.createdAt || Date.now(),
+      user.lastSeen || null
+    ]
+  );
+}
+
+async function updateUserLastSeen(username, lastSeen) {
+  const user = users.get(username);
+
+  if (user) {
+    user.lastSeen = lastSeen;
+  }
+
+  if (!pool) return;
+
+  await pool.query(
+    `
+    UPDATE arcaidron_users
+    SET last_seen = $1
+    WHERE username = $2
+    `,
+    [lastSeen, username]
+  );
+}
 
 function cleanUsername(name) {
   return String(name || '')
@@ -108,61 +203,73 @@ app.get('/', (req, res) => {
 });
 
 app.post('/api/register', async (req, res) => {
-  const username = cleanUsername(req.body.username);
-  const password = String(req.body.password || '');
-  const avatar = String(req.body.avatar || '🛡️');
+  try {
+    const username = cleanUsername(req.body.username);
+    const password = String(req.body.password || '');
+    const avatar = String(req.body.avatar || '🛡️');
 
-  if (username.length < 3) {
-    return res.json({ error: 'Nome muito curto' });
+    if (username.length < 3) {
+      return res.json({ error: 'Nome muito curto' });
+    }
+
+    if (password.length < 6) {
+      return res.json({ error: 'Senha muito curta' });
+    }
+
+    if (users.has(username)) {
+      return res.json({ error: 'Esse usuário já existe' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = {
+      username,
+      avatar,
+      passwordHash,
+      createdAt: Date.now(),
+      lastSeen: null
+    };
+
+    await saveUser(user);
+
+    res.json({
+      ok: true,
+      token: createToken(username),
+      username,
+      avatar
+    });
+  } catch (err) {
+    console.error('Erro no cadastro:', err);
+    res.json({ error: 'Erro ao criar conta' });
   }
-
-  if (password.length < 6) {
-    return res.json({ error: 'Senha muito curta' });
-  }
-
-  if (users.has(username)) {
-    return res.json({ error: 'Esse usuário já existe' });
-  }
-
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  users.set(username, {
-    username,
-    avatar,
-    passwordHash,
-    createdAt: Date.now(),
-    lastSeen: null
-  });
-
-  res.json({
-    ok: true,
-    token: createToken(username),
-    username,
-    avatar
-  });
 });
 
 app.post('/api/login', async (req, res) => {
-  const username = cleanUsername(req.body.username);
-  const password = String(req.body.password || '');
-  const user = users.get(username);
+  try {
+    const username = cleanUsername(req.body.username);
+    const password = String(req.body.password || '');
+    const user = users.get(username);
 
-  if (!user) {
-    return res.json({ error: 'Login inválido' });
+    if (!user) {
+      return res.json({ error: 'Login inválido' });
+    }
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+
+    if (!valid) {
+      return res.json({ error: 'Senha inválida' });
+    }
+
+    res.json({
+      ok: true,
+      token: createToken(username),
+      username,
+      avatar: user.avatar
+    });
+  } catch (err) {
+    console.error('Erro no login:', err);
+    res.json({ error: 'Erro ao entrar' });
   }
-
-  const valid = await bcrypt.compare(password, user.passwordHash);
-
-  if (!valid) {
-    return res.json({ error: 'Senha inválida' });
-  }
-
-  res.json({
-    ok: true,
-    token: createToken(username),
-    username,
-    avatar: user.avatar
-  });
 });
 
 app.post('/api/open-chat', auth, (req, res) => {
@@ -224,13 +331,10 @@ setInterval(() => {
   }
 }, 60000);
 
-io.on('connection', socket => {
+io.on('connection', async socket => {
   const username = socket.username;
-  const user = users.get(username);
 
-  if (user) {
-    user.lastSeen = Date.now();
-  }
+  await updateUserLastSeen(username, Date.now());
 
   if (!onlineUsers.has(username)) {
     onlineUsers.set(username, new Set());
@@ -421,12 +525,8 @@ io.on('connection', socket => {
     }
   });
 
-  socket.on('disconnect', () => {
-    const currentUser = users.get(username);
-
-    if (currentUser) {
-      currentUser.lastSeen = Date.now();
-    }
+  socket.on('disconnect', async () => {
+    await updateUserLastSeen(username, Date.now());
 
     const set = onlineUsers.get(username);
 
@@ -442,6 +542,13 @@ io.on('connection', socket => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log('ARCAIDRON ativo na porta ' + PORT);
-});
+initDatabase()
+  .then(() => {
+    server.listen(PORT, () => {
+      console.log('ARCAIDRON ativo na porta ' + PORT);
+    });
+  })
+  .catch(err => {
+    console.error('Erro ao iniciar banco de dados:', err);
+    process.exit(1);
+  });
