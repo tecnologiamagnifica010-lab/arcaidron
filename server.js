@@ -61,7 +61,12 @@ function userStatus(username) {
 function publicUser(username) {
   const user = users.get(username);
   if (!user) return null;
-  return { username: user.username, avatar: user.avatar };
+
+  return {
+    username: user.username,
+    avatar: user.avatar,
+    lastSeen: user.lastSeen || null
+  };
 }
 
 function auth(req, res, next) {
@@ -86,6 +91,16 @@ function sendToUser(username, event, payload) {
   }
 
   return true;
+}
+
+function emitPresence(username) {
+  const user = users.get(username);
+
+  io.emit('presence:update', {
+    username,
+    status: userStatus(username),
+    lastSeen: user?.lastSeen || null
+  });
 }
 
 app.get('/', (req, res) => {
@@ -115,7 +130,8 @@ app.post('/api/register', async (req, res) => {
     username,
     avatar,
     passwordHash,
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    lastSeen: null
   });
 
   res.json({
@@ -183,7 +199,8 @@ app.post('/api/open-chat', auth, (req, res) => {
     ok: true,
     roomId,
     peer: publicUser(target),
-    status: userStatus(target)
+    status: userStatus(target),
+    lastSeen: user.lastSeen || null
   });
 });
 
@@ -199,13 +216,6 @@ io.use((socket, next) => {
   next();
 });
 
-function emitPresence(username) {
-  io.emit('presence:update', {
-    username,
-    status: userStatus(username)
-  });
-}
-
 setInterval(() => {
   for (const chat of chats.values()) {
     chat.messages = chat.messages.filter(msg => {
@@ -216,6 +226,11 @@ setInterval(() => {
 
 io.on('connection', socket => {
   const username = socket.username;
+  const user = users.get(username);
+
+  if (user) {
+    user.lastSeen = Date.now();
+  }
 
   if (!onlineUsers.has(username)) {
     onlineUsers.set(username, new Set());
@@ -232,6 +247,22 @@ io.on('connection', socket => {
     if (!chat.members.includes(username)) return;
 
     socket.join(roomId);
+
+    for (const msg of chat.messages) {
+      if (msg.from !== username) {
+        if (!msg.deliveredBy) msg.deliveredBy = [];
+
+        if (!msg.deliveredBy.includes(username)) {
+          msg.deliveredBy.push(username);
+
+          io.to(roomId).emit('message:delivered', {
+            id: msg.id,
+            deliveredBy: msg.deliveredBy
+          });
+        }
+      }
+    }
+
     socket.emit('room:history', chat.messages);
   });
 
@@ -242,6 +273,16 @@ io.on('connection', socket => {
     socket.to(data.roomId).emit('typing', {
       username,
       typing: !!data.typing
+    });
+  });
+
+  socket.on('recording', data => {
+    const chat = chats.get(data.roomId);
+    if (!chat || !chat.members.includes(username)) return;
+
+    socket.to(data.roomId).emit('recording', {
+      username,
+      recording: !!data.recording
     });
   });
 
@@ -262,12 +303,26 @@ io.on('connection', socket => {
       replyTo: data.replyTo || '',
       edited: false,
       deleted: false,
+      deliveredBy: [username],
       seenBy: [],
       createdAt: Date.now()
     };
 
     chat.messages.push(message);
     io.to(data.roomId).emit('message:new', message);
+
+    for (const member of chat.members) {
+      if (member !== username && onlineUsers.has(member)) {
+        if (!message.deliveredBy.includes(member)) {
+          message.deliveredBy.push(member);
+        }
+
+        io.to(data.roomId).emit('message:delivered', {
+          id: message.id,
+          deliveredBy: message.deliveredBy
+        });
+      }
+    }
   });
 
   socket.on('message:edit', data => {
@@ -313,6 +368,8 @@ io.on('connection', socket => {
     const msg = chat.messages.find(m => m.id === data.id);
     if (!msg) return;
 
+    if (!msg.seenBy) msg.seenBy = [];
+
     if (!msg.seenBy.includes(username)) {
       msg.seenBy.push(username);
     }
@@ -353,12 +410,24 @@ io.on('connection', socket => {
       return;
     }
 
-    if (data.type === 'answer' || data.type === 'ice' || data.type === 'decline' || data.type === 'busy' || data.type === 'hang') {
+    if (
+      data.type === 'answer' ||
+      data.type === 'ice' ||
+      data.type === 'decline' ||
+      data.type === 'busy' ||
+      data.type === 'hang'
+    ) {
       sendToUser(other, 'call:signal', payload);
     }
   });
 
   socket.on('disconnect', () => {
+    const currentUser = users.get(username);
+
+    if (currentUser) {
+      currentUser.lastSeen = Date.now();
+    }
+
     const set = onlineUsers.get(username);
 
     if (set) {
