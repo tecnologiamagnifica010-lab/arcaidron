@@ -1514,10 +1514,10 @@ localStream.getTracks().forEach(track=>{
 peerConnection.addTrack(track,localStream);
 });
 
-const offer=await peerConnection.createOffer({
-offerToReceiveAudio:true,
-offerToReceiveVideo:video
-});
+  const offer=await peerConnection.createOffer({
+  offerToReceiveAudio:true,
+  offerToReceiveVideo:true
+  });
 
 await peerConnection.setLocalDescription(offer);
 
@@ -1553,6 +1553,14 @@ await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer
 const answer=await peerConnection.createAnswer();
 
 await peerConnection.setLocalDescription(answer);
+  setTimeout(()=>{
+  const remoteAudio=$("remoteAudio");
+  if(remoteAudio){
+  remoteAudio.muted=false;
+  remoteAudio.volume=1;
+  remoteAudio.play().catch(()=>{});
+  }
+  },500);
 
 socket.emit("call:signal",{roomId:currentRoom,type:"answer",answer});
 
