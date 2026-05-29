@@ -1211,10 +1211,12 @@ toast("Conversa segura aberta.");
 
 $("backBtn").onclick=exitFullChat;
 
-$("logoutBtn").onclick=()=>{
-localStorage.clear();
-location.reload();
-};
+  $("logoutBtn").onclick=()=>{
+  localStorage.removeItem("arcaidron_token");
+  localStorage.removeItem("arcaidron_username");
+  localStorage.removeItem("arcaidron_avatar");
+  location.reload();
+  };
 
 $("clearBtn").onclick=()=>{
 $("messages").innerHTML='<div class="empty"><h3>Tela limpa</h3><p>Isso limpa apenas sua tela.</p></div>';
@@ -1829,9 +1831,14 @@ if($("remoteAudio").srcObject){
 $("remoteAudio").play().catch(()=>{});
 }
 },{once:false});
-  
+
   function vaultStorageKey(){
-  return "arcaidron_secure_vault_"+(currentUser||"guest");
+  const user=cleanUsername(
+  currentUser ||
+  localStorage.getItem("arcaidron_username") ||
+  "guest"
+  );
+  return "arcaidron_secure_vault_"+user;
   }
 
   function vaultHasData(){
