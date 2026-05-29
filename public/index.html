@@ -458,6 +458,58 @@ padding:26px;
 box-shadow:var(--shadow);
 text-align:center;
 }
+  .vaultModal{
+  width:min(430px,94vw);
+  max-height:88vh;
+  overflow:auto;
+  }
+
+  .vaultTitle{
+  font-size:22px;
+  font-weight:900;
+  margin-bottom:6px;
+  }
+
+  .vaultSub{
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:12px;
+  line-height:1.45;
+  }
+
+  .vaultActions{
+  display:grid;
+  gap:8px;
+  margin-top:10px;
+  }
+
+  .vaultList{
+  display:grid;
+  gap:8px;
+  margin-top:12px;
+  }
+
+  .vaultItem{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px;
+  background:#081424;
+  border:1px solid var(--line);
+  border-radius:14px;
+  }
+
+  .vaultItemName{
+  font-weight:900;
+  font-size:14px;
+  }
+
+  .vaultItemUser{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:3px;
+  }
 .callAvatar{
 width:92px;
 height:92px;
@@ -674,6 +726,8 @@ font-size:13px;
 <input id="chatKey" class="input" type="password" placeholder="Chave privada compartilhada">
 
 <button id="openChatBtn" class="btn full">🔐 Abrir conversa</button>
+  <button id="vaultBtn" class="btn full dark" type="button">📁🔐 Pasta Segura</button>
+  <p class="small" style="margin-top:8px">Guarde usuários e chaves no seu aparelho com senha mestra.</p>
 
 <div class="statusLine">
 <span id="targetDot" class="dot"></span>
@@ -767,6 +821,12 @@ font-size:13px;
 </section>
 
 <div id="toast" class="toast hidden"></div>
+  <section id="vaultOverlay" class="callOverlay hidden">
+    <div class="callCard vaultModal">
+      <div class="vaultTitle">📁🔐 Pasta Segura</div>
+      <div id="vaultContent"></div>
+    </div>
+  </section>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -1770,6 +1830,224 @@ $("remoteAudio").play().catch(()=>{});
 }
 },{once:false});
 
+  function vaultStorageKey(){
+  return "arcaidron_secure_vault_"+(currentUser||"guest");
+  }
+
+  function vaultHasData(){
+  return !!localStorage.getItem(vaultStorageKey());
+  }
+
+  async function vaultKeyFromPassword(password,saltBase64){
+  const material=await crypto.subtle.importKey("raw",encoder.encode(password),"PBKDF2",false,["deriveKey"]);
+
+  return crypto.subtle.deriveKey(
+  {name:"PBKDF2",salt:base64ToBuffer(saltBase64),iterations:260000,hash:"SHA-256"},
+  material,
+  {name:"AES-GCM",length:256},
+  false,
+  ["encrypt","decrypt"]
+  );
+  }
+
+  async function vaultSave(entries,password,existingSalt){
+  const salt=existingSalt||bufferToBase64(crypto.getRandomValues(new Uint8Array(16)));
+  const key=await vaultKeyFromPassword(password,salt);
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,encoder.encode(JSON.stringify(entries||[])));
+
+  localStorage.setItem(vaultStorageKey(),JSON.stringify({
+  salt,
+  iv:bufferToBase64(iv),
+  cipher:bufferToBase64(cipher)
+  }));
+  }
+
+  async function vaultLoad(password){
+  const raw=localStorage.getItem(vaultStorageKey());
+  if(!raw)return [];
+  const data=JSON.parse(raw);
+  const key=await vaultKeyFromPassword(password,data.salt);
+  const decrypted=await crypto.subtle.decrypt({name:"AES-GCM",iv:base64ToBuffer(data.iv)},key,base64ToBuffer(data.cipher));
+  return JSON.parse(decoder.decode(decrypted));
+  }
+
+  let vaultPassword="";
+  let vaultEntries=[];
+
+  function openVault(){
+  if(!currentUser){
+  toast("Entre na conta primeiro.");
+  return;
+  }
+
+  $("vaultOverlay").classList.remove("hidden");
+
+  if(vaultHasData()){
+  renderVaultUnlock();
+  }else{
+  renderVaultCreate();
+  }
+  }
+
+  function closeVault(){
+  $("vaultOverlay").classList.add("hidden");
+  }
+
+  function renderVaultCreate(){
+  $("vaultContent").innerHTML=`
+  <div class="vaultSub">Crie uma senha mestra para proteger usuários e chaves neste aparelho.</div>
+  <input id="vaultNewPass" class="input" type="password" placeholder="Criar senha mestra">
+  <input id="vaultNewPass2" class="input" type="password" placeholder="Confirmar senha mestra">
+  <div class="vaultActions">
+  <button id="vaultCreateBtn" class="btn full">🔐 Criar Pasta Segura</button>
+  <button id="vaultCloseBtn" class="btn full dark">Fechar</button>
+  </div>
+  <p class="small" style="margin-top:10px">Se esquecer a senha mestra, só será possível resetar a pasta.</p>
+  `;
+
+  $("vaultCreateBtn").onclick=async()=>{
+  const p1=$("vaultNewPass").value;
+  const p2=$("vaultNewPass2").value;
+
+  if(p1.length<6){toast("Use pelo menos 6 caracteres.");return;}
+  if(p1!==p2){toast("As senhas não conferem.");return;}
+
+  await vaultSave([],p1);
+  vaultPassword=p1;
+  vaultEntries=[];
+  renderVaultList();
+  toast("Pasta Segura criada.");
+  };
+
+  $("vaultCloseBtn").onclick=closeVault;
+  }
+
+  function renderVaultUnlock(){
+  $("vaultContent").innerHTML=`
+  <div class="vaultSub">Digite sua senha mestra para abrir sua lista privada.</div>
+  <input id="vaultPass" class="input" type="password" placeholder="Senha mestra">
+  <div class="vaultActions">
+  <button id="vaultUnlockBtn" class="btn full">🔓 Abrir Pasta Segura</button>
+  <button id="vaultResetBtn" class="btn full dark">Esqueci a senha / Resetar</button>
+  <button id="vaultCloseBtn" class="btn full dark">Fechar</button>
+  </div>
+  `;
+
+  $("vaultUnlockBtn").onclick=async()=>{
+  try{
+  vaultPassword=$("vaultPass").value;
+  vaultEntries=await vaultLoad(vaultPassword);
+  renderVaultList();
+  }catch{
+  toast("Senha mestra incorreta.");
+  }
+  };
+
+  $("vaultResetBtn").onclick=resetVault;
+  $("vaultCloseBtn").onclick=closeVault;
+  }
+
+  function renderVaultList(){
+  const items=vaultEntries.map((item,index)=>`
+  <div class="vaultItem">
+  <div>
+  <div class="vaultItemName">👤 ${escapeHtml(item.label||item.username)}</div>
+  <div class="vaultItemUser">${escapeHtml(item.username)}</div>
+  </div>
+  <div>
+  <button class="btn dark" style="padding:7px 9px;margin:2px" onclick="vaultOpenChat(${index})">Abrir</button>
+  <button class="btn dark" style="padding:7px 9px;margin:2px" onclick="vaultDelete(${index})">Apagar</button>
+  </div>
+  </div>
+  `).join("") || `<div class="safeItem">Nenhum contato salvo ainda.</div>`;
+
+  $("vaultContent").innerHTML=`
+  <div class="vaultSub">Sua lista fica criptografada neste aparelho. O servidor não recebe essa pasta.</div>
+  <input id="vaultLabel" class="input" placeholder="Nome para lembrar. Ex: João">
+  <input id="vaultUsername" class="input" placeholder="Nome exato do usuário ARCAIDRON">
+  <input id="vaultKey" class="input" type="password" placeholder="Chave privada combinada">
+  <button id="vaultAddBtn" class="btn full">➕ Salvar contato seguro</button>
+  <div class="vaultList">${items}</div>
+  <div class="vaultActions">
+  <button id="vaultLockBtn" class="btn full dark">🔒 Bloquear Pasta</button>
+  <button id="vaultResetBtn" class="btn full dark">🗑 Resetar Pasta Segura</button>
+  <button id="vaultCloseBtn" class="btn full dark">Fechar</button>
+  </div>
+  `;
+
+  $("vaultAddBtn").onclick=async()=>{
+  const label=$("vaultLabel").value.trim();
+  const username=cleanUsername($("vaultUsername").value);
+  const key=$("vaultKey").value;
+
+  if(!username||!key){
+  toast("Informe usuário e chave.");
+  return;
+  }
+
+  vaultEntries.push({
+  label:label||username,
+  username,
+  key,
+  createdAt:Date.now()
+  });
+
+  await vaultSave(vaultEntries,vaultPassword,JSON.parse(localStorage.getItem(vaultStorageKey())).salt);
+  renderVaultList();
+  toast("Contato salvo.");
+  };
+
+  $("vaultLockBtn").onclick=()=>{
+  vaultPassword="";
+  vaultEntries=[];
+  renderVaultUnlock();
+  };
+
+  $("vaultResetBtn").onclick=resetVault;
+  $("vaultCloseBtn").onclick=closeVault;
+  }
+
+  function vaultOpenChat(index){
+  const item=vaultEntries[index];
+  if(!item)return;
+
+  $("otherUser").value=item.username;
+  $("chatKey").value=item.key;
+
+  closeVault();
+
+  $("openChatBtn").click();
+  }
+
+  async function vaultDelete(index){
+  if(!confirm("Apagar este contato da Pasta Segura?"))return;
+
+  vaultEntries.splice(index,1);
+  await vaultSave(vaultEntries,vaultPassword,JSON.parse(localStorage.getItem(vaultStorageKey())).salt);
+  renderVaultList();
+  }
+
+  function resetVault(){
+  if(!confirm("Resetar a Pasta Segura? Isso apaga usuários e chaves salvos neste aparelho."))return;
+  if(!confirm("Confirmar reset definitivo da Pasta Segura?"))return;
+
+  localStorage.removeItem(vaultStorageKey());
+  vaultPassword="";
+  vaultEntries=[];
+  renderVaultCreate();
+  toast("Pasta Segura resetada.");
+  }
+
+  if($("vaultBtn")){
+  $("vaultBtn").onclick=openVault;
+  }
+
+  if($("vaultOverlay")){
+  $("vaultOverlay").addEventListener("click",e=>{
+  if(e.target.id==="vaultOverlay")closeVault();
+  });
+  }
 if(token&&currentUser){
 showApp();
 }else{
