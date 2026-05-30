@@ -395,18 +395,18 @@
         padding: 6px 8px;
         font-size: 11px;
       }
-      .media{
-      max-width:260px;
-      max-height:320px;
-      border-radius:12px;
-      margin-top:5px;
-      background:#020617;
-      object-fit:cover;
+      .media {
+        max-width: 260px;
+        max-height: 320px;
+        border-radius: 12px;
+        margin-top: 5px;
+        background: #020617;
+        object-fit: cover;
       }
 
-      audio{
-      max-width:260px;
-      height:40px;
+      audio {
+        max-width: 260px;
+        height: 40px;
       }
       .fileLink {
         display: inline-flex;
@@ -1031,6 +1031,7 @@
       let peerAvatar = "👤";
       let cryptoKey = null;
       let replyTo = "";
+      let replyTextCache = "";
       let typingTimer = null;
 
       let peerConnection = null;
@@ -1617,6 +1618,7 @@
 
       function startReply(id, text) {
         replyTo = id;
+        replyTextCache = text;
         $("replyText").textContent = "Respondendo: " + text;
         $("replyBox").classList.remove("hidden");
         $("messageInput").focus();
@@ -1792,7 +1794,7 @@
             const audioUrl = URL.createObjectURL(blob);
 
             const enviar = confirm(
-              "Áudio gravado.\n\nOK = Enviar\nCancelar = Apagar"
+              "Áudio gravado.\n\nOK = Enviar\nCancelar = Apagar",
             );
 
             if (!enviar) {
@@ -1801,13 +1803,9 @@
               return;
             }
 
-            const file = new File(
-              [blob],
-              "audio-arcaidron.webm",
-              {
-                type: "audio/webm",
-              }
-            );
+            const file = new File([blob], "audio-arcaidron.webm", {
+              type: "audio/webm",
+            });
 
             await sendFile(file, "voice");
 
