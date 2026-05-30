@@ -14,7 +14,10 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: { origin: '*' },
-  maxHttpBufferSize: 25 * 1024 * 1024
+  maxHttpBufferSize: 25 * 1024 * 1024,
+  pingInterval: 25000,
+  pingTimeout: 60000,
+  transports: ['websocket', 'polling']
 });
 
 const PORT = process.env.PORT || 3000;

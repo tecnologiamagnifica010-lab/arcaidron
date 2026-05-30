@@ -1294,7 +1294,55 @@
       function connectSocket() {
         if (socket) socket.disconnect();
 
-        socket = io({ auth: { token } });
+        socket = io({
+          auth: { token },
+          transports: ["websocket", "polling"],
+          reconnection: true,
+          reconnectionAttempts: Infinity,
+          reconnectionDelay: 800,
+          reconnectionDelayMax: 5000,
+          timeout: 20000
+        });
+
+        socket.on("connect", () => {
+
+          console.log("ARCAIDRON conectado:", socket.id);
+
+          if (currentRoom) {
+            socket.emit("room:join", {
+              roomId: currentRoom
+            });
+          }
+
+        });
+
+        socket.on("disconnect", (reason) => {
+
+          console.log("ARCAIDRON desconectado:", reason);
+
+          toast("Reconectando ao servidor...");
+
+        });
+
+        socket.io.on("reconnect", () => {
+
+          console.log("ARCAIDRON reconectado");
+
+          if (currentRoom) {
+            socket.emit("room:join", {
+              roomId: currentRoom
+            });
+          }
+
+          toast("Conexão restaurada.");
+
+        });
+
+        socket.io.on("reconnect_error", () => {
+
+          console.log("Tentando reconectar...");
+
+        });
 
         socket.on("connect_error", () => {
           toast("Sessão expirada. Entre novamente.");
