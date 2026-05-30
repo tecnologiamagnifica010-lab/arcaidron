@@ -1344,14 +1344,27 @@
 
         });
 
-        socket.on("connect_error", () => {
-          toast("Sessão expirada. Entre novamente.");
+        socket.on("connect_error", (err) => {
 
-          localStorage.removeItem("arcaidron_token");
-          localStorage.removeItem("arcaidron_username");
-          localStorage.removeItem("arcaidron_avatar");
+          console.log("Erro socket:", err?.message);
 
-          showAuth();
+          if (
+            err?.message === "Não autorizado" ||
+            err?.message === "Unauthorized"
+          ) {
+
+            toast("Sessão expirada. Entre novamente.");
+
+            localStorage.removeItem("arcaidron_token");
+            localStorage.removeItem("arcaidron_username");
+            localStorage.removeItem("arcaidron_avatar");
+
+            showAuth();
+            return;
+          }
+
+          toast("Reconectando ao servidor...");
+
         });
 
         socket.on("presence:update", (data) => {
