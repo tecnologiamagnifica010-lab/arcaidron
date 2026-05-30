@@ -1,32 +1,33 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const crypto = require('crypto');
-const path = require('path');
-const { Pool } = require('pg');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const crypto = require("crypto");
+const path = require("path");
+const { Pool } = require("pg");
 
 const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: { origin: '*' },
+  cors: { origin: "*" },
   maxHttpBufferSize: 25 * 1024 * 1024,
   pingInterval: 25000,
   pingTimeout: 60000,
-  transports: ['websocket', 'polling']
+  transports: ["websocket", "polling"],
 });
 
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+const JWT_SECRET =
+  process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex");
 const MESSAGE_TTL = 60 * 60 * 1000;
-const DATABASE_URL = process.env.DATABASE_URL || '';
+const DATABASE_URL = process.env.DATABASE_URL || "";
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(express.json({ limit: '30mb' }));
+app.use(express.json({ limit: "30mb" }));
 app.use(rateLimit({ windowMs: 60000, max: 180 }));
 app.use(express.static(__dirname));
 
@@ -40,14 +41,14 @@ if (DATABASE_URL) {
   pool = new Pool({
     connectionString: DATABASE_URL,
     ssl: {
-      rejectUnauthorized: false
-    }
+      rejectUnauthorized: false,
+    },
   });
 }
 
 async function initDatabase() {
   if (!pool) {
-    console.log('DATABASE_URL não configurada. Usando memória temporária.');
+    console.log("DATABASE_URL não configurada. Usando memória temporária.");
     return;
   }
 
@@ -71,14 +72,14 @@ async function initDatabase() {
   for (const row of result.rows) {
     users.set(row.username, {
       username: row.username,
-      avatar: row.avatar || '🛡️',
+      avatar: row.avatar || "🛡️",
       passwordHash: row.password_hash,
       createdAt: Number(row.created_at),
-      lastSeen: row.last_seen ? Number(row.last_seen) : null
+      lastSeen: row.last_seen ? Number(row.last_seen) : null,
     });
   }
 
-  console.log('Usuários carregados do banco:', users.size);
+  console.log("Usuários carregados do banco:", users.size);
 }
 
 async function saveUser(user) {
@@ -100,11 +101,11 @@ async function saveUser(user) {
     `,
     [
       user.username,
-      user.avatar || '🛡️',
+      user.avatar || "🛡️",
       user.passwordHash,
       user.createdAt || Date.now(),
-      user.lastSeen || null
-    ]
+      user.lastSeen || null,
+    ],
   );
 }
 
@@ -123,20 +124,20 @@ async function updateUserLastSeen(username, lastSeen) {
     SET last_seen = $1
     WHERE username = $2
     `,
-    [lastSeen, username]
+    [lastSeen, username],
   );
 }
 
 function cleanUsername(name) {
-  return String(name || '')
+  return String(name || "")
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9_.-]/g, '')
+    .replace(/[^a-z0-9_.-]/g, "")
     .slice(0, 32);
 }
 
 function createToken(username) {
-  return jwt.sign({ username }, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ username }, JWT_SECRET, { expiresIn: "7d" });
 }
 
 function verifyToken(token) {
@@ -148,12 +149,15 @@ function verifyToken(token) {
 }
 
 function createRoomId(a, b, key) {
-  const pair = [a, b].sort().join('::');
-  return crypto.createHash('sha256').update(pair + '::' + key).digest('hex');
+  const pair = [a, b].sort().join("::");
+  return crypto
+    .createHash("sha256")
+    .update(pair + "::" + key)
+    .digest("hex");
 }
 
 function userStatus(username) {
-  return onlineUsers.has(username) ? 'online' : 'offline';
+  return onlineUsers.has(username) ? "online" : "offline";
 }
 
 function publicUser(username) {
@@ -163,17 +167,17 @@ function publicUser(username) {
   return {
     username: user.username,
     avatar: user.avatar,
-    lastSeen: user.lastSeen || null
+    lastSeen: user.lastSeen || null,
   };
 }
 
 function auth(req, res, next) {
-  const header = req.headers.authorization || '';
-  const token = header.replace('Bearer ', '');
+  const header = req.headers.authorization || "";
+  const token = header.replace("Bearer ", "");
   const data = verifyToken(token);
 
   if (!data || !users.has(data.username)) {
-    return res.status(401).json({ error: 'Sessão inválida' });
+    return res.status(401).json({ error: "Sessão inválida" });
   }
 
   req.user = data.username;
@@ -194,33 +198,33 @@ function sendToUser(username, event, payload) {
 function emitPresence(username) {
   const user = users.get(username);
 
-  io.emit('presence:update', {
+  io.emit("presence:update", {
     username,
     status: userStatus(username),
-    lastSeen: user?.lastSeen || null
+    lastSeen: user?.lastSeen || null,
   });
 }
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.post('/api/register', async (req, res) => {
+app.post("/api/register", async (req, res) => {
   try {
     const username = cleanUsername(req.body.username);
-    const password = String(req.body.password || '');
-    const avatar = String(req.body.avatar || '🛡️');
+    const password = String(req.body.password || "");
+    const avatar = String(req.body.avatar || "🛡️");
 
     if (username.length < 3) {
-      return res.json({ error: 'Nome muito curto' });
+      return res.json({ error: "Nome muito curto" });
     }
 
     if (password.length < 6) {
-      return res.json({ error: 'Senha muito curta' });
+      return res.json({ error: "Senha muito curta" });
     }
 
     if (users.has(username)) {
-      return res.json({ error: 'Esse usuário já existe' });
+      return res.json({ error: "Esse usuário já existe" });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -230,7 +234,7 @@ app.post('/api/register', async (req, res) => {
       avatar,
       passwordHash,
       createdAt: Date.now(),
-      lastSeen: null
+      lastSeen: null,
     };
 
     await saveUser(user);
@@ -239,59 +243,59 @@ app.post('/api/register', async (req, res) => {
       ok: true,
       token: createToken(username),
       username,
-      avatar
+      avatar,
     });
   } catch (err) {
-    console.error('Erro no cadastro:', err);
-    res.json({ error: 'Erro ao criar conta' });
+    console.error("Erro no cadastro:", err);
+    res.json({ error: "Erro ao criar conta" });
   }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post("/api/login", async (req, res) => {
   try {
     const username = cleanUsername(req.body.username);
-    const password = String(req.body.password || '');
+    const password = String(req.body.password || "");
     const user = users.get(username);
 
     if (!user) {
-      return res.json({ error: 'Login inválido' });
+      return res.json({ error: "Login inválido" });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
 
     if (!valid) {
-      return res.json({ error: 'Senha inválida' });
+      return res.json({ error: "Senha inválida" });
     }
 
     res.json({
       ok: true,
       token: createToken(username),
       username,
-      avatar: user.avatar
+      avatar: user.avatar,
     });
   } catch (err) {
-    console.error('Erro no login:', err);
-    res.json({ error: 'Erro ao entrar' });
+    console.error("Erro no login:", err);
+    res.json({ error: "Erro ao entrar" });
   }
 });
 
-app.post('/api/open-chat', auth, (req, res) => {
+app.post("/api/open-chat", auth, (req, res) => {
   const me = req.user;
   const target = cleanUsername(req.body.target);
-  const sharedKeyHash = String(req.body.sharedKeyHash || '');
+  const sharedKeyHash = String(req.body.sharedKeyHash || "");
 
   if (!target || !sharedKeyHash) {
-    return res.json({ error: 'Informe usuário e chave' });
+    return res.json({ error: "Informe usuário e chave" });
   }
 
   if (target === me) {
-    return res.json({ error: 'Você não pode conversar consigo mesmo' });
+    return res.json({ error: "Você não pode conversar consigo mesmo" });
   }
 
   const user = users.get(target);
 
   if (!user) {
-    return res.json({ error: 'Usuário ou chave inválidos' });
+    return res.json({ error: "Usuário ou chave inválidos" });
   }
 
   const roomId = createRoomId(me, target, sharedKeyHash);
@@ -301,7 +305,7 @@ app.post('/api/open-chat', auth, (req, res) => {
       roomId,
       members: [me, target],
       messages: [],
-      createdAt: Date.now()
+      createdAt: Date.now(),
     });
   }
 
@@ -310,7 +314,7 @@ app.post('/api/open-chat', auth, (req, res) => {
     roomId,
     peer: publicUser(target),
     status: userStatus(target),
-    lastSeen: user.lastSeen || null
+    lastSeen: user.lastSeen || null,
   });
 });
 
@@ -319,7 +323,7 @@ io.use((socket, next) => {
   const data = verifyToken(token);
 
   if (!data || !users.has(data.username)) {
-    return next(new Error('Não autorizado'));
+    return next(new Error("Não autorizado"));
   }
 
   socket.username = data.username;
@@ -328,13 +332,13 @@ io.use((socket, next) => {
 
 setInterval(() => {
   for (const chat of chats.values()) {
-    chat.messages = chat.messages.filter(msg => {
+    chat.messages = chat.messages.filter((msg) => {
       return Date.now() - msg.createdAt < MESSAGE_TTL;
     });
   }
 }, 60000);
 
-io.on('connection', async socket => {
+io.on("connection", async (socket) => {
   const username = socket.username;
 
   await updateUserLastSeen(username, Date.now());
@@ -346,7 +350,7 @@ io.on('connection', async socket => {
   onlineUsers.get(username).add(socket.id);
   emitPresence(username);
 
-  socket.on('room:join', data => {
+  socket.on("room:join", (data) => {
     const roomId = data.roomId;
     const chat = chats.get(roomId);
 
@@ -362,38 +366,38 @@ io.on('connection', async socket => {
         if (!msg.deliveredBy.includes(username)) {
           msg.deliveredBy.push(username);
 
-          io.to(roomId).emit('message:delivered', {
+          io.to(roomId).emit("message:delivered", {
             id: msg.id,
-            deliveredBy: msg.deliveredBy
+            deliveredBy: msg.deliveredBy,
           });
         }
       }
     }
 
-    socket.emit('room:history', chat.messages);
+    socket.emit("room:history", chat.messages);
   });
 
-  socket.on('typing', data => {
+  socket.on("typing", (data) => {
     const chat = chats.get(data.roomId);
     if (!chat || !chat.members.includes(username)) return;
 
-    socket.to(data.roomId).emit('typing', {
+    socket.to(data.roomId).emit("typing", {
       username,
-      typing: !!data.typing
+      typing: !!data.typing,
     });
   });
 
-  socket.on('recording', data => {
+  socket.on("recording", (data) => {
     const chat = chats.get(data.roomId);
     if (!chat || !chat.members.includes(username)) return;
 
-    socket.to(data.roomId).emit('recording', {
+    socket.to(data.roomId).emit("recording", {
       username,
-      recording: !!data.recording
+      recording: !!data.recording,
     });
   });
 
-  socket.on('message:send', data => {
+  socket.on("message:send", (data) => {
     const chat = chats.get(data.roomId);
     if (!chat || !chat.members.includes(username)) return;
 
@@ -401,23 +405,23 @@ io.on('connection', async socket => {
       id: crypto.randomUUID(),
       roomId: data.roomId,
       from: username,
-      avatar: users.get(username)?.avatar || '🛡️',
-      type: data.type || 'text',
-      cipher: data.cipher || '',
-      iv: data.iv || '',
-      fileName: data.fileName || '',
-      fileMime: data.fileMime || '',
-      replyTo: data.replyTo || '',
-      replyText: data.replyText || '',
+      avatar: users.get(username)?.avatar || "🛡️",
+      type: data.type || "text",
+      cipher: data.cipher || "",
+      iv: data.iv || "",
+      fileName: data.fileName || "",
+      fileMime: data.fileMime || "",
+      replyTo: data.replyTo || "",
+      replyText: data.replyText || "",
       edited: false,
       deleted: false,
       deliveredBy: [username],
       seenBy: [],
-      createdAt: Date.now()
+      createdAt: Date.now(),
     };
 
     chat.messages.push(message);
-    io.to(data.roomId).emit('message:new', message);
+    io.to(data.roomId).emit("message:new", message);
 
     for (const member of chat.members) {
       if (member !== username && onlineUsers.has(member)) {
@@ -425,55 +429,59 @@ io.on('connection', async socket => {
           message.deliveredBy.push(member);
         }
 
-        io.to(data.roomId).emit('message:delivered', {
+        io.to(data.roomId).emit("message:delivered", {
           id: message.id,
-          deliveredBy: message.deliveredBy
+          deliveredBy: message.deliveredBy,
         });
       }
     }
   });
 
-  socket.on('message:edit', data => {
+  socket.on("message:edit", (data) => {
     const chat = chats.get(data.roomId);
     if (!chat || !chat.members.includes(username)) return;
 
-    const msg = chat.messages.find(m => m.id === data.id && m.from === username);
+    const msg = chat.messages.find(
+      (m) => m.id === data.id && m.from === username,
+    );
     if (!msg || msg.deleted) return;
 
-    msg.cipher = data.cipher || '';
-    msg.iv = data.iv || '';
+    msg.cipher = data.cipher || "";
+    msg.iv = data.iv || "";
     msg.edited = true;
 
-    io.to(data.roomId).emit('message:edited', {
+    io.to(data.roomId).emit("message:edited", {
       id: msg.id,
       cipher: msg.cipher,
-      iv: msg.iv
+      iv: msg.iv,
     });
   });
 
-  socket.on('message:delete', data => {
+  socket.on("message:delete", (data) => {
     const chat = chats.get(data.roomId);
     if (!chat || !chat.members.includes(username)) return;
 
-    const msg = chat.messages.find(m => m.id === data.id && m.from === username);
+    const msg = chat.messages.find(
+      (m) => m.id === data.id && m.from === username,
+    );
     if (!msg) return;
 
     msg.deleted = true;
-    msg.cipher = '';
-    msg.iv = '';
-    msg.fileName = '';
-    msg.fileMime = '';
+    msg.cipher = "";
+    msg.iv = "";
+    msg.fileName = "";
+    msg.fileMime = "";
 
-    io.to(data.roomId).emit('message:deleted', {
-      id: msg.id
+    io.to(data.roomId).emit("message:deleted", {
+      id: msg.id,
     });
   });
 
-  socket.on('message:seen', data => {
+  socket.on("message:seen", (data) => {
     const chat = chats.get(data.roomId);
     if (!chat || !chat.members.includes(username)) return;
 
-    const msg = chat.messages.find(m => m.id === data.id);
+    const msg = chat.messages.find((m) => m.id === data.id);
     if (!msg) return;
 
     if (!msg.seenBy) msg.seenBy = [];
@@ -482,36 +490,36 @@ io.on('connection', async socket => {
       msg.seenBy.push(username);
     }
 
-    io.to(data.roomId).emit('message:seen', {
+    io.to(data.roomId).emit("message:seen", {
       id: msg.id,
-      seenBy: msg.seenBy
+      seenBy: msg.seenBy,
     });
   });
 
-  socket.on('call:signal', data => {
+  socket.on("call:signal", (data) => {
     const roomId = data.roomId;
     const chat = chats.get(roomId);
 
     if (!chat || !chat.members.includes(username)) return;
 
-    const other = chat.members.find(member => member !== username);
+    const other = chat.members.find((member) => member !== username);
 
     const payload = {
       ...data,
       roomId,
       from: username,
-      fromAvatar: users.get(username)?.avatar || '👤',
-      to: other
+      fromAvatar: users.get(username)?.avatar || "👤",
+      to: other,
     };
 
-    if (data.type === 'offer') {
-      const delivered = sendToUser(other, 'call:signal', payload);
+    if (data.type === "offer") {
+      const delivered = sendToUser(other, "call:signal", payload);
 
       if (!delivered) {
-        socket.emit('call:signal', {
+        socket.emit("call:signal", {
           roomId,
-          type: 'offline',
-          from: other
+          type: "offline",
+          from: other,
         });
       }
 
@@ -519,17 +527,17 @@ io.on('connection', async socket => {
     }
 
     if (
-      data.type === 'answer' ||
-      data.type === 'ice' ||
-      data.type === 'decline' ||
-      data.type === 'busy' ||
-      data.type === 'hang'
+      data.type === "answer" ||
+      data.type === "ice" ||
+      data.type === "decline" ||
+      data.type === "busy" ||
+      data.type === "hang"
     ) {
-      sendToUser(other, 'call:signal', payload);
+      sendToUser(other, "call:signal", payload);
     }
   });
 
-  socket.on('disconnect', async () => {
+  socket.on("disconnect", async () => {
     await updateUserLastSeen(username, Date.now());
 
     const set = onlineUsers.get(username);
@@ -549,10 +557,10 @@ io.on('connection', async socket => {
 initDatabase()
   .then(() => {
     server.listen(PORT, () => {
-      console.log('ARCAIDRON ativo na porta ' + PORT);
+      console.log("ARCAIDRON ativo na porta " + PORT);
     });
   })
-  .catch(err => {
-    console.error('Erro ao iniciar banco de dados:', err);
+  .catch((err) => {
+    console.error("Erro ao iniciar banco de dados:", err);
     process.exit(1);
   });
