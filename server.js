@@ -408,6 +408,7 @@ io.on('connection', async socket => {
       fileName: data.fileName || '',
       fileMime: data.fileMime || '',
       replyTo: data.replyTo || '',
+      replyText: data.replyText || '',
       edited: false,
       deleted: false,
       deliveredBy: [username],
