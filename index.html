@@ -1301,58 +1301,44 @@
           reconnectionAttempts: Infinity,
           reconnectionDelay: 800,
           reconnectionDelayMax: 5000,
-          timeout: 20000
+          timeout: 20000,
         });
 
         socket.on("connect", () => {
-
           console.log("ARCAIDRON conectado:", socket.id);
 
           if (currentRoom) {
             socket.emit("room:join", {
-              roomId: currentRoom
+              roomId: currentRoom,
             });
           }
-
         });
 
         socket.on("disconnect", (reason) => {
-
           console.log("ARCAIDRON desconectado:", reason);
-
-          toast("Reconectando ao servidor...");
-
         });
 
         socket.io.on("reconnect", () => {
-
           console.log("ARCAIDRON reconectado");
 
           if (currentRoom) {
             socket.emit("room:join", {
-              roomId: currentRoom
+              roomId: currentRoom,
             });
           }
-
-          toast("Conexão restaurada.");
-
         });
 
         socket.io.on("reconnect_error", () => {
-
           console.log("Tentando reconectar...");
-
         });
 
         socket.on("connect_error", (err) => {
-
           console.log("Erro socket:", err?.message);
 
           if (
             err?.message === "Não autorizado" ||
             err?.message === "Unauthorized"
           ) {
-
             toast("Sessão expirada. Entre novamente.");
 
             localStorage.removeItem("arcaidron_token");
@@ -1362,9 +1348,6 @@
             showAuth();
             return;
           }
-
-          toast("Reconectando ao servidor...");
-
         });
 
         socket.on("presence:update", (data) => {
