@@ -1563,9 +1563,14 @@
         }
 
         let html = "";
-        if (message.replyTo)
+
+        if (message.replyTo) {
           html +=
-            '<div class="replyPreview">Respondendo mensagem anterior</div>';
+            '<div class="replyPreview">' +
+            "↩ Respondendo:<br>" +
+            escapeHtml(message.replyText || "Mensagem anterior") +
+            "</div>";
+        }
 
         html +=
           '<div class="msgBody">' +
