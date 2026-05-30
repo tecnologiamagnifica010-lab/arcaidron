@@ -395,11 +395,18 @@
         padding: 6px 8px;
         font-size: 11px;
       }
-      .media {
-        max-width: 100%;
-        border-radius: 12px;
-        margin-top: 5px;
-        background: #020617;
+      .media{
+      max-width:260px;
+      max-height:320px;
+      border-radius:12px;
+      margin-top:5px;
+      background:#020617;
+      object-fit:cover;
+      }
+
+      audio{
+      max-width:260px;
+      height:40px;
       }
       .fileLink {
         display: inline-flex;
@@ -1774,10 +1781,6 @@
 
           mediaRecorder.onstop = async () => {
             const blob = new Blob(recordChunks, { type: "audio/webm" });
-            const file = new File([blob], "audio-arcaidron.webm", {
-              type: "audio/webm",
-            });
-            await sendFile(file, "voice");
 
             if (recordStream) {
               recordStream.getTracks().forEach((t) => t.stop());
@@ -1785,6 +1788,31 @@
             }
 
             $("recordBtn").classList.remove("recording");
+
+            const audioUrl = URL.createObjectURL(blob);
+
+            const enviar = confirm(
+              "Áudio gravado.\n\nOK = Enviar\nCancelar = Apagar"
+            );
+
+            if (!enviar) {
+              URL.revokeObjectURL(audioUrl);
+              toast("Áudio apagado.");
+              return;
+            }
+
+            const file = new File(
+              [blob],
+              "audio-arcaidron.webm",
+              {
+                type: "audio/webm",
+              }
+            );
+
+            await sendFile(file, "voice");
+
+            URL.revokeObjectURL(audioUrl);
+
             toast("Áudio enviado.");
           };
 
