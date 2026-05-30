@@ -1706,12 +1706,14 @@
           roomId: currentRoom,
           type: "text",
           replyTo,
+          replyText: replyTextCache,
           cipher: encrypted.cipher,
           iv: encrypted.iv,
         });
 
         $("messageInput").value = "";
         replyTo = "";
+        replyTextCache = "";
         $("replyBox").classList.add("hidden");
       }
 
