@@ -1,0 +1,1 @@
+- [Arcaidron stack decisions](arcaidron-stack.md) — wouter route fix, dark class on html, socket.io proxy setup
