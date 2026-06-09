@@ -8637,5 +8637,167 @@
         display: block !important;
       }
     </style>
-  </body>
+  
+<!-- ARCAIDRON LOGIN PREMIUM OFICIAL -->
+<style>
+#authScreen{
+  background:
+    radial-gradient(circle at top,#061a36 0%,#020712 45%,#01040c 100%) !important;
+  min-height:100vh !important;
+  display:grid !important;
+  place-items:center !important;
+  padding:24px !important;
+}
+
+#authScreen .authCard{
+  width:min(430px,94vw) !important;
+  padding:34px 28px 30px !important;
+  border-radius:34px !important;
+  background:linear-gradient(180deg,rgba(7,18,35,.96),rgba(3,8,18,.98)) !important;
+  border:1px solid rgba(0,174,255,.38) !important;
+  box-shadow:0 0 45px rgba(0,145,255,.22), inset 0 0 35px rgba(0,145,255,.06) !important;
+  color:white !important;
+  text-align:center !important;
+}
+
+#authScreen .brand{
+  font-size:34px !important;
+  letter-spacing:8px !important;
+  font-weight:900 !important;
+  color:#eaf6ff !important;
+  text-shadow:0 0 18px rgba(0,174,255,.38) !important;
+}
+
+#authScreen .sub{
+  color:#1aa8ff !important;
+  letter-spacing:5px !important;
+  font-weight:800 !important;
+  margin-bottom:26px !important;
+}
+
+#authScreen .tabs{
+  display:grid !important;
+  grid-template-columns:1fr 1fr !important;
+  gap:10px !important;
+  margin:0 0 18px !important;
+}
+
+#authScreen .tabs button{
+  border:1px solid rgba(0,174,255,.45) !important;
+  border-radius:16px !important;
+  background:rgba(3,12,25,.72) !important;
+  color:#8fb3d9 !important;
+  height:48px !important;
+  font-weight:900 !important;
+}
+
+#authScreen .tabs button.active{
+  background:linear-gradient(135deg,#003cff,#009dff) !important;
+  color:white !important;
+  box-shadow:0 0 20px rgba(0,145,255,.38) !important;
+}
+
+#authScreen input.input{
+  height:62px !important;
+  border-radius:18px !important;
+  border:1px solid rgba(0,174,255,.38) !important;
+  background:rgba(1,8,18,.9) !important;
+  color:white !important;
+  font-size:17px !important;
+  padding:0 18px !important;
+  margin-bottom:14px !important;
+  box-shadow:inset 0 0 18px rgba(0,145,255,.08) !important;
+}
+
+#authScreen input.input::placeholder{
+  color:#7f93aa !important;
+}
+
+#authScreen #loginPhotoBtn{
+  height:56px !important;
+  border-radius:18px !important;
+  border:1px solid rgba(0,174,255,.55) !important;
+  background:rgba(2,12,26,.75) !important;
+  color:#eaf6ff !important;
+  font-weight:900 !important;
+  margin-bottom:18px !important;
+}
+
+#authScreen #authBtn{
+  height:64px !important;
+  border-radius:18px !important;
+  border:1px solid #00a2ff !important;
+  background:linear-gradient(135deg,#1838ff,#008cff) !important;
+  color:white !important;
+  font-size:18px !important;
+  font-weight:900 !important;
+  letter-spacing:2px !important;
+  box-shadow:0 0 28px rgba(0,145,255,.48) !important;
+  display:block !important;
+  width:100% !important;
+  margin-top:4px !important;
+}
+
+#authScreen #loginError{
+  margin-top:14px !important;
+  color:#ff6b6b !important;
+  font-weight:800 !important;
+}
+
+#authScreen .authFoot,
+#authScreen .hint{
+  color:#8796ad !important;
+  margin-top:22px !important;
+  font-size:13px !important;
+}
+</style>
+
+<script>
+(function(){
+  function installPremiumLogin(){
+    const auth = document.getElementById("authBtn");
+    const login = document.getElementById("loginTab");
+    const reg = document.getElementById("registerTab");
+    const user = document.getElementById("username");
+    const pass = document.getElementById("password");
+    const sub = document.querySelector("#authScreen .sub");
+
+    if(sub) sub.textContent = "SEU NOME PRIVADO 🔒";
+    if(user) user.placeholder = "Digite seu nome";
+    if(pass) pass.placeholder = "Digite sua senha";
+
+    if(login) login.textContent = "ENTRAR";
+    if(reg) reg.textContent = "CRIAR CONTA";
+
+    if(auth && !auth.dataset.loginPremiumOk){
+      auth.dataset.loginPremiumOk = "1";
+      auth.textContent = "⚡ ENTRAR";
+    }
+
+    if(login && auth){
+      login.onclick = function(){
+        try{ authMode = "login"; }catch{}
+        login.classList.add("active");
+        reg && reg.classList.remove("active");
+        auth.textContent = "⚡ ENTRAR";
+      };
+    }
+
+    if(reg && auth){
+      reg.onclick = function(){
+        try{ authMode = "register"; }catch{}
+        reg.classList.add("active");
+        login && login.classList.remove("active");
+        auth.textContent = "🛡️ CRIAR CONTA";
+      };
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", installPremiumLogin);
+  setTimeout(installPremiumLogin,300);
+  setTimeout(installPremiumLogin,1200);
+})();
+</script>
+<!-- FIM ARCAIDRON LOGIN PREMIUM OFICIAL -->
+</body>
 </html>
