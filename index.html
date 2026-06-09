@@ -8758,5 +8758,120 @@
 })();
 </script>
 <!-- FIM ARCAIDRON LOGIN COM FOTO CORRETO -->
+
+<!-- ARCAIDRON ABRIR SALA ROBUSTO -->
+<script>
+(function(){
+  async function arcaOpenChatSeguro(){
+    try{
+      const targetEl = document.getElementById("otherUser");
+      const keyEl = document.getElementById("chatKey");
+
+      const targetRaw = targetEl ? targetEl.value : "";
+      const key = keyEl ? keyEl.value : "";
+
+      const target = typeof cleanUsername === "function"
+        ? cleanUsername(targetRaw)
+        : String(targetRaw || "").trim().toLowerCase();
+
+      if(!target || !key){
+        if(typeof toast === "function") toast("Digite o ID/nome do amigo e a chave privada.");
+        return;
+      }
+
+      if(typeof createCryptoKey === "function"){
+        cryptoKey = await createCryptoKey(key);
+      }
+
+      const sharedKeyHash = typeof sha256 === "function" ? await sha256(key) : key;
+
+      const result = await api("/api/open-chat", {
+        target,
+        sharedKeyHash
+      });
+
+      if(!result || result.error){
+        if(typeof toast === "function") toast((result && result.error) || "Não foi possível abrir a conversa.");
+        return;
+      }
+
+      const previousRoom = typeof currentRoom !== "undefined" ? currentRoom : "";
+
+      currentRoom = result.roomId;
+      peerUser = (result.peer && result.peer.username) || target;
+      peerAvatar = (result.peer && result.peer.avatar) || "👤";
+
+      if(previousRoom !== currentRoom && document.getElementById("messages")){
+        document.getElementById("messages").innerHTML = "";
+      }
+
+      if(typeof localStorage !== "undefined"){
+        localStorage.setItem("arcaidron_last_room", currentRoom || "");
+        localStorage.setItem("arcaidron_last_peer", peerUser || "");
+      }
+
+      if(typeof arcaSetAvatarElement === "function" && document.getElementById("peerAvatar")){
+        arcaSetAvatarElement(document.getElementById("peerAvatar"), peerAvatar);
+      }
+
+      if(document.getElementById("peerName")){
+        document.getElementById("peerName").textContent = peerUser;
+      }
+
+      if(typeof setPeerStatus === "function"){
+        setPeerStatus(result.status === "online" ? "online" : "offline");
+      }
+
+      if(typeof rejoinCurrentRoom === "function"){
+        rejoinCurrentRoom();
+      } else if(typeof socket !== "undefined" && socket && currentRoom){
+        socket.emit("room:join", { roomId: currentRoom });
+      }
+
+      if(typeof loadLocalMessages === "function" && typeof addMessage === "function"){
+        try{
+          const local = loadLocalMessages();
+          if(Array.isArray(local)){
+            for(const msg of local){
+              if(msg && msg.roomId === currentRoom) await addMessage(msg);
+            }
+          }
+        }catch(e){}
+      }
+
+      if(typeof enterFullChat === "function"){
+        enterFullChat();
+      } else if(document.getElementById("appScreen")){
+        document.getElementById("appScreen").classList.add("fullChat");
+      }
+
+      if(typeof toast === "function") toast("Conversa segura aberta.");
+    }catch(err){
+      console.error("Erro ao abrir sala:", err);
+      if(typeof toast === "function") toast("Erro ao abrir conversa. Verifique ID, chave e conexão.");
+    }
+  }
+
+  function install(){
+    const oldBtn = document.getElementById("openChatBtn");
+    if(!oldBtn || oldBtn.dataset.arcaOpenFixed === "1") return;
+
+    const btn = oldBtn.cloneNode(true);
+    btn.dataset.arcaOpenFixed = "1";
+    oldBtn.parentNode.replaceChild(btn, oldBtn);
+
+    btn.addEventListener("click", function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      arcaOpenChatSeguro();
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", install);
+  setTimeout(install,300);
+  setTimeout(install,1000);
+})();
+</script>
+<!-- FIM ARCAIDRON ABRIR SALA ROBUSTO -->
 </body>
 </html>
