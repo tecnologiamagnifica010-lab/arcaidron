@@ -8640,19 +8640,17 @@
   
 
 
-<!-- ARCAIDRON LOGIN FINAL PEDIDO -->
+
+
+<!-- ARCAIDRON LOGIN COM FOTO CORRETO -->
 <style>
-#authScreen{
-  min-height:100vh!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  padding:22px!important;
+#authScreen .authCard::before,
+#authScreen .authIcon,
+#authScreen .brandIcon,
+#authScreen .logoIcon{
+  display:none!important;
 }
-#authScreen .authCard{
-  width:min(520px,94vw)!important;
-  padding:34px 28px!important;
-}
+
 #authScreen .sub{
   font-size:0!important;
 }
@@ -8660,36 +8658,63 @@
   content:"Chat privado criptografado de ponta a ponta";
   font-size:15px!important;
 }
+
 #authScreen .tabs{
   display:grid!important;
   grid-template-columns:1fr 1fr!important;
-  gap:10px!important;
-  margin:20px 0!important;
+  gap:0!important;
+  padding:7px!important;
+  border-radius:28px!important;
+  background:rgba(0,0,0,.38)!important;
+  margin:24px 0 22px!important;
 }
+
 #authScreen .tabs button{
-  display:block!important;
+  height:64px!important;
+  border:0!important;
+  border-radius:22px!important;
+  background:transparent!important;
+  color:#9fb0c8!important;
+  font-size:21px!important;
+  font-weight:900!important;
 }
+
+#authScreen .tabs button.active{
+  background:rgba(30,58,95,.92)!important;
+  color:white!important;
+}
+
 #authScreen #username,
-#authScreen #password,
-#authScreen #avatar,
-#authScreen #loginPhotoBtn,
+#authScreen #password{
+  display:block!important;
+  width:100%!important;
+  height:66px!important;
+  margin-bottom:16px!important;
+  border-radius:22px!important;
+  font-size:20px!important;
+}
+
+#authScreen #avatar{
+  display:none!important;
+}
+
+#authScreen #loginPhotoBtn{
+  display:block!important;
+  width:100%!important;
+  height:62px!important;
+  margin:0 0 18px!important;
+  border-radius:22px!important;
+  font-size:18px!important;
+  font-weight:900!important;
+}
+
 #authScreen #authBtn{
   display:block!important;
   width:100%!important;
-  box-sizing:border-box!important;
-}
-#authScreen #username,
-#authScreen #password,
-#authScreen #avatar{
-  height:58px!important;
-  margin-bottom:14px!important;
-}
-#authScreen #loginPhotoBtn{
-  margin-bottom:14px!important;
-}
-#authScreen #authBtn{
-  height:62px!important;
-  margin-top:16px!important;
+  height:70px!important;
+  border-radius:24px!important;
+  font-size:22px!important;
+  font-weight:900!important;
 }
 </style>
 
@@ -8701,33 +8726,29 @@
     const auth = document.getElementById("authBtn");
     const user = document.getElementById("username");
     const pass = document.getElementById("password");
+    const photo = document.getElementById("loginPhotoBtn");
 
     if(user) user.placeholder = "Seu nome privado";
     if(pass) pass.placeholder = "Sua senha";
+    if(photo) photo.textContent = "🖼️ Escolher foto de perfil";
 
     if(login) login.textContent = "Entrar";
     if(reg) reg.textContent = "Criar conta";
 
-    if(login && auth){
+    if(login && reg && auth){
       login.onclick = function(){
         try{ authMode = "login"; }catch{}
         login.classList.add("active");
-        reg && reg.classList.remove("active");
+        reg.classList.remove("active");
         auth.textContent = "⚡ Entrar";
       };
-    }
 
-    if(reg && auth){
       reg.onclick = function(){
         try{ authMode = "register"; }catch{}
         reg.classList.add("active");
-        login && login.classList.remove("active");
+        login.classList.remove("active");
         auth.textContent = "🛡️ Criar conta";
       };
-    }
-
-    if(auth && !auth.textContent.trim()){
-      auth.textContent = "⚡ Entrar";
     }
   }
 
@@ -8736,6 +8757,6 @@
   setTimeout(install,1000);
 })();
 </script>
-<!-- FIM ARCAIDRON LOGIN FINAL PEDIDO -->
+<!-- FIM ARCAIDRON LOGIN COM FOTO CORRETO -->
 </body>
 </html>
