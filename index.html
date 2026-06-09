@@ -2415,8 +2415,8 @@
 
         <div class="panel">
           <div class="tabs">
-            <button id="loginTab" class="active">Entrar</button>
-            <button id="registerTab">Criar conta</button>
+            <button id="loginTab" class="active" type="button">Entrar</button>
+            <button id="registerTab" type="button">Criar conta</button>
           </div>
 
           <input id="username" class="input" placeholder="Seu nome privado" />
@@ -2431,7 +2431,7 @@
 
           <input id="loginPhotoInput" type="file" accept="image/*" hidden />
           <button id="loginPhotoBtn" class="btn full dark" type="button">🖼️ Escolher foto de perfil</button>
-          <button id="authBtn" class="btn full">⚡ Entrar</button>
+          <button id="authBtn" class="btn full" type="button">⚡ Entrar</button>
           <p id="loginError" class="error"></p>
         </div>
       </div>
@@ -3524,39 +3524,47 @@ if (section === "chamadas") {
       $("authBtn").onclick = async () => {
         const username = cleanUsername($("username").value);
         const password = $("password").value;
-        const avatar = $("avatar").value;
+        const avatar = $("avatar")?.value || "🛡️";
 
         if (!username || !password) {
           $("loginError").textContent = "Digite nome e senha.";
           return;
         }
 
-        const result = await api("/api/" + authMode, {
-          username,
-          password,
-          avatar,
-        });
+        $("authBtn").disabled = true;
+        $("loginError").textContent = "";
+        $("authBtn").textContent = authMode === "login" ? "Entrando..." : "Criando...";
 
-        if (result.error) {
-          $("loginError").textContent = result.error;
-          return;
+        try {
+          const result = await api("/api/" + authMode, {
+            username,
+            password,
+            avatar,
+          });
+
+          if (result.error) {
+            $("loginError").textContent = result.error;
+            return;
+          }
+
+          token = result.token;
+          currentUser = result.username || username;
+          currentAvatar = result.avatar || avatar || "🛡️";
+          currentUserId = result.userId || "";
+
+          localStorage.setItem("arcaidron_token", token);
+          localStorage.setItem("arcaidron_username", currentUser);
+          localStorage.setItem("arcaidron_avatar", currentAvatar);
+          localStorage.setItem("arcaidron_userid", currentUserId);
+
+          showApp();
+        } catch (err) {
+          console.error("Erro no login:", err);
+          $("loginError").textContent = "Erro ao conectar ao servidor.";
+        } finally {
+          $("authBtn").disabled = false;
+          $("authBtn").textContent = authMode === "login" ? "⚡ Entrar" : "🛡️ Criar conta";
         }
-
-        token = result.token;
-        currentUser = result.username;
-        currentAvatar = result.avatar || localStorage.getItem("arcaidron_avatar") || "🛡️";
-            if (String(currentAvatar).startsWith("data:image/")) {
-              localStorage.setItem("arcaidron_avatar", currentAvatar);
-              localStorage.setItem("arcaidron_profile_photo", currentAvatar);
-            }
-        currentUserId = result.userId || "";
-
-        localStorage.setItem("arcaidron_token", token);
-        localStorage.setItem("arcaidron_username", currentUser);
-        localStorage.setItem("arcaidron_avatar", currentAvatar);
-        localStorage.setItem("arcaidron_userid", currentUserId);
-
-        showApp();
       };
 
       function connectSocket() {
@@ -7603,5 +7611,45 @@ if (section === "chamadas") {
 })();
 </script>
 <!-- FIM ARCAIDRON FUNCTIONAL SETTINGS AND LIBRARY -->
+
+<!-- ARCAIDRON LOGIN DUPLICADO FIX -->
+<script>
+(function(){
+  function install(){
+    const login = document.getElementById("loginTab");
+    const reg = document.getElementById("registerTab");
+    const auth = document.getElementById("authBtn");
+    const err = document.getElementById("loginError");
+
+    if (!login || !reg || !auth) return;
+
+    login.type = "button";
+    reg.type = "button";
+    auth.type = "button";
+
+    login.onclick = function(){
+      window.authMode = "login";
+      try { authMode = "login"; } catch {}
+      login.classList.add("active");
+      reg.classList.remove("active");
+      auth.textContent = "⚡ Entrar";
+      if (err) err.textContent = "";
+    };
+
+    reg.onclick = function(){
+      window.authMode = "register";
+      try { authMode = "register"; } catch {}
+      reg.classList.add("active");
+      login.classList.remove("active");
+      auth.textContent = "🛡️ Criar conta";
+      if (err) err.textContent = "";
+    };
+  }
+
+  document.addEventListener("DOMContentLoaded", install);
+  setTimeout(install, 300);
+})();
+</script>
+<!-- FIM ARCAIDRON LOGIN DUPLICADO FIX -->
 </body>
 </html>
