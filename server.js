@@ -49,6 +49,29 @@ const DATABASE_URL = process.env.DATABASE_URL || "";
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: "30mb" }));
 app.use(rateLimit({ windowMs: 60000, max: 180 }));
+function injectClientExtensions(html) {
+  const extension = '<script src="/public/arcaidron-functional.js"></script>';
+  const seenEmit = 'socket.emit("message:seen", { roomId: currentRoom, id: message.id });';
+  const guardedSeenEmit = `if (localStorage.getItem("arcaidron_hide_seen") !== "1") {
+          ${seenEmit}
+        }`;
+  let nextHtml = html;
+
+  if (nextHtml.includes(seenEmit) && !nextHtml.includes("arcaidron_hide_seen")) {
+    nextHtml = nextHtml.replace(seenEmit, guardedSeenEmit);
+  }
+
+  if (nextHtml.includes(extension)) return nextHtml;
+  return nextHtml.replace("</body>", extension + "\n</body>");
+}
+
+app.get("/", (req, res) => {
+  fs.readFile(path.join(__dirname, "index.html"), "utf8", (err, html) => {
+    if (err) return res.status(500).send("Erro ao carregar ARCAIDRON");
+    res.send(injectClientExtensions(html));
+  });
+});
+
 app.use(express.static(__dirname));
 
 const users = new Map();
@@ -383,10 +406,6 @@ function emitPresence(username) {
   });
 }
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
 app.post("/api/register", async (req, res) => {
   try {
     const username = cleanUsername(req.body.username);
@@ -501,6 +520,9 @@ app.post("/api/update-avatar", auth, (req, res) => {
   if (!user) return res.json({ error: "Usuário não encontrado" });
 
   user.avatar = avatar;
+  saveUser(user).catch((err) => {
+    console.error("Erro ao salvar avatar:", err);
+  });
   emitPresence(req.user);
 
   res.json({ ok: true, avatar });

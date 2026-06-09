@@ -4783,7 +4783,12 @@ if (section === "chamadas") {
         $("messages").appendChild(div);
         $("messages").scrollTop = $("messages").scrollHeight;
 
-        if (message.from !== currentUser && socket && socket.connected) {
+        if (
+          message.from !== currentUser &&
+          socket &&
+          socket.connected &&
+          localStorage.getItem("arcaidron_hide_seen") !== "1"
+        ) {
           socket.emit("message:seen", { roomId: currentRoom, id: message.id });
         }
       }
@@ -6947,5 +6952,570 @@ if (section === "chamadas") {
 })();
 </script>
 <!-- FIM ARCAIDRON FINAL MOCKUP EXACT OVERRIDE -->
+<!-- ARCAIDRON FUNCTIONAL SETTINGS AND LIBRARY -->
+<style>
+  .arcaSwitchRow {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid rgba(35, 72, 110, .78);
+    border-radius: 13px;
+    background: linear-gradient(145deg, #071b33, #061224);
+  }
+
+  .arcaSwitchRow strong,
+  .arcaChoice strong {
+    display: block;
+    color: #f7fbff;
+  }
+
+  .arcaSwitchRow small,
+  .arcaChoice small {
+    color: #8fa7c1;
+  }
+
+  .arcaToggle {
+    width: 50px;
+    height: 28px;
+    border: 1px solid rgba(74, 119, 160, .7);
+    border-radius: 999px;
+    background: #07101e;
+    position: relative;
+  }
+
+  .arcaToggle::after {
+    content: "";
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    top: 2px;
+    left: 3px;
+    border-radius: 50%;
+    background: #8fa7c1;
+    transition: .18s ease;
+  }
+
+  .arcaToggle.active {
+    background: linear-gradient(135deg, #4639ff, #087fff);
+  }
+
+  .arcaToggle.active::after {
+    left: 23px;
+    background: white;
+  }
+
+  .arcaChoiceGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .arcaChoice {
+    min-height: 74px;
+    border: 1px solid rgba(35, 72, 110, .78);
+    border-radius: 13px;
+    background: linear-gradient(145deg, #071b33, #061224);
+    color: #f7fbff;
+    text-align: left;
+    padding: 12px;
+  }
+
+  .arcaChoice.active {
+    border-color: #008cff;
+    box-shadow: 0 0 24px rgba(0, 140, 255, .28);
+  }
+
+  body.arca-theme-orange {
+    --arca-blue: #ff7a00;
+    --arca-purple: #ff3d00;
+  }
+
+  body.arca-theme-light #authScreen,
+  body.arca-theme-light #appScreen,
+  body.arca-theme-light #arcaUtilityOverlay {
+    background: linear-gradient(180deg, #f7fbff, #dfeeff) !important;
+    color: #07111f !important;
+  }
+
+  body.arca-theme-red {
+    --arca-blue: #ff1744;
+    --arca-purple: #9f1239;
+  }
+
+  body.arca-theme-brazil {
+    --arca-blue: #009b3a;
+    --arca-purple: #ffdf00;
+  }
+
+  body.arca-theme-flamengo {
+    --arca-blue: #e30613;
+    --arca-purple: #111;
+  }
+
+  body.arca-theme-corinthians {
+    --arca-blue: #f7fbff;
+    --arca-purple: #111;
+  }
+
+  body.arca-theme-palmeiras {
+    --arca-blue: #006437;
+    --arca-purple: #00a859;
+  }
+
+  body.arca-theme-santos {
+    --arca-blue: #f7fbff;
+    --arca-purple: #111;
+  }
+
+  body.arca-theme-orange .logo,
+  body.arca-theme-red .logo,
+  body.arca-theme-brazil .logo,
+  body.arca-theme-flamengo .logo,
+  body.arca-theme-corinthians .logo,
+  body.arca-theme-palmeiras .logo,
+  body.arca-theme-santos .logo {
+    background: linear-gradient(150deg, var(--arca-blue), #06132b 58%, var(--arca-purple)) !important;
+  }
+</style>
+
+<script>
+(function(){
+  const S = {
+    hideSeen: "arcaidron_hide_seen",
+    hideOnline: "arcaidron_hide_online",
+    tempMessages: "arcaidron_temp_messages",
+    notifications: "arcaidron_notifications",
+    sound: "arcaidron_sound",
+    vibration: "arcaidron_vibration",
+    theme: "arcaidron_theme",
+    language: "arcaidron_language",
+    blocked: "arcaidron_blocked_contacts",
+    hiddenName: "arcaidron_hidden_name_contacts",
+    hiddenPhoto: "arcaidron_hidden_photo_contacts",
+    callLog: "arcaidron_call_log",
+  };
+
+  const translations = {
+    pt: { settings: "Configurações", account: "Conta", privacy: "Privacidade", calls: "Chamadas", files: "Arquivos", profile: "Meu perfil" },
+    en: { settings: "Settings", account: "Account", privacy: "Privacy", calls: "Calls", files: "Files", profile: "My profile" },
+    es: { settings: "Configuración", account: "Cuenta", privacy: "Privacidad", calls: "Llamadas", files: "Archivos", profile: "Mi perfil" },
+    fr: { settings: "Paramètres", account: "Compte", privacy: "Confidentialité", calls: "Appels", files: "Fichiers", profile: "Mon profil" },
+    zh: { settings: "设置", account: "账户", privacy: "隐私", calls: "通话", files: "文件", profile: "我的资料" },
+  };
+
+  function t(key) {
+    const lang = localStorage.getItem(S.language) || "pt";
+    return (translations[lang] && translations[lang][key]) || translations.pt[key] || key;
+  }
+
+  function readList(key) {
+    try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
+  }
+
+  function writeList(key, list) {
+    localStorage.setItem(key, JSON.stringify(list || []));
+  }
+
+  function isOn(key, fallback = false) {
+    const value = localStorage.getItem(key);
+    if (value === null) return fallback;
+    return value === "1";
+  }
+
+  function setOn(key, value) {
+    localStorage.setItem(key, value ? "1" : "0");
+  }
+
+  function currentContacts() {
+    try { return loadInviteContacts(); } catch { return []; }
+  }
+
+  function isBlocked(username) {
+    return readList(S.blocked).includes(cleanUsername(username));
+  }
+
+  window.arcaIsBlocked = isBlocked;
+
+  function toggleListValue(key, username) {
+    const user = cleanUsername(username);
+    if (!user) return;
+    const list = readList(key);
+    const next = list.includes(user) ? list.filter((item) => item !== user) : [...list, user];
+    writeList(key, next);
+  }
+
+  function renderSwitch(label, subtitle, key, onclick) {
+    const active = isOn(key);
+    return (
+      "<button class='arcaSwitchRow' type='button' onclick='" + onclick + "'>" +
+        "<span><strong>" + escapeHtml(label) + "</strong><small>" + escapeHtml(subtitle) + "</small></span>" +
+        "<span class='arcaToggle " + (active ? "active" : "") + "'></span>" +
+      "</button>"
+    );
+  }
+
+  function renderContactPrivacy(key, actionName) {
+    const contacts = currentContacts();
+    if (!contacts.length) {
+      return "<div class='safeItem'>Nenhum contato salvo ainda.</div>";
+    }
+
+    const selected = readList(key);
+    return contacts.map((item) => {
+      const user = cleanUsername(item.username);
+      const active = selected.includes(user);
+      return (
+        "<button class='arcaSwitchRow' type='button' onclick='" + actionName + "(\"" + user + "\")'>" +
+          "<span><strong>" + escapeHtml(item.label || user) + "</strong><small>@" + escapeHtml(user) + "</small></span>" +
+          "<span class='arcaToggle " + (active ? "active" : "") + "'></span>" +
+        "</button>"
+      );
+    }).join("");
+  }
+
+  function showBack(title, html) {
+    const overlay = document.getElementById("arcaUtilityOverlay");
+    const titleEl = document.getElementById("arcaUtilityTitle");
+    const content = document.getElementById("arcaUtilityContent");
+    if (!overlay || !titleEl || !content) return;
+    overlay.classList.remove("hidden");
+    titleEl.textContent = title;
+    content.innerHTML = html;
+  }
+
+  window.arcaToggleSetting = async function(key, refresh) {
+    const next = !isOn(key);
+    setOn(key, next);
+
+    if (key === S.hideOnline && typeof api === "function") {
+      try { await api("/api/privacy-online", { hidden: next }); } catch {}
+    }
+
+    if (refresh) window[refresh]();
+  };
+
+  window.arcaToggleBlocked = function(username) {
+    toggleListValue(S.blocked, username);
+    arcaOpenPrivacySettings();
+  };
+
+  window.arcaToggleHiddenName = function(username) {
+    toggleListValue(S.hiddenName, username);
+    arcaOpenPrivacySettings();
+  };
+
+  window.arcaToggleHiddenPhoto = function(username) {
+    toggleListValue(S.hiddenPhoto, username);
+    arcaOpenPrivacySettings();
+  };
+
+  window.arcaOpenAccountSettings = function() {
+    showBack("Conta", [
+      "<div class='arcaUtilityCenter'>",
+      "<div class='arcaHeroShield'></div>",
+      "<h3>" + escapeHtml(currentUser || "ARCAIDRON") + "</h3>",
+      "<p>ID seguro: " + escapeHtml(currentUserId || "gerando") + "</p>",
+      "<p>O ARCAIDRON usa identificador unico, salas privadas por par de IDs e criptografia no navegador para reduzir exposicao de dados.</p>",
+      "<button class='btn full' onclick='copyMyId()'>Copiar meu ID</button>",
+      "<button class='btn full dark' onclick='$(\"profilePhotoInput\").click()'>Atualizar foto</button>",
+      "</div>",
+    ].join(""));
+  };
+
+  window.arcaOpenPrivacySettings = function() {
+    showBack("Privacidade", [
+      "<div class='arcaUtilityList'>",
+      renderSwitch("Ocultar online", "Seu status aparece como offline para outros usuarios.", S.hideOnline, "arcaToggleSetting('"+S.hideOnline+"','arcaOpenPrivacySettings')"),
+      renderSwitch("Ocultar dois vistos", "Mensagens recebidas ficam sem confirmacao azul de leitura.", S.hideSeen, "arcaToggleSetting('"+S.hideSeen+"','arcaOpenPrivacySettings')"),
+      renderSwitch("Mensagens temporarias", "Mantem a destruicao automatica em 24 horas destacada neste aparelho.", S.tempMessages, "arcaToggleSetting('"+S.tempMessages+"','arcaOpenPrivacySettings')"),
+      "<div class='safeItem'><b>Bloqueios</b><br><span class='small'>Contatos bloqueados nao abrem conversa neste aparelho.</span></div>",
+      renderContactPrivacy(S.blocked, "arcaToggleBlocked"),
+      "<div class='safeItem'><b>Ocultar meu nome destes contatos</b></div>",
+      renderContactPrivacy(S.hiddenName, "arcaToggleHiddenName"),
+      "<div class='safeItem'><b>Ocultar minha foto destes contatos</b></div>",
+      renderContactPrivacy(S.hiddenPhoto, "arcaToggleHiddenPhoto"),
+      "</div>",
+    ].join(""));
+  };
+
+  window.arcaOpenNotificationSettings = function() {
+    showBack("Notificações", [
+      "<div class='arcaUtilityList'>",
+      renderSwitch("Alertas de novas mensagens", "Mostra aviso visual quando chega mensagem.", S.notifications, "arcaToggleSetting('"+S.notifications+"','arcaOpenNotificationSettings')"),
+      renderSwitch("Som", "Ativa sons locais para chamadas e mensagens.", S.sound, "arcaToggleSetting('"+S.sound+"','arcaOpenNotificationSettings')"),
+      renderSwitch("Vibracao", "Usa vibracao quando o aparelho permitir.", S.vibration, "arcaToggleSetting('"+S.vibration+"','arcaOpenNotificationSettings')"),
+      "</div>",
+    ].join(""));
+  };
+
+  window.arcaSetTheme = function(theme) {
+    localStorage.setItem(S.theme, theme);
+    arcaApplyTheme();
+    arcaOpenAppearanceSettings();
+  };
+
+  window.arcaApplyTheme = function() {
+    const theme = localStorage.getItem(S.theme) || "dark";
+    document.body.className = document.body.className
+      .split(/\s+/)
+      .filter((name) => !name.startsWith("arca-theme-"))
+      .join(" ");
+    document.body.classList.add("arca-theme-" + theme);
+  };
+
+  window.arcaOpenAppearanceSettings = function() {
+    const theme = localStorage.getItem(S.theme) || "dark";
+    const themes = [
+      ["dark", "Escuro", "Azul neon padrao"],
+      ["orange", "Laranja", "Energia quente"],
+      ["light", "Branco", "Tema claro"],
+      ["red", "Vermelho", "Alerta forte"],
+      ["brazil", "Brasil", "Verde e amarelo"],
+      ["flamengo", "Flamengo", "Rubro-negro"],
+      ["corinthians", "Corinthians", "Preto e branco"],
+      ["palmeiras", "Palmeiras", "Verde forte"],
+      ["santos", "Santos", "Branco e preto"],
+    ];
+    showBack("Aparência", "<div class='arcaChoiceGrid'>" + themes.map((item) =>
+      "<button class='arcaChoice " + (theme === item[0] ? "active" : "") + "' onclick='arcaSetTheme(\"" + item[0] + "\")'><strong>" + item[1] + "</strong><small>" + item[2] + "</small></button>"
+    ).join("") + "</div>");
+  };
+
+  window.arcaSetLanguage = function(lang) {
+    localStorage.setItem(S.language, lang);
+    arcaOpenLanguageSettings();
+  };
+
+  window.arcaOpenLanguageSettings = function() {
+    const lang = localStorage.getItem(S.language) || "pt";
+    const langs = [
+      ["pt", "Português", "Brasil"],
+      ["en", "English", "United States"],
+      ["es", "Español", "Latinoamérica"],
+      ["fr", "Français", "France"],
+      ["zh", "中文", "China"],
+    ];
+    showBack(t("Idioma") || "Idioma", "<div class='arcaChoiceGrid'>" + langs.map((item) =>
+      "<button class='arcaChoice " + (lang === item[0] ? "active" : "") + "' onclick='arcaSetLanguage(\"" + item[0] + "\")'><strong>" + item[1] + "</strong><small>" + item[2] + "</small></button>"
+    ).join("") + "</div>");
+  };
+
+  window.arcaOpenAbout = function() {
+    showBack("Sobre o ARCAIDRON", [
+      "<div class='arcaUtilityCenter'>",
+      "<div class='arcaHeroShield'></div>",
+      "<h3>ARCAIDRON</h3>",
+      "<p>Rede privada segura para conversas por ID unico, salas exclusivas entre duas pessoas e mensagens protegidas por criptografia no navegador.</p>",
+      "<p>Objetivo: reduzir vazamento de dados, preservar historico local temporario e manter voz, video, arquivos e contatos dentro de uma experiencia privada.</p>",
+      "<p>Versao 1.0.0</p>",
+      "</div>",
+    ].join(""));
+  };
+
+  function settingsMenu() {
+    showBack("Configurações", [
+      "<div class='arcaUtilityList'>",
+      "<button class='arcaUtilityRow' onclick='arcaOpenAccountSettings()'><div class='arcaUtilityRowIcon'>♙</div><div><strong>Conta</strong><small>Privacidade, segurança e dados</small></div><div class='small'>›</div></button>",
+      "<button class='arcaUtilityRow' onclick='arcaOpenPrivacySettings()'><div class='arcaUtilityRowIcon'>▣</div><div><strong>Privacidade</strong><small>Bloqueios, vistos e mensagens temporárias</small></div><div class='small'>›</div></button>",
+      "<button class='arcaUtilityRow' onclick='arcaOpenNotificationSettings()'><div class='arcaUtilityRowIcon'>◌</div><div><strong>Notificações</strong><small>Sons, vibrações e alertas</small></div><div class='small'>›</div></button>",
+      "<button class='arcaUtilityRow' onclick='arcaOpenAppearanceSettings()'><div class='arcaUtilityRowIcon'>✧</div><div><strong>Aparência</strong><small>Tema, cores e papel de parede</small></div><div class='small'>›</div></button>",
+      "<button class='arcaUtilityRow' onclick='arcaOpenLanguageSettings()'><div class='arcaUtilityRowIcon'>◎</div><div><strong>Idioma</strong><small>Português, inglês, espanhol, francês e chinês</small></div><div class='small'>›</div></button>",
+      "<button class='arcaUtilityRow' onclick='arcaOpenAbout()'><div class='arcaUtilityRowIcon'>?</div><div><strong>Sobre o ARCAIDRON</strong><small>Objetivo e versão do aplicativo</small></div><div class='small'>›</div></button>",
+      "</div>",
+      "<button class='btn full dark' onclick='arcaLogoutFromMenu()' style='margin-top:16px'>Entrar em outra conta</button>",
+    ].join(""));
+  }
+
+  async function showConversations() {
+    const contacts = currentContacts();
+    let online = [];
+    try {
+      const result = await api("/api/online-users", {});
+      online = result.users || [];
+    } catch {}
+
+    const merged = [];
+    const seen = new Set();
+    [...online, ...contacts].forEach((item) => {
+      const username = cleanUsername(item.username);
+      if (!username || seen.has(username)) return;
+      seen.add(username);
+      merged.push({ ...item, username });
+    });
+
+    showBack("Conversas", "<div class='arcaUtilityList'>" + (
+      merged.length
+        ? merged.map((item, index) =>
+            "<button class='arcaUtilityRow' onclick='arcaOpenConversationByName(\"" + item.username + "\")'><div class='arcaUtilityRowIcon'>●</div><div><strong>" + escapeHtml(item.label || item.username) + "</strong><small>" + (online.some((u) => cleanUsername(u.username) === item.username) ? "Online agora" : "Contato salvo") + "</small></div><div class='small'>Abrir</div></button>"
+          ).join("")
+        : "<div class='safeItem'>Nenhum contato online ou conversa salva agora.</div>"
+    ) + "</div>");
+  }
+
+  window.arcaOpenConversationByName = function(username) {
+    if (isBlocked(username)) {
+      toast("Contato bloqueado neste aparelho.");
+      return;
+    }
+    const list = currentContacts();
+    let index = list.findIndex((item) => cleanUsername(item.username) === cleanUsername(username));
+    if (index < 0) {
+      saveInviteContactLocal(username);
+      index = loadInviteContacts().findIndex((item) => cleanUsername(item.username) === cleanUsername(username));
+    }
+    document.getElementById("arcaUtilityOverlay")?.classList.add("hidden");
+    if (index >= 0) openInviteContact(index);
+  };
+
+  window.arcaOpenRequests = async function() {
+    showBack("Solicitações", "<div class='safeItem'>Carregando solicitações...</div>");
+    try {
+      const result = await api("/api/list-invites", {});
+      const invites = result.invites || [];
+      const html = invites.length
+        ? invites.map((invite) =>
+            "<div class='arcaUtilityRow'><div class='arcaUtilityRowIcon'>+</div><div><strong>" + escapeHtml(invite.from) + "</strong><small>Quer adicionar voce no ARCAIDRON</small></div><div><button class='btn dark' onclick='acceptInvite(\"" + escapeHtml(invite.from) + "\"); arcaOpenRequests()'>Aceitar</button></div></div>"
+          ).join("")
+        : "<div class='safeItem'>Nenhuma solicitação pendente.</div>";
+      showBack("Solicitações", "<div class='arcaUtilityList'>" + html + "</div>");
+    } catch {
+      showBack("Solicitações", "<div class='safeItem'>Não foi possível carregar solicitações agora.</div>");
+    }
+  };
+
+  function callLog() {
+    return readList(S.callLog);
+  }
+
+  function addCallLog(kind, username, video) {
+    const log = callLog();
+    log.unshift({ kind, username: username || peerUser || "Contato", video: !!video, at: Date.now() });
+    writeList(S.callLog, log.slice(0, 80));
+  }
+
+  window.arcaRenderCalls = function(filter = "all") {
+    const labels = { all: "Todas", missed: "Perdidas", received: "Recebidas", outgoing: "Realizadas" };
+    let log = callLog();
+    if (!log.length) {
+      log = currentContacts().map((item, index) => ({ kind: index % 2 ? "received" : "outgoing", username: item.username, video: index % 2 === 0, at: Date.now() - index * 86400000 }));
+    }
+    const filtered = filter === "all" ? log : log.filter((item) => item.kind === filter);
+    showBack("Chamadas", [
+      "<div class='tabs' style='margin-bottom:14px'>",
+      Object.keys(labels).map((key) => "<button class='" + (filter === key ? "active" : "") + "' onclick='arcaRenderCalls(\"" + key + "\")'>" + labels[key] + "</button>").join(""),
+      "</div><div class='arcaUtilityList'>",
+      filtered.length ? filtered.map((item) =>
+        "<div class='arcaUtilityRow'><div class='arcaUtilityRowIcon'>" + (item.video ? "◉" : "☎") + "</div><div><strong>" + escapeHtml(item.username) + "</strong><small>" + (item.video ? "Chamada de video" : "Chamada de voz") + "</small></div><div class='small'>" + new Date(item.at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) + "</div></div>"
+      ).join("") : "<div class='safeItem'>Nenhuma chamada nesta categoria.</div>",
+      "</div>",
+    ].join(""));
+  };
+
+  function openTypedFilePicker(kind) {
+    const input = document.getElementById("fileInput");
+    if (!input) return;
+    if (kind === "image") input.accept = "image/*";
+    if (kind === "video") input.accept = "video/*";
+    if (kind === "audio") input.accept = "audio/*";
+    if (kind === "doc") input.accept = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt";
+    input.click();
+  }
+
+  window.arcaOpenFileLibrary = function(kind = "all") {
+    const labels = { image: "Imagens", video: "Vídeos", audio: "Áudios", doc: "Documentos" };
+    showBack("Arquivos", [
+      "<div class='arcaUtilityGrid'>",
+      Object.keys(labels).map((key) => "<button class='arcaUtilityTile' onclick='arcaOpenFileLibrary(\"" + key + "\")'><b>" + labels[key] + "</b><span>Abrir galeria</span></button>").join(""),
+      "</div>",
+      "<p class='small'>" + (labels[kind] || "Recentes") + "</p>",
+      "<div class='arcaUtilityList'>",
+      "<button class='arcaUtilityRow' onclick='arcaPickFileType(\"" + (kind === "all" ? "image" : kind) + "\")'><div class='arcaUtilityRowIcon'>▧</div><div><strong>" + (kind === "video" ? "Selecionar vídeo" : kind === "audio" ? "Selecionar áudio" : kind === "doc" ? "Selecionar documento" : "Selecionar foto") + "</strong><small>Abre somente este tipo de arquivo</small></div><div class='small'>Abrir</div></button>",
+      "</div>",
+    ].join(""));
+  };
+
+  window.arcaPickFileType = function(kind) {
+    arcaCloseUtilityOverlay();
+    if (!currentRoom) {
+      toast("Abra uma conversa antes de enviar arquivos.");
+      return;
+    }
+    openTypedFilePicker(kind);
+  };
+
+  const previousUtility = window.arcaShowUtilityOverlay;
+  window.arcaShowUtilityOverlay = function(section) {
+    if (section === "settings") return settingsMenu();
+    if (section === "calls") return arcaRenderCalls("all");
+    if (section === "files") return arcaOpenFileLibrary("all");
+    if (section === "profile" && previousUtility) return previousUtility(section);
+    if (section === "chats") return showConversations();
+    if (previousUtility) return previousUtility(section);
+  };
+
+  const oldOpenInvite = window.openInviteContact || openInviteContact;
+  window.openInviteContact = async function(index) {
+    const item = currentContacts()[index];
+    if (item && isBlocked(item.username)) {
+      toast("Contato bloqueado neste aparelho.");
+      return;
+    }
+    return oldOpenInvite(index);
+  };
+
+  const oldStartCall = window.startCall || startCall;
+  window.startCall = async function(video) {
+    addCallLog("outgoing", peerUser, video);
+    return oldStartCall(video);
+  };
+
+  const oldSendText = window.sendText || sendText;
+  window.sendText = async function() {
+    if (peerUser && isBlocked(peerUser)) {
+      toast("Contato bloqueado neste aparelho.");
+      return;
+    }
+    return oldSendText();
+  };
+
+  function wireFunctionalTabs() {
+    const requestTab = document.getElementById("arcaSolicTab");
+    if (requestTab && requestTab.dataset.fnReady !== "1") {
+      requestTab.dataset.fnReady = "1";
+      requestTab.onclick = arcaOpenRequests;
+    }
+
+    const send = document.getElementById("sendBtn");
+    if (send) send.onclick = window.sendText;
+
+    const voice = document.getElementById("voiceBtn");
+    if (voice) voice.onclick = () => window.startCall(false);
+
+    const video = document.getElementById("videoBtn");
+    if (video) video.onclick = () => window.startCall(true);
+
+    document.querySelectorAll(".arcaBottomNav button").forEach((button) => {
+      if (button.dataset.fnReady === "1") return;
+      button.dataset.fnReady = "1";
+      button.addEventListener("click", () => {
+        if (button.dataset.arcaNav === "chats") showConversations();
+      });
+    });
+  }
+
+  arcaApplyTheme();
+  setOn(S.notifications, isOn(S.notifications, true));
+  setOn(S.sound, isOn(S.sound, true));
+  setOn(S.vibration, isOn(S.vibration, true));
+  setOn(S.tempMessages, isOn(S.tempMessages, true));
+
+  document.addEventListener("DOMContentLoaded", wireFunctionalTabs);
+  setTimeout(wireFunctionalTabs, 500);
+  setInterval(wireFunctionalTabs, 1500);
+})();
+</script>
+<!-- FIM ARCAIDRON FUNCTIONAL SETTINGS AND LIBRARY -->
 </body>
 </html>
