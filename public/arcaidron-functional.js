@@ -21,6 +21,10 @@
     body.arca-theme-santos{--arca-blue:#f7fbff;--arca-purple:#111}
     body.arca-theme-light #authScreen,body.arca-theme-light #appScreen,body.arca-theme-light #arcaUtilityOverlay{background:linear-gradient(180deg,#f7fbff,#dfeeff)!important;color:#07111f!important}
     body.arca-theme-orange .logo,body.arca-theme-red .logo,body.arca-theme-brazil .logo,body.arca-theme-flamengo .logo,body.arca-theme-corinthians .logo,body.arca-theme-palmeiras .logo,body.arca-theme-santos .logo{background:linear-gradient(150deg,var(--arca-blue),#06132b 58%,var(--arca-purple))!important}
+    .arca-modern-icon{display:grid!important;place-items:center!important}
+    .arca-modern-icon:before,.arca-modern-icon:after{content:none!important}
+    .arca-modern-icon svg{width:58%!important;height:58%!important;stroke:currentColor!important;fill:none!important;stroke-width:2.35!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+    #sendBtn.arca-modern-icon svg{width:64%!important;height:64%!important}
   `;
   document.head.appendChild(style);
 
@@ -56,6 +60,22 @@
   }
   function setOn(key, value) { localStorage.setItem(key, value ? "1" : "0"); }
   function contacts() { try { return loadInviteContacts(); } catch { return []; } }
+  function vaultContacts() {
+    try {
+      return typeof window.arcaGetVaultContactsForChat === "function"
+        ? window.arcaGetVaultContactsForChat()
+        : [];
+    } catch {
+      return [];
+    }
+  }
+  function vaultNeedsUnlock() {
+    try {
+      return typeof window.arcaVaultNeedsUnlockForChat === "function" && window.arcaVaultNeedsUnlockForChat();
+    } catch {
+      return false;
+    }
+  }
   function me() { return localStorage.getItem("arcaidron_username") || window.currentUser || "ARCAIDRON"; }
   function myId() { return localStorage.getItem("arcaidron_userid") || window.currentUserId || "gerando"; }
   function peer() {
@@ -63,6 +83,25 @@
       document.querySelector("#chatTitle")?.textContent?.trim() ||
       document.querySelector(".chatUserName")?.textContent?.trim() ||
       "Contato";
+  }
+  const arcaIcons = {
+    voiceBtn: '<svg viewBox="0 0 24 24"><path d="M7.2 4.3c1.1 4.9 4 8.4 8.6 10.5"/><path d="M6.8 4.2l2.7-1.1 2 4.4-1.9 1.2"/><path d="M15.7 14.7l1.1-2 4.2 2.2-1.2 2.7c-.5 1.1-1.7 1.7-2.8 1.3C10.5 17 6.6 13.1 4.9 7c-.3-1.1.3-2.3 1.4-2.8z"/></svg>',
+    videoBtn: '<svg viewBox="0 0 24 24"><rect x="4" y="6.5" width="11" height="11" rx="3"/><path d="M15 10.2l5-2.7v9l-5-2.7"/><path d="M8 10h3"/><path d="M9.5 8.5v3"/></svg>',
+    clearBtn: '<svg viewBox="0 0 24 24"><path d="M6.5 7.5h11"/><path d="M9 7.5V5.2h6v2.3"/><path d="M8 10l.7 8.2c.1 1 1 1.8 2 1.8h2.6c1 0 1.9-.8 2-1.8L16 10"/><path d="M10.5 12.4v4.3"/><path d="M13.5 12.4v4.3"/></svg>',
+    clipBtn: '<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/><path d="M7.5 7.5l9 9"/><path d="M16.5 7.5l-9 9"/></svg>',
+    sendBtn: '<svg viewBox="0 0 24 24"><path d="M4 12h12"/><path d="M13 6l6 6-6 6"/><path d="M5 5l14 7-14 7 3-7z"/></svg>'
+  };
+  function arcaApplyModernIcons() {
+    Object.keys(arcaIcons).forEach((id) => {
+      const button = $(id);
+      if (!button || button.dataset.arcaIconReady === "1") return;
+      button.dataset.arcaIconReady = "1";
+      button.classList.add("arca-modern-icon");
+      button.innerHTML = arcaIcons[id];
+      if (id === "clipBtn") button.title = "Adicionar item seguro";
+      if (id === "sendBtn") button.title = "Enviar pulso seguro";
+      if (id === "clearBtn") button.title = "Apagar mensagens";
+    });
   }
   function show(title, html) {
     const overlay = $("arcaUtilityOverlay");
@@ -160,20 +199,58 @@
     </div><button class="btn full dark" onclick="arcaLogoutFromMenu()" style="margin-top:16px">Entrar em outra conta</button>`);
   }
   async function conversations() {
+    if (vaultNeedsUnlock()) {
+      show("Bate-papo seguro", `<div class="arcaUtilityList">
+        <div class="safeItem"><b>Cofre privado bloqueado</b><br><span class="small">Digite a senha mestra para mostrar tambem os contatos protegidos por ate 1 hora.</span></div>
+        <input id="arcaVaultChatPass" class="input" type="password" placeholder="Senha mestra do cofre privado">
+        <button class="btn full" onclick="arcaUnlockVaultFromChat()">Desbloquear e listar contatos</button>
+        <button class="btn full dark" onclick="arcaShowChatListWithoutVault()">Ver apenas contatos comuns</button>
+      </div>`);
+      return;
+    }
+
+    return arcaShowChatListWithoutVault();
+  }
+
+  window.arcaUnlockVaultFromChat = async function () {
+    const input = $("arcaVaultChatPass");
+    const password = input ? input.value : "";
+
+    if (!password) {
+      toast("Digite a senha mestra.");
+      return;
+    }
+
+    try {
+      if (typeof window.arcaUnlockVaultForChat === "function") {
+        await window.arcaUnlockVaultForChat(password);
+      }
+      toast("Cofre liberado por 1 hora.");
+      arcaShowChatListWithoutVault();
+    } catch {
+      toast("Senha mestra incorreta.");
+    }
+  };
+
+  window.arcaShowChatListWithoutVault = async function () {
     let online = [];
     try { online = ((await api("/api/online-users", {})).users || []); } catch {}
     const merged = [];
     const seen = new Set();
-    [...online, ...contacts()].forEach((item) => {
+    [...online, ...contacts(), ...vaultContacts()].forEach((item) => {
       const user = clean(item.username);
       if (!user || seen.has(user)) return;
       seen.add(user);
       merged.push({ ...item, username: user });
     });
-    show("Conversas", `<div class="arcaUtilityList">${merged.length ? merged.map((item) => `<button class="arcaUtilityRow" onclick="arcaOpenConversationByName('${item.username}')"><div class="arcaUtilityRowIcon">ON</div><div><strong>${safe(item.label || item.username)}</strong><small>${online.some((u) => clean(u.username) === item.username) ? "Online agora" : "Contato salvo"}</small></div><div class="small">Abrir</div></button>`).join("") : '<div class="safeItem">Nenhum contato online ou conversa salva agora.</div>'}</div>`);
-  }
-  window.arcaOpenConversationByName = function (username) {
+    show("Conversas", `<div class="arcaUtilityList">${merged.length ? merged.map((item) => `<button class="arcaUtilityRow" onclick="arcaOpenConversationByName('${item.username}','${item.fromVault ? "vault" : "contact"}')"><div class="arcaUtilityRowIcon">${item.fromVault ? "CF" : "ON"}</div><div><strong>${safe(item.label || item.username)}</strong><small>${item.fromVault ? "Contato do cofre privado" : online.some((u) => clean(u.username) === item.username) ? "Online agora" : "Contato salvo"}</small></div><div class="small">Abrir</div></button>`).join("") : '<div class="safeItem">Nenhum contato online ou conversa salva agora.</div>'}</div>`);
+  };
+  window.arcaOpenConversationByName = async function (username, source) {
     if (blocked(username)) return toast("Contato bloqueado neste aparelho.");
+    if (source === "vault" && typeof window.arcaOpenVaultChatByUsername === "function") {
+      const opened = await window.arcaOpenVaultChatByUsername(username);
+      if (opened) return;
+    }
     let list = contacts();
     let index = list.findIndex((item) => clean(item.username) === clean(username));
     if (index < 0 && typeof saveInviteContactLocal === "function") {
@@ -230,6 +307,7 @@
 
   const rawEmit = window.socket && window.socket.emit;
   function wire() {
+    arcaApplyModernIcons();
     if (window.socket && window.socket.emit && window.socket.emit !== window.__arcaEmitWrapped) {
       const original = window.socket.emit.bind(window.socket);
       window.__arcaEmitWrapped = function (event, data, ack) {
@@ -249,6 +327,7 @@
     });
   }
   arcaApplyTheme();
+  arcaApplyModernIcons();
   setOn(S.notifications, isOn(S.notifications, true));
   setOn(S.sound, isOn(S.sound, true));
   setOn(S.vibration, isOn(S.vibration, true));

@@ -5844,17 +5844,103 @@ if (section === "chamadas") {
         $("vaultCloseBtn").onclick = closeVault;
       }
 
+      function arcaSaveVaultContactForChat(item) {
+        if (!item || !item.username || !item.key) return -1;
+
+        const username = cleanUsername(item.username);
+        let list = loadInviteContacts();
+        let existingIndex = list.findIndex(
+          (contact) => cleanUsername(contact.username) === username,
+        );
+
+        const nextContact = {
+          label: item.label || username,
+          username,
+          key: item.key,
+          type: "vault",
+          fromVault: true,
+          createdAt: item.createdAt || Date.now(),
+        };
+
+        if (existingIndex >= 0) {
+          list[existingIndex] = {
+            ...list[existingIndex],
+            ...nextContact,
+            roomId: list[existingIndex].roomId,
+          };
+        } else {
+          list.push(nextContact);
+          existingIndex = list.length - 1;
+        }
+
+        saveInviteContacts(list);
+        renderInviteContacts();
+        renderChatRooms();
+        return existingIndex;
+      }
+
+      async function arcaOpenVaultContact(item) {
+        const index = arcaSaveVaultContactForChat(item);
+        if (index < 0) return;
+
+        if ($("vaultOverlay")) closeVault();
+        if ($("arcaUtilityOverlay")) $("arcaUtilityOverlay").classList.add("hidden");
+
+        await openInviteContact(index);
+      }
+
       function vaultOpenChat(index) {
         const item = vaultEntries[index];
         if (!item) return;
 
-        $("otherUser").value = item.username;
-        $("chatKey").value = item.key;
-
-        closeVault();
-
-        $("openChatBtn").click();
+        arcaOpenVaultContact(item);
       }
+
+      window.arcaVaultNeedsUnlockForChat = function () {
+        return vaultHasData() && !vaultIsTemporarilyUnlocked();
+      };
+
+      window.arcaUnlockVaultForChat = async function (password) {
+        vaultPassword = password;
+        vaultEntries = await vaultLoad(vaultPassword);
+        vaultUnlockedUntil = Date.now() + 60 * 60 * 1000;
+        return vaultEntries.map((item) => ({
+          label: item.label || item.username,
+          username: item.username,
+          type: "vault",
+          fromVault: true,
+        }));
+      };
+
+      window.arcaGetVaultContactsForChat = function () {
+        if (!vaultIsTemporarilyUnlocked()) return [];
+        return vaultEntries.map((item) => ({
+          label: item.label || item.username,
+          username: item.username,
+          type: "vault",
+          fromVault: true,
+        }));
+      };
+
+      window.arcaOpenVaultChatByUsername = async function (username) {
+        if (!vaultIsTemporarilyUnlocked()) {
+          toast("Digite a senha mestra do cofre privado.");
+          return false;
+        }
+
+        const clean = cleanUsername(username);
+        const item = vaultEntries.find(
+          (entry) => cleanUsername(entry.username) === clean,
+        );
+
+        if (!item) {
+          toast("Contato nao encontrado no cofre.");
+          return false;
+        }
+
+        await arcaOpenVaultContact(item);
+        return true;
+      };
 
       async function vaultDelete(index) {
         if (!confirm("Apagar este contato da Pasta Segura?")) return;
