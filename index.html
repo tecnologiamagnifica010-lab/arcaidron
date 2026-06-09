@@ -6987,51 +6987,11 @@ if (section === "chamadas") {
 
   function forceLoginText(){
     const sub = document.querySelector(".sub");
-    if (sub) sub.textContent = "REDE PRIVADA SEGURA";
-    const auth = document.getElementById("authBtn");
-    if (auth) auth.textContent = "Entrar";
-    const login = document.getElementById("loginTab");
-    const reg = document.getElementById("registerTab");
-    if (login) login.textContent = "Entrar";
-    if (reg) reg.textContent = "Criar conta";
+    if (sub) sub.textContent = "Chat privado criptografado • Voz • Vídeo";
   }
 
   function wireFinalAuthFlow(){
-    const authScreen = document.getElementById("authScreen");
-    const auth = document.getElementById("authBtn");
-    const login = document.getElementById("loginTab");
-    const reg = document.getElementById("registerTab");
-
-    if (!authScreen || !auth || auth.dataset.arcaFinalAuth === "1") return;
-    auth.dataset.arcaFinalAuth = "1";
-
-    const originalAuth = auth.onclick;
-    auth.onclick = function(event){
-      if (!authScreen.classList.contains("arcaAuthOpen")) {
-        event.preventDefault();
-        authScreen.classList.add("arcaAuthOpen");
-        document.getElementById("username")?.focus();
-        return;
-      }
-
-      if (typeof originalAuth === "function") {
-        return originalAuth.call(this, event);
-      }
-    };
-
-    if (login && login.dataset.arcaFinalAuth !== "1") {
-      login.dataset.arcaFinalAuth = "1";
-      login.addEventListener("click", function(){
-        authScreen.classList.add("arcaAuthOpen");
-      });
-    }
-
-    if (reg && reg.dataset.arcaFinalAuth !== "1") {
-      reg.dataset.arcaFinalAuth = "1";
-      reg.addEventListener("click", function(){
-        authScreen.classList.add("arcaAuthOpen");
-      });
-    }
+    return;
   }
 
   document.addEventListener("DOMContentLoaded", function(){
@@ -7651,5 +7611,22 @@ if (section === "chamadas") {
 })();
 </script>
 <!-- FIM ARCAIDRON LOGIN DUPLICADO FIX -->
+
+<style>
+#authScreen .tabs{
+  display:grid !important;
+  grid-template-columns:1fr 1fr !important;
+}
+#authScreen #authBtn{
+  display:block !important;
+}
+#authScreen.arcaAuthOpen .tabs,
+#authScreen.arcaAuthOpen #username,
+#authScreen.arcaAuthOpen #password,
+#authScreen.arcaAuthOpen #authBtn,
+#authScreen.arcaAuthOpen #loginError{
+  display:block !important;
+}
+</style>
 </body>
 </html>
