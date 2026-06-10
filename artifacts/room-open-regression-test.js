@@ -78,8 +78,17 @@ assert(
   "adding a friend by ID must create the room before returning to the client",
 );
 assert(
+  server.includes('app.post("/api/accept-invite", auth, async') &&
+    !server.includes('error: "Pedido de amizade'),
+  "accepting/opening from the receiver side must not depend on a pending in-memory invite",
+);
+assert(
   server.includes("roomId: room.roomId"),
   "send-invite/open-chat responses must include the stable roomId",
+);
+assert(
+  !html.includes('toast("Abra a Pasta Segura primeiro.")'),
+  "accepting a friendship must not require unlocking the private vault",
 );
 assert(
   server.includes("findUsernameByUserId(targetIdRaw)"),

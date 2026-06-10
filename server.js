@@ -887,15 +887,11 @@ app.post("/api/accept-invite", auth, async (req, res) => {
   const username = req.user;
   const from = cleanUsername(req.body.from);
 
-  const received = invites.get(username) || [];
-
-  const invite = received.find((i) => i.from === from);
-
-  if (!invite) {
-    return res.json({
-      error: "Pedido de amizade não encontrado",
-    });
+  if (!from || !users.has(from)) {
+    return res.json({ error: "Usuario do convite nao encontrado" });
   }
+
+  const received = invites.get(username) || [];
 
   invites.set(
     username,
@@ -907,19 +903,19 @@ app.post("/api/accept-invite", auth, async (req, res) => {
     room = await saveFriendship(username, from);
   } catch (err) {
     console.error("Erro ao salvar amizade:", err);
-    return res.json({
-      error: "Erro ao salvar amizade",
-    });
+    return res.json({ error: "Erro ao salvar amizade" });
+  }
+
+  if (!room) {
+    return res.json({ error: "Nao foi possivel abrir a sala da amizade" });
   }
 
   res.json({
     ok: true,
     message: "Amizade aceita",
     from,
-    roomId: room?.roomId || createRoomIdByUsers(username, from),
-    pairHash:
-      room?.pairHash ||
-      createFriendPairHash(ensureUserId(username), ensureUserId(from)),
+    roomId: room.roomId,
+    pairHash: room.pairHash,
     peer: publicUser(from),
   });
 });

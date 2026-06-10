@@ -5345,16 +5345,6 @@
 
       async function acceptInvite(from) {
         try {
-          if (!vaultPassword) {
-            toast("Abra a Pasta Segura primeiro.");
-
-            if ($("vaultBtn")) {
-              $("vaultBtn").click();
-            }
-
-            return;
-          }
-
           const result = await api("/api/accept-invite", {
             from,
           });
@@ -5380,7 +5370,9 @@
             $("viewInvitesBtn").click();
           }
 
-          renderVaultList();
+          if (typeof renderVaultList === "function" && vaultPassword) {
+            renderVaultList();
+          }
         } catch {
           toast("Erro ao aceitar convite.");
         }
