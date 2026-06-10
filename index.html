@@ -2513,166 +2513,383 @@
     </style>
     <!-- FIM ARCAIDRON NEON SHIELD UI 2026 -->
 
-    <!-- ARCAIDRON RESTAURA LOGIN ANTIGO - SOMENTE LOGIN -->
+
+    <!-- ARCAIDRON LOGIN UNICO FINAL -->
     <style>
       body:has(#authScreen:not(.hidden)) {
+        overflow: auto !important;
+        min-height: 100dvh !important;
         background:
-          radial-gradient(
-            circle at 55% 25%,
-            rgba(59, 130, 246, 0.18),
-            transparent 32%
-          ),
-          radial-gradient(
-            circle at 30% 80%,
-            rgba(34, 197, 94, 0.11),
-            transparent 30%
-          ),
-          #080510 !important;
+          radial-gradient(circle at 50% 4%, rgba(0, 149, 255, 0.28), transparent 38%),
+          radial-gradient(circle at 15% 86%, rgba(63, 56, 255, 0.16), transparent 28%),
+          #020712 !important;
       }
 
-      #authScreen.authScreen {
-        display: grid !important;
-        place-items: center !important;
-        padding: 22px !important;
-        min-height: auto !important;
-        height: 100% !important;
+      #authScreen {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         width: 100% !important;
+        min-height: 100dvh !important;
+        height: auto !important;
+        padding: 16px !important;
         border: 0 !important;
         border-radius: 0 !important;
-        box-shadow: none !important;
         background: transparent !important;
+        overflow: visible !important;
       }
 
       #authScreen .authCard {
         width: min(430px, 94vw) !important;
         min-height: 0 !important;
-        display: block !important;
+        padding: 28px 24px 26px !important;
+        border: 2px solid #0797ff !important;
+        border-radius: 28px !important;
+        background:
+          linear-gradient(180deg, rgba(8, 24, 48, 0.96), rgba(2, 8, 20, 0.98)),
+          radial-gradient(circle at 50% 0%, rgba(0, 145, 255, 0.2), transparent 44%) !important;
+        box-shadow:
+          0 0 0 1px rgba(127, 218, 255, 0.16) inset,
+          0 0 34px rgba(0, 132, 255, 0.38),
+          0 30px 80px rgba(0, 0, 0, 0.55) !important;
         text-align: center !important;
-        gap: 0 !important;
       }
 
+      #authScreen .authCard::before,
       #authScreen .authCard::after {
         content: none !important;
         display: none !important;
       }
 
       #authScreen .logo {
-        width: 72px !important;
-        height: 72px !important;
-        border-radius: 24px !important;
-        margin: 0 auto 16px !important;
         display: grid !important;
         place-items: center !important;
-        background: linear-gradient(145deg, #101f38, #06101f) !important;
-        box-shadow: 0 0 35px rgba(59, 130, 246, 0.55) !important;
-        border: 1px solid rgba(96, 165, 250, 0.25) !important;
+        width: 86px !important;
+        height: 86px !important;
+        margin: 0 auto 14px !important;
+        border-radius: 50% !important;
+        background: url("/icon-192x192.png") center/cover no-repeat !important;
+        border: 1px solid rgba(120, 217, 255, 0.6) !important;
+        box-shadow: 0 0 30px rgba(0, 153, 255, 0.45) !important;
         clip-path: none !important;
       }
 
       #authScreen .logo svg {
-        width: 40px !important;
-        height: 40px !important;
-        filter: none !important;
-        stroke: #60a5fa !important;
+        display: none !important;
       }
 
       #authScreen .brand {
-        font-size: 34px !important;
+        display: block !important;
+        color: #f4f9ff !important;
+        font-size: 28px !important;
+        line-height: 1.05 !important;
+        letter-spacing: 8px !important;
         font-weight: 900 !important;
-        letter-spacing: -1px !important;
-        color: #60a5fa !important;
-        line-height: normal !important;
-        text-shadow: 0 0 20px rgba(96, 165, 250, 0.55) !important;
+        margin: 0 0 10px !important;
+        text-shadow: 0 2px 12px #000, 0 0 20px rgba(0, 145, 255, 0.55) !important;
       }
 
       #authScreen .sub {
-        font-size: 14px !important;
-        color: #8da3bd !important;
-        margin: 8px 0 24px !important;
-        text-transform: none !important;
-        letter-spacing: normal !important;
+        display: block !important;
+        margin: 0 0 20px !important;
+        color: #dce9ff !important;
+        font-size: 11px !important;
+        letter-spacing: 4px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+      }
+
+      #authScreen .sub::after {
+        content: none !important;
       }
 
       #authScreen .panel {
-        background: rgba(10, 22, 39, 0.88) !important;
-        border: 1px solid #223654 !important;
-        border-radius: 24px !important;
-        padding: 22px !important;
-        box-shadow: 0 22px 80px rgba(0, 0, 0, 0.45) !important;
-        backdrop-filter: blur(16px) !important;
+        display: grid !important;
+        gap: 12px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
       }
 
       #authScreen .tabs {
+        position: relative !important;
+        order: 1 !important;
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
-        gap: 6px !important;
+        gap: 0 !important;
+        min-height: 58px !important;
+        margin: 0 0 2px !important;
         padding: 5px !important;
-        border-radius: 18px !important;
-        background: #050d19 !important;
-        margin: 0 0 18px !important;
+        border: 1px solid rgba(95, 137, 181, 0.7) !important;
+        border-radius: 999px !important;
+        background: rgba(2, 10, 24, 0.72) !important;
+        overflow: hidden !important;
+      }
+
+      #authScreen .tabs::before {
+        content: "" !important;
+        position: absolute !important;
+        inset: 5px auto 5px 5px !important;
+        width: calc(50% - 5px) !important;
+        border-radius: 999px !important;
+        background: linear-gradient(90deg, #075cff, #08a8ff) !important;
+        box-shadow: 0 0 20px rgba(0, 140, 255, 0.5) !important;
+        transition: transform 0.22s ease !important;
+      }
+
+      #authScreen.arcaRegisterMode .tabs::before {
+        transform: translateX(100%) !important;
       }
 
       #authScreen .tabs button {
-        border: 0 !important;
-        padding: 13px !important;
+        position: relative !important;
+        z-index: 1 !important;
+        display: block !important;
+        width: 100% !important;
+        height: 48px !important;
         min-height: 0 !important;
-        border-radius: 14px !important;
+        padding: 0 8px !important;
+        border: 0 !important;
+        border-radius: 999px !important;
         background: transparent !important;
-        color: #8da3bd !important;
-        font-weight: 800 !important;
+        color: #b9c5d7 !important;
+        font-size: 14px !important;
+        font-weight: 900 !important;
+        letter-spacing: 2px !important;
+        text-transform: uppercase !important;
         box-shadow: none !important;
       }
 
       #authScreen .tabs button.active {
-        background: #13243d !important;
         color: #ffffff !important;
       }
 
-      #authScreen .input,
-      #authScreen .select {
+      #authScreen #username,
+      #authScreen #password {
+        order: 2 !important;
+        display: block !important;
         width: 100% !important;
-        border: 1px solid #223654 !important;
-        background: #0d1a2d !important;
-        color: #ffffff !important;
-        border-radius: 16px !important;
-        padding: 15px !important;
+        height: 58px !important;
+        margin: 0 !important;
+        padding: 0 18px !important;
+        border: 1px solid rgba(118, 153, 194, 0.78) !important;
+        border-radius: 18px !important;
         outline: none !important;
-        margin-top: 10px !important;
-      }
-
-      #authScreen .input:focus,
-      #authScreen .select:focus {
-        border-color: #7c3aed !important;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16) !important;
-      }
-
-      #authScreen .btn {
-        border: 0 !important;
-        border-radius: 16px !important;
-        padding: 14px 16px !important;
-        font-weight: 900 !important;
-        background: linear-gradient(135deg, #2563eb, #60a5fa) !important;
-        color: #ffffff !important;
+        background: rgba(8, 20, 40, 0.92) !important;
+        color: #edf6ff !important;
+        font-size: 17px !important;
         box-shadow: none !important;
       }
 
-      #authScreen .btn.full {
+      #authScreen #username::placeholder,
+      #authScreen #password::placeholder {
+        color: #96a5bb !important;
+      }
+
+      #authScreen #username:focus,
+      #authScreen #password:focus {
+        border-color: #0a9dff !important;
+        box-shadow: 0 0 0 4px rgba(0, 145, 255, 0.16) !important;
+      }
+
+      #authScreen #loginPhotoBtn,
+      #authScreen .arcaBioLoginBtn,
+      #authScreen #authBtn {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         width: 100% !important;
-        margin-top: 12px !important;
+        min-height: 56px !important;
+        margin: 0 !important;
+        border-radius: 18px !important;
+        font-size: 16px !important;
+        font-weight: 900 !important;
       }
 
-      #authScreen .btn.dark {
-        background: #102033 !important;
-        border: 1px solid #223654 !important;
+      #authScreen #loginPhotoBtn {
+        order: 3 !important;
+        border: 1px solid rgba(87, 127, 174, 0.72) !important;
+        background: rgba(13, 31, 55, 0.94) !important;
+        color: #ffffff !important;
       }
 
-      #authScreen .error {
+      #authScreen .arcaBioLoginBtn {
+        order: 4 !important;
+        border: 1px solid rgba(0, 145, 255, 0.45) !important;
+        background: rgba(4, 20, 42, 0.88) !important;
+        color: #20a9ff !important;
+      }
+
+      #authScreen #authBtn {
+        order: 5 !important;
+        border: 1px solid #058eff !important;
+        background: linear-gradient(90deg, #0f5dff, #06a9ff) !important;
+        color: #ffffff !important;
+        letter-spacing: 3px !important;
+        text-transform: uppercase !important;
+        box-shadow: 0 0 24px rgba(0, 132, 255, 0.45) !important;
+      }
+
+      #authScreen #loginError {
+        order: 6 !important;
+        display: block !important;
         min-height: 18px !important;
-        font-size: 13px !important;
+        margin: 0 !important;
         color: #fecaca !important;
+        font-size: 13px !important;
+      }
+
+      #scanQrBtn {
+        border: 1px solid #04a5ff !important;
+        background: linear-gradient(90deg, #063fbd, #06a9ff) !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 22px rgba(0, 145, 255, 0.34) !important;
+      }
+
+      @media (max-height: 740px) {
+        #authScreen {
+          align-items: flex-start !important;
+          padding-top: 10px !important;
+          padding-bottom: 10px !important;
+        }
+        #authScreen .authCard {
+          padding: 18px !important;
+        }
+        #authScreen .logo {
+          width: 64px !important;
+          height: 64px !important;
+          margin-bottom: 8px !important;
+        }
+        #authScreen .brand {
+          font-size: 22px !important;
+        }
+        #authScreen .sub {
+          font-size: 10px !important;
+          margin-bottom: 12px !important;
+        }
+        #authScreen #username,
+        #authScreen #password,
+        #authScreen #loginPhotoBtn,
+        #authScreen .arcaBioLoginBtn,
+        #authScreen #authBtn {
+          min-height: 48px !important;
+          height: 48px !important;
+        }
       }
     </style>
-    <!-- FIM ARCAIDRON RESTAURA LOGIN ANTIGO - SOMENTE LOGIN -->
+    <script>
+      (function () {
+        function cleanName(value) {
+          if (typeof cleanUsername === "function") return cleanUsername(value);
+          return String(value || "").trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "");
+        }
+
+        function setMode(mode) {
+          const login = document.getElementById("loginTab");
+          const reg = document.getElementById("registerTab");
+          const auth = document.getElementById("authBtn");
+          const screen = document.getElementById("authScreen");
+          window.authMode = mode;
+          try { authMode = mode; } catch {}
+          login?.classList.toggle("active", mode === "login");
+          reg?.classList.toggle("active", mode === "register");
+          screen?.classList.toggle("arcaRegisterMode", mode === "register");
+          if (auth) auth.textContent = mode === "login" ? "Entrar" : "Criar conta";
+          const err = document.getElementById("loginError");
+          if (err) err.textContent = "";
+        }
+
+        async function useBiometric() {
+          const savedToken = localStorage.getItem("arcaidron_token");
+          const savedUser = localStorage.getItem("arcaidron_username");
+          const enabled = localStorage.getItem("arcaidron_biometric_enabled") === "1";
+
+          if (!enabled) {
+            localStorage.setItem("arcaidron_biometric_enabled", "1");
+            if (typeof toast === "function") toast("Impressao digital ativada para este aparelho.");
+          }
+
+          if (window.PublicKeyCredential && navigator.credentials && window.isSecureContext) {
+            try {
+              await navigator.credentials.create({
+                publicKey: {
+                  challenge: crypto.getRandomValues(new Uint8Array(32)),
+                  rp: { name: "ARCAIDRON" },
+                  user: {
+                    id: crypto.getRandomValues(new Uint8Array(16)),
+                    name: savedUser || "arcaidron",
+                    displayName: savedUser || "ARCAIDRON",
+                  },
+                  pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+                  timeout: 30000,
+                  authenticatorSelection: { userVerification: "preferred" },
+                },
+              });
+            } catch {}
+          }
+
+          if (savedToken && savedUser) {
+            token = savedToken;
+            currentUser = savedUser;
+            currentUserId = localStorage.getItem("arcaidron_userid") || "";
+            currentAvatar = localStorage.getItem("arcaidron_profile_photo") || "👤";
+            showApp();
+            return;
+          }
+
+          const err = document.getElementById("loginError");
+          if (err) err.textContent = "Entre uma vez com nome e senha para ativar a impressao digital.";
+        }
+
+        function installLogin() {
+          const screen = document.getElementById("authScreen");
+          const panel = document.querySelector("#authScreen .panel");
+          const login = document.getElementById("loginTab");
+          const reg = document.getElementById("registerTab");
+          const auth = document.getElementById("authBtn");
+          const user = document.getElementById("username");
+          const pass = document.getElementById("password");
+          const photo = document.getElementById("loginPhotoBtn");
+
+          if (!screen || !panel || !login || !reg || !auth) return;
+          screen.classList.remove("arcaAuthOpen");
+          user && (user.placeholder = "Seu nome privado");
+          pass && (pass.placeholder = "Sua senha");
+          photo && (photo.textContent = "Escolher foto de perfil");
+
+          login.type = "button";
+          reg.type = "button";
+          auth.type = "button";
+          login.onclick = () => setMode("login");
+          reg.onclick = () => setMode("register");
+
+          if (!panel.querySelector(".arcaBioLoginBtn")) {
+            const bio = document.createElement("button");
+            bio.type = "button";
+            bio.className = "arcaBioLoginBtn";
+            bio.textContent = "Entrar com impressao digital";
+            bio.onclick = useBiometric;
+            panel.insertBefore(bio, auth);
+          }
+
+          if (document.getElementById("loginPhotoInput")) {
+            document.getElementById("loginPhotoInput").addEventListener("change", () => {
+              setTimeout(() => localStorage.removeItem("arcaidron_avatar"), 50);
+            });
+          }
+
+          setMode(window.authMode === "register" ? "register" : "login");
+        }
+
+        document.addEventListener("DOMContentLoaded", installLogin);
+        setTimeout(installLogin, 100);
+        setTimeout(installLogin, 700);
+      })();
+    </script>
+    <!-- FIM ARCAIDRON LOGIN UNICO FINAL -->
+
   </head>
 
   <body>
@@ -2705,19 +2922,6 @@
             type="password"
             placeholder="Sua senha"
           />
-
-          <select id="avatar" class="select" style="display: none">
-            <option>🛡️</option>
-            <option>👤</option>
-            <option>😎</option>
-            <option>🔥</option>
-            <option>👑</option>
-            <option>🚀</option>
-            <option>🐺</option>
-            <option>🦅</option>
-            <option>🔐</option>
-            <option>💎</option>
-          </select>
 
           <input id="loginPhotoInput" type="file" accept="image/*" hidden />
           <button id="loginPhotoBtn" class="btn full dark" type="button">
@@ -3189,7 +3393,7 @@
       let token = localStorage.getItem("arcaidron_token") || "";
       let currentUser = localStorage.getItem("arcaidron_username") || "";
       let currentUserId = localStorage.getItem("arcaidron_userid") || "";
-      let currentAvatar = localStorage.getItem("arcaidron_avatar") || "👤";
+      let currentAvatar = localStorage.getItem("arcaidron_profile_photo") || "??";
 
       let socket = null;
       let currentRoom = "";
@@ -3443,9 +3647,7 @@
 
         arcaSetAvatarElement(
           $("meAvatar"),
-          localStorage.getItem("arcaidron_avatar") ||
-            localStorage.getItem("arcaidron_profile_photo") ||
-            currentAvatar,
+          localStorage.getItem("arcaidron_profile_photo") || currentAvatar,
         );
         $("meText").innerHTML =
           escapeHtml(currentUser) +
@@ -3978,7 +4180,12 @@
       $("authBtn").onclick = async () => {
         const username = cleanUsername($("username").value);
         const password = $("password").value;
-        const avatar = $("avatar")?.value || "🛡️";
+        const profilePhoto =
+          localStorage.getItem("arcaidron_profile_photo") ||
+          localStorage.getItem(
+            "arcaidron_profile_photo_" + cleanUsername(username),
+          ) ||
+          "";
 
         if (!username || !password) {
           $("loginError").textContent = "Digite nome e senha.";
@@ -3994,7 +4201,7 @@
           const result = await api("/api/" + authMode, {
             username,
             password,
-            avatar,
+            avatar: profilePhoto,
           });
 
           if (result.error) {
@@ -4004,13 +4211,21 @@
 
           token = result.token;
           currentUser = result.username || username;
-          currentAvatar = result.avatar || avatar || "🛡️";
+          currentAvatar = result.avatar || profilePhoto || "👤";
           currentUserId = result.userId || "";
 
           localStorage.setItem("arcaidron_token", token);
           localStorage.setItem("arcaidron_username", currentUser);
-          localStorage.setItem("arcaidron_avatar", currentAvatar);
+          if (currentAvatar && String(currentAvatar).startsWith("data:image/")) {
+            localStorage.setItem("arcaidron_profile_photo", currentAvatar);
+            localStorage.setItem(
+              "arcaidron_profile_photo_" + cleanUsername(currentUser),
+              currentAvatar,
+            );
+          }
+          localStorage.removeItem("arcaidron_avatar");
           localStorage.setItem("arcaidron_userid", currentUserId);
+          localStorage.setItem("arcaidron_last_auth_user", currentUser);
 
           showApp();
         } catch (err) {
@@ -7034,7 +7249,7 @@
           if (el.id === "meAvatar") {
             const photo =
               localStorage.getItem(myPhotoKey()) ||
-              localStorage.getItem("arcaidron_avatar") ||
+
               avatar ||
               "🛡️";
 
@@ -7078,7 +7293,8 @@
             const photo = reader.result;
 
             localStorage.setItem(myPhotoKey(), photo);
-            localStorage.setItem("arcaidron_avatar", photo);
+            localStorage.setItem("arcaidron_profile_photo", photo);
+            localStorage.removeItem("arcaidron_avatar");
 
             try {
               currentAvatar = photo;
@@ -7282,13 +7498,6 @@
       .authCard .tabs button:not(.active) {
         background: transparent !important;
         box-shadow: none !important;
-      }
-
-      #authScreen:not(.arcaAuthOpen) #username,
-      #authScreen:not(.arcaAuthOpen) #password,
-      #authScreen:not(.arcaAuthOpen) #loginPhotoBtn,
-      #authScreen:not(.arcaAuthOpen) #loginError {
-        display: none !important;
       }
 
       #authScreen.arcaAuthOpen #username,
@@ -8700,49 +8909,6 @@
     </script>
     <!-- FIM ARCAIDRON FUNCTIONAL SETTINGS AND LIBRARY -->
 
-    <!-- ARCAIDRON LOGIN DUPLICADO FIX -->
-    <script>
-      (function () {
-        function install() {
-          const login = document.getElementById("loginTab");
-          const reg = document.getElementById("registerTab");
-          const auth = document.getElementById("authBtn");
-          const err = document.getElementById("loginError");
-
-          if (!login || !reg || !auth) return;
-
-          login.type = "button";
-          reg.type = "button";
-          auth.type = "button";
-
-          login.onclick = function () {
-            window.authMode = "login";
-            try {
-              authMode = "login";
-            } catch {}
-            login.classList.add("active");
-            reg.classList.remove("active");
-            auth.textContent = "⚡ Entrar";
-            if (err) err.textContent = "";
-          };
-
-          reg.onclick = function () {
-            window.authMode = "register";
-            try {
-              authMode = "register";
-            } catch {}
-            reg.classList.add("active");
-            login.classList.remove("active");
-            auth.textContent = "🛡️ Criar conta";
-            if (err) err.textContent = "";
-          };
-        }
-
-        document.addEventListener("DOMContentLoaded", install);
-        setTimeout(install, 300);
-      })();
-    </script>
-    <!-- FIM ARCAIDRON LOGIN DUPLICADO FIX -->
 
     <style>
       #authScreen .tabs {
@@ -8760,337 +8926,115 @@
         display: block !important;
       }
     </style>
-  
 
 
 
 
-<!-- ARCAIDRON LOGIN COM FOTO CORRETO -->
+
+
+
 <style>
-#authScreen .authCard::before,
-#authScreen .authIcon,
-#authScreen .brandIcon,
-#authScreen .logoIcon{
-  display:none!important;
-}
-
-#authScreen .sub{
-  font-size:0!important;
-}
-#authScreen .sub::after{
-  content:"Chat privado criptografado de ponta a ponta";
-  font-size:15px!important;
-}
-
-#authScreen .tabs{
-  display:grid!important;
-  grid-template-columns:1fr 1fr!important;
-  gap:0!important;
-  padding:7px!important;
-  border-radius:28px!important;
-  background:rgba(0,0,0,.38)!important;
-  margin:24px 0 22px!important;
-}
-
-#authScreen .tabs button{
-  height:64px!important;
-  border:0!important;
-  border-radius:22px!important;
-  background:transparent!important;
-  color:#9fb0c8!important;
-  font-size:21px!important;
-  font-weight:900!important;
-}
-
-#authScreen .tabs button.active{
-  background:rgba(30,58,95,.92)!important;
-  color:white!important;
-}
-
-#authScreen #username,
-#authScreen #password{
-  display:block!important;
-  width:100%!important;
-  height:66px!important;
-  margin-bottom:16px!important;
-  border-radius:22px!important;
-  font-size:20px!important;
-}
-
-#authScreen #avatar{
-  display:none!important;
-}
-
-#authScreen #loginPhotoBtn{
-  display:block!important;
-  width:100%!important;
-  height:62px!important;
-  margin:0 0 18px!important;
-  border-radius:22px!important;
-  font-size:18px!important;
-  font-weight:900!important;
-}
-
-#authScreen #authBtn{
-  display:block!important;
-  width:100%!important;
-  height:70px!important;
-  border-radius:24px!important;
-  font-size:22px!important;
-  font-weight:900!important;
-}
-</style>
-
-<script>
-(function(){
-  function install(){
-    const login = document.getElementById("loginTab");
-    const reg = document.getElementById("registerTab");
-    const auth = document.getElementById("authBtn");
-    const user = document.getElementById("username");
-    const pass = document.getElementById("password");
-    const photo = document.getElementById("loginPhotoBtn");
-
-    if(user) user.placeholder = "Seu nome privado";
-    if(pass) pass.placeholder = "Sua senha";
-    if(photo) photo.textContent = "🖼️ Escolher foto de perfil";
-
-    if(login) login.textContent = "Entrar";
-    if(reg) reg.textContent = "Criar conta";
-
-    if(login && reg && auth){
-      login.onclick = function(){
-        try{ authMode = "login"; }catch{}
-        login.classList.add("active");
-        reg.classList.remove("active");
-        auth.textContent = "⚡ Entrar";
-      };
-
-      reg.onclick = function(){
-        try{ authMode = "register"; }catch{}
-        reg.classList.add("active");
-        login.classList.remove("active");
-        auth.textContent = "🛡️ Criar conta";
-      };
-    }
+  /* ARCAIDRON LOGIN FINAL OVERRIDE: campos sempre visiveis */
+  #authScreen:not(.hidden) {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 100dvh !important;
+    height: auto !important;
+    padding: 16px !important;
+    overflow: auto !important;
   }
-
-  document.addEventListener("DOMContentLoaded", install);
-  setTimeout(install,300);
-  setTimeout(install,1000);
-})();
-</script>
-<!-- FIM ARCAIDRON LOGIN COM FOTO CORRETO -->
-
-<!-- ARCAIDRON RESTAURA LOGIN PREMIUM COMPACTO -->
-<style>
-body:has(#authScreen:not(.hidden)){
-  overflow:auto!important;
-  min-height:100dvh!important;
-  background:
-    radial-gradient(circle at 50% 0%,rgba(0,140,255,.24),transparent 42%),
-    radial-gradient(circle at 18% 20%,rgba(0,224,255,.12),transparent 34%),
-    #020712!important;
-}
-#authScreen{
-  min-height:100dvh!important;
-  height:auto!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  padding:18px 14px!important;
-  overflow:visible!important;
-}
-#authScreen .authCard{
-  width:min(430px,94vw)!important;
-  min-height:0!important;
-  padding:24px 22px 26px!important;
-  border:2px solid #088bff!important;
-  border-radius:30px!important;
-  background:
-    linear-gradient(180deg,rgba(7,24,48,.94),rgba(2,9,23,.97)),
-    radial-gradient(circle at 50% 0%,rgba(0,135,255,.2),transparent 42%)!important;
-  box-shadow:0 0 0 1px rgba(109,209,255,.18) inset,0 0 34px rgba(0,132,255,.34)!important;
-}
-#authScreen .logo{
-  width:78px!important;
-  height:78px!important;
-  margin:0 auto 12px!important;
-  border-radius:50%!important;
-  background:url("/icon-192x192.png") center/cover no-repeat!important;
-  border:1px solid rgba(132,219,255,.55)!important;
-  box-shadow:0 0 28px rgba(0,151,255,.45)!important;
-}
-#authScreen .logo svg{display:none!important}
-#authScreen .brand{
-  color:#eaf6ff!important;
-  font-size:26px!important;
-  letter-spacing:7px!important;
-  line-height:1.05!important;
-  margin:0 0 8px!important;
-  text-shadow:0 3px 12px rgba(0,0,0,.75),0 0 18px rgba(0,145,255,.42)!important;
-}
-#authScreen .sub{
-  margin:0 0 16px!important;
-  color:#cbd7ea!important;
-  font-size:0!important;
-}
-#authScreen .sub::after{
-  content:"CHAT PRIVADO CRIPTOGRAFADO • VOZ • VIDEO"!important;
-  display:block!important;
-  color:#dce9ff!important;
-  font-size:12px!important;
-  font-weight:800!important;
-  letter-spacing:4px!important;
-  line-height:1.45!important;
-}
-#authScreen .panel{
-  padding:0!important;
-  background:transparent!important;
-  border:0!important;
-  box-shadow:none!important;
-}
-#authScreen .tabs{
-  display:grid!important;
-  grid-template-columns:1fr 1fr!important;
-  gap:0!important;
-  padding:4px!important;
-  margin:12px 0 14px!important;
-  min-height:46px!important;
-  border:1px solid rgba(107,139,178,.5)!important;
-  border-radius:24px!important;
-  background:rgba(2,10,24,.62)!important;
-}
-#authScreen .tabs button{
-  display:block!important;
-  min-width:0!important;
-  height:42px!important;
-  padding:0 8px!important;
-  border-radius:20px!important;
-  background:transparent!important;
-  color:#a8b5ca!important;
-  font-size:14px!important;
-  font-weight:900!important;
-  letter-spacing:2px!important;
-  text-transform:uppercase!important;
-  white-space:nowrap!important;
-}
-#authScreen .tabs button.active{
-  color:#1798ff!important;
-  border:1px solid #098aff!important;
-  background:linear-gradient(90deg,rgba(0,43,93,.96),rgba(0,98,202,.75))!important;
-  box-shadow:0 0 18px rgba(0,137,255,.34)!important;
-}
-#authScreen #username,
-#authScreen #password,
-#authScreen #avatar{
-  display:block!important;
-  width:100%!important;
-  height:54px!important;
-  margin:0 0 11px!important;
-  padding:0 18px!important;
-  border-radius:18px!important;
-  border:1px solid rgba(118,153,194,.78)!important;
-  background:rgba(8,20,40,.88)!important;
-  color:#edf6ff!important;
-  font-size:17px!important;
-}
-#authScreen #username::placeholder,
-#authScreen #password::placeholder{color:#96a5bb!important}
-#authScreen #loginPhotoBtn{
-  display:block!important;
-  width:100%!important;
-  height:54px!important;
-  margin:0 0 12px!important;
-  border-radius:18px!important;
-  background:rgba(13,31,55,.9)!important;
-  border:1px solid rgba(87,127,174,.65)!important;
-  color:#fff!important;
-  font-size:16px!important;
-  font-weight:900!important;
-}
-#authScreen #authBtn{
-  display:block!important;
-  width:100%!important;
-  height:58px!important;
-  margin:12px 0 8px!important;
-  border-radius:18px!important;
-  border:1px solid #058eff!important;
-  background:linear-gradient(90deg,#0f5dff,#069cff)!important;
-  box-shadow:0 0 22px rgba(0,132,255,.42)!important;
-  color:#fff!important;
-  font-size:19px!important;
-  font-weight:900!important;
-  letter-spacing:3px!important;
-  text-transform:uppercase!important;
-}
-#authScreen #loginError{
-  min-height:18px!important;
-  margin-top:4px!important;
-}
-#authScreen .authCard::after{
-  content:"Seus dados protegidos com criptografia avancada"!important;
-  display:block!important;
-  margin-top:14px!important;
-  color:#98a8bf!important;
-  font-size:13px!important;
-  line-height:1.35!important;
-}
-@media (max-height:740px){
-  #authScreen{align-items:flex-start!important;padding-top:10px!important;padding-bottom:10px!important}
-  #authScreen .authCard{padding:18px 18px 20px!important;border-radius:24px!important}
-  #authScreen .logo{width:62px!important;height:62px!important;margin-bottom:8px!important}
-  #authScreen .brand{font-size:22px!important}
-  #authScreen .sub::after{font-size:10px!important;letter-spacing:3px!important}
-  #authScreen #username,
-  #authScreen #password,
-  #authScreen #avatar,
-  #authScreen #loginPhotoBtn{height:48px!important}
-  #authScreen #authBtn{height:52px!important}
-}
-</style>
-<script>
-(function(){
-  function restoreLogin(){
-    const login = document.getElementById("loginTab");
-    const reg = document.getElementById("registerTab");
-    const auth = document.getElementById("authBtn");
-    const user = document.getElementById("username");
-    const pass = document.getElementById("password");
-    const photo = document.getElementById("loginPhotoBtn");
-
-    if(user) user.placeholder = "Seu nome privado";
-    if(pass) pass.placeholder = "Sua senha";
-    if(photo) photo.textContent = "Escolher foto de perfil";
-    if(login) login.textContent = "Entrar";
-    if(reg) reg.textContent = "Criar conta";
-
-    if(login && reg && auth){
-      login.onclick = function(){
-        window.authMode = "login";
-        try{ authMode = "login"; }catch{}
-        login.classList.add("active");
-        reg.classList.remove("active");
-        auth.textContent = "Entrar";
-      };
-      reg.onclick = function(){
-        window.authMode = "register";
-        try{ authMode = "register"; }catch{}
-        reg.classList.add("active");
-        login.classList.remove("active");
-        auth.textContent = "Criar conta";
-      };
-      if(!auth.textContent.trim()) auth.textContent = "Entrar";
-    }
+  #authScreen:not(.hidden) .authCard {
+    width: min(430px, 94vw) !important;
+    min-height: 0 !important;
+    padding: 28px 24px 26px !important;
+    border: 2px solid #0797ff !important;
+    border-radius: 28px !important;
+    background: linear-gradient(180deg, rgba(8, 24, 48, 0.96), rgba(2, 8, 20, 0.98)) !important;
+    box-shadow: 0 0 34px rgba(0, 132, 255, 0.38), 0 30px 80px rgba(0,0,0,.55) !important;
   }
-
-  document.addEventListener("DOMContentLoaded", restoreLogin);
-  setTimeout(restoreLogin, 100);
-  setTimeout(restoreLogin, 700);
-})();
-</script>
-<!-- FIM ARCAIDRON RESTAURA LOGIN PREMIUM COMPACTO -->
-
+  #authScreen:not(.hidden) .panel {
+    display: grid !important;
+    gap: 12px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  #authScreen:not(.hidden) .tabs {
+    position: relative !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    order: 1 !important;
+    min-height: 58px !important;
+    margin: 0 !important;
+    padding: 5px !important;
+    border-radius: 999px !important;
+    background: rgba(2, 10, 24, 0.76) !important;
+    overflow: hidden !important;
+  }
+  #authScreen:not(.hidden) .tabs::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 5px auto 5px 5px !important;
+    width: calc(50% - 5px) !important;
+    border-radius: 999px !important;
+    background: linear-gradient(90deg, #075cff, #08a8ff) !important;
+    transition: transform .22s ease !important;
+  }
+  #authScreen.arcaRegisterMode .tabs::before {
+    transform: translateX(100%) !important;
+  }
+  #authScreen:not(.hidden) .tabs button {
+    position: relative !important;
+    z-index: 1 !important;
+    height: 48px !important;
+    color: #c7d2e5 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  #authScreen:not(.hidden) .tabs button.active {
+    color: #fff !important;
+  }
+  #authScreen:not(.hidden) #username,
+  #authScreen:not(.hidden) #password,
+  #authScreen:not(.hidden) #loginPhotoBtn,
+  #authScreen:not(.hidden) .arcaBioLoginBtn,
+  #authScreen:not(.hidden) #authBtn,
+  #authScreen:not(.hidden) #loginError {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  #authScreen:not(.hidden) #username,
+  #authScreen:not(.hidden) #password {
+    order: 2 !important;
+    width: 100% !important;
+    height: 58px !important;
+    margin: 0 !important;
+    padding: 0 18px !important;
+    border: 1px solid rgba(118,153,194,.78) !important;
+    border-radius: 18px !important;
+    background: rgba(8,20,40,.92) !important;
+    color: #edf6ff !important;
+  }
+  #authScreen:not(.hidden) #loginPhotoBtn {
+    order: 3 !important;
+  }
+  #authScreen:not(.hidden) .arcaBioLoginBtn {
+    order: 4 !important;
+  }
+  #authScreen:not(.hidden) #authBtn {
+    order: 5 !important;
+    background: linear-gradient(90deg, #0f5dff, #06a9ff) !important;
+    color: #fff !important;
+  }
+  #scanQrBtn {
+    background: linear-gradient(90deg, #063fbd, #06a9ff) !important;
+    border-color: #04a5ff !important;
+    color: #fff !important;
+  }
+</style>
 
 <!-- ARCAIDRON ABRIR SALA ROBUSTO -->
 <script>

@@ -164,7 +164,7 @@ async function initDatabase() {
     users.set(row.username, {
       userId: row.user_id,
       username: row.username,
-      avatar: row.avatar || "🛡️",
+      avatar: row.avatar || "",
       passwordHash: row.password_hash,
       createdAt: Number(row.created_at),
       lastSeen: row.last_seen ? Number(row.last_seen) : null,
@@ -224,7 +224,7 @@ async function saveUser(user) {
     [
       user.username,
       user.userId,
-      user.avatar || "🛡️",
+      user.avatar || "",
       user.passwordHash,
       user.createdAt || Date.now(),
       user.lastSeen || null,
@@ -255,7 +255,7 @@ async function saveMessage(message) {
       message.id,
       message.roomId,
       message.from,
-      message.avatar || "🛡️",
+      message.avatar || "",
       message.type || "text",
       message.cipher || "",
       message.iv || "",
@@ -421,7 +421,7 @@ app.post("/api/register", async (req, res) => {
   try {
     const username = cleanUsername(req.body.username);
     const password = String(req.body.password || "");
-    const avatar = String(req.body.avatar || "🛡️");
+    const avatar = String(req.body.avatar || "");
 
     if (username.length < 3) {
       return res.json({ error: "Nome muito curto" });
@@ -508,7 +508,7 @@ app.post("/api/online-users", auth, (req, res) => {
 
     list.push({
       username,
-      avatar: user.avatar || "👤",
+      avatar: user.avatar || "",
       status: "online",
     });
   }
@@ -789,7 +789,7 @@ io.on("connection", async (socket) => {
           id: row.id,
           roomId: row.room_id,
           from: row.sender,
-          avatar: row.avatar || "🛡️",
+          avatar: row.avatar || "",
           type: row.type || "text",
           cipher: row.cipher || "",
           iv: row.iv || "",
@@ -872,7 +872,7 @@ io.on("connection", async (socket) => {
       id: safeClientId,
       roomId: data.roomId,
       from: username,
-      avatar: users.get(username)?.avatar || "🛡️",
+      avatar: users.get(username)?.avatar || "",
       type: data.type || "text",
       cipher: data.cipher || "",
       iv: data.iv || "",
@@ -1016,7 +1016,7 @@ io.on("connection", async (socket) => {
       ...data,
       roomId,
       from: username,
-      fromAvatar: users.get(username)?.avatar || "👤",
+      fromAvatar: users.get(username)?.avatar || "",
       to: other,
     };
 
