@@ -31,6 +31,15 @@ assert(
   "saved contacts with roomId must open the conversation view immediately",
 );
 assert(
+  html.includes("async function arcaHydrateContactFromServer"),
+  "old Android/local contacts must be completed from /api/list-friends before opening",
+);
+assert(
+  html.includes("roomId: item.roomId || \"\"") &&
+    html.includes("userId: item.userId || \"\""),
+  "vault contacts must preserve roomId and userId when moved from normal contacts",
+);
+assert(
   html.includes('onclick="openInviteContact(${index})"'),
   "conversation rows must open the saved contact object, not a username-only path",
 );

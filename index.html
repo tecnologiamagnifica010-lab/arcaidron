@@ -4816,11 +4816,57 @@
         );
       }
 
+      async function arcaHydrateContactFromServer(source) {
+        const base =
+          source && typeof source === "object"
+            ? { ...source }
+            : { username: source };
+        const username = cleanUsername(base.username || "");
+        const userId = String(base.userId || base.targetId || "").trim();
+
+        if (base.roomId && (base.userId || username)) return base;
+
+        try {
+          const result = await api("/api/list-friends");
+          const friends = Array.isArray(result.friends) ? result.friends : [];
+          const found = friends.find((friend) => {
+            return (
+              (userId && String(friend.userId || "") === userId) ||
+              (username &&
+                cleanUsername(friend.username || "") === username)
+            );
+          });
+
+          if (found) {
+            const hydrated = {
+              ...base,
+              ...found,
+              label: base.label || found.label || found.username || username,
+              username: found.username || username,
+              userId: found.userId || userId,
+              key:
+                base.key ||
+                createInviteAutoKey(found.userId || found.username || username),
+              roomId: found.roomId || base.roomId || "",
+              pairHash: found.pairHash || base.pairHash || "",
+              type: base.type || "friend",
+            };
+            saveInviteContactLocal(hydrated);
+            return hydrated;
+          }
+        } catch {
+          console.log("Nao foi possivel completar contato pelo servidor.");
+        }
+
+        return base;
+      }
+
       async function arcaOpenDirectChat(contactOrUsername) {
-        const source =
+        let source =
           typeof contactOrUsername === "string"
             ? { username: contactOrUsername }
             : contactOrUsername || {};
+        source = await arcaHydrateContactFromServer(source);
         const target = cleanUsername(source.username || "");
         const targetId = String(source.userId || source.targetId || "").trim();
         const identity = targetId || target;
@@ -5250,7 +5296,11 @@
           vaultEntries.push({
             label: item.label,
             username: item.username,
+            userId: item.userId || "",
             key: item.key,
+            roomId: item.roomId || "",
+            pairHash: item.pairHash || "",
+            avatar: item.avatar || "",
             type: "invite",
             createdAt: Date.now(),
           });
@@ -5296,6 +5346,7 @@
           const saved = saveInviteContactLocal({
             ...(result.peer || {}),
             username: (result.peer && result.peer.username) || from,
+            userId: (result.peer && result.peer.userId) || "",
             roomId: result.roomId || "",
             pairHash: result.pairHash || "",
           });
