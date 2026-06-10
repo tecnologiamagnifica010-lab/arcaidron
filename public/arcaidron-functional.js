@@ -239,24 +239,41 @@
     const seen = new Set();
     [...online, ...contacts(), ...vaultContacts()].forEach((item) => {
       const user = clean(item.username);
-      if (!user || seen.has(user)) return;
-      seen.add(user);
+      const identity = String(item.userId || user || "").trim();
+      if (!identity || seen.has(identity)) return;
+      seen.add(identity);
       merged.push({ ...item, username: user });
     });
-    show("Conversas", `<div class="arcaUtilityList">${merged.length ? merged.map((item) => `<button class="arcaUtilityRow" onclick="arcaOpenConversationByName('${item.username}','${item.fromVault ? "vault" : "contact"}')"><div class="arcaUtilityRowIcon">${item.fromVault ? "CF" : "ON"}</div><div><strong>${safe(item.label || item.username)}</strong><small>${item.fromVault ? "Contato do cofre privado" : online.some((u) => clean(u.username) === item.username) ? "Online agora" : "Contato salvo"}</small></div><div class="small">Abrir</div></button>`).join("") : '<div class="safeItem">Nenhum contato online ou conversa salva agora.</div>'}</div>`);
+    window.arcaUtilityChatItems = merged;
+    show("Conversas", `<div class="arcaUtilityList">${merged.length ? merged.map((item, index) => `<button class="arcaUtilityRow" onclick="arcaOpenConversationByIndex(${index})"><div class="arcaUtilityRowIcon">${item.fromVault ? "CF" : "ON"}</div><div><strong>${safe(item.label || item.username)}</strong><small>${item.fromVault ? "Contato do cofre privado" : online.some((u) => clean(u.username) === item.username) ? "Online agora" : "Contato salvo"}</small></div><div class="small">Abrir</div></button>`).join("") : '<div class="safeItem">Nenhum contato online ou conversa salva agora.</div>'}</div>`);
   };
-  window.arcaOpenConversationByName = async function (username, source) {
-    if (blocked(username)) return toast("Contato bloqueado neste aparelho.");
-    if (source === "vault" && typeof window.arcaOpenVaultChatByUsername === "function") {
-      const opened = await window.arcaOpenVaultChatByUsername(username);
+  window.arcaOpenConversationByIndex = async function (index) {
+    const item = (window.arcaUtilityChatItems || [])[index];
+    if (!item) return toast("Contato nao encontrado.");
+    return window.arcaOpenConversationByName(item.userId || item.username, item.fromVault ? "vault" : "contact", item);
+  };
+  window.arcaOpenConversationByName = async function (username, source, contact) {
+    const identity = String(username || "").trim();
+    const cleanName = clean(contact?.username || username);
+    if (cleanName && blocked(cleanName)) return toast("Contato bloqueado neste aparelho.");
+    if (source === "vault" && cleanName && typeof window.arcaOpenVaultChatByUsername === "function") {
+      const opened = await window.arcaOpenVaultChatByUsername(cleanName);
       if (opened) return;
     }
-    if (!contacts().some((item) => clean(item.username) === clean(username)) && typeof saveInviteContactLocal === "function") {
-      saveInviteContactLocal(username);
+    if (!contacts().some((item) => String(item.userId || "") === identity || clean(item.username) === cleanName) && typeof saveInviteContactLocal === "function") {
+      saveInviteContactLocal(contact || username);
     }
     $("arcaUtilityOverlay")?.classList.add("hidden");
+    if (contact && typeof window.arcaOpenDirectChat === "function") {
+      await window.arcaOpenDirectChat(contact);
+      return;
+    }
+    if (identity.startsWith("arc_") && typeof openInviteContactByUserId === "function") {
+      await openInviteContactByUserId(identity);
+      return;
+    }
     if (typeof openInviteContactByUsername === "function") {
-      await openInviteContactByUsername(username);
+      await openInviteContactByUsername(cleanName || username);
       return;
     }
     if (typeof window.arcaOpenDirectChat === "function") await window.arcaOpenDirectChat(username);

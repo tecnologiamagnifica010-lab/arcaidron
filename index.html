@@ -4077,12 +4077,13 @@
         if (menu) menu.classList.add("hidden");
 
         $("otherUser").value = item.username;
-        $("chatKey").value = item.key || createInviteAutoKey(item.username);
+        $("chatKey").value =
+          item.key || createInviteAutoKey(item.userId || item.username);
 
         if ($("arcaChatMenuPanel"))
           $("arcaChatMenuPanel").classList.add("hidden");
 
-        $("openChatBtn").click();
+        await arcaOpenDirectChat(item);
       }
 
       function arcaGroupsKey() {
@@ -4641,7 +4642,12 @@
       }
 
       function createInviteAutoKey(from) {
-        const pair = [cleanUsername(currentUser), cleanUsername(from)]
+        const source =
+          from && typeof from === "object"
+            ? from.userId || from.targetId || from.username || ""
+            : from;
+        const me = currentUserId || currentUser;
+        const pair = [String(me || "").trim(), String(source || "").trim()]
           .sort()
           .join("::");
         return "ARCAIDRON-CONVITE-" + pair;
@@ -4746,38 +4752,58 @@
       }
 
       function saveInviteContactLocal(from) {
-        const username = cleanUsername(from);
+        const source =
+          from && typeof from === "object"
+            ? from
+            : { username: from, label: from };
+        const username = cleanUsername(source.username || source.name || "");
+        const userId = String(
+          source.userId || source.targetId || source.id || "",
+        ).trim();
+        const identity = userId || username;
+
         if (isContactHiddenInVault(username)) {
           return false;
         }
         const list = loadInviteContacts();
 
-        const exists = list.some((item) => item.username === username);
+        const exists = list.findIndex(
+          (item) =>
+            (userId && String(item.userId || "") === userId) ||
+            cleanUsername(item.username) === username,
+        );
 
-        if (!exists) {
-          const autoKey = createInviteAutoKey(username);
+        const autoKey = source.key || createInviteAutoKey(identity);
+        const nextContact = {
+          label: source.label || username || userId,
+          username,
+          userId,
+          key: autoKey,
+          roomId: source.roomId || "",
+          pairHash: source.pairHash || "",
+          avatar: source.avatar || "",
+          type: source.type || "friend",
+          createdAt: source.createdAt || Date.now(),
+        };
 
-          list.push({
-            label: username,
-            username,
-            key: autoKey,
-            type: "friend",
-            createdAt: Date.now(),
-          });
+        if (exists >= 0) list[exists] = { ...list[exists], ...nextContact };
+        else list.push(nextContact);
 
-          saveInviteContacts(list);
-        }
+        saveInviteContacts(list);
 
         renderInviteContacts();
         renderChatRooms();
 
-        return true;
+        return nextContact;
       }
 
       function arcaFindInviteContact(username) {
-        const user = cleanUsername(username);
+        const raw = String(username || "").trim();
+        const user = cleanUsername(raw);
         return loadInviteContacts().find(
-          (item) => cleanUsername(item.username) === user,
+          (item) =>
+            (raw && String(item.userId || "") === raw) ||
+            cleanUsername(item.username) === user,
         );
       }
 
@@ -4786,29 +4812,32 @@
           typeof contactOrUsername === "string"
             ? { username: contactOrUsername }
             : contactOrUsername || {};
-        const target = cleanUsername(source.username || source.userId || "");
+        const target = cleanUsername(source.username || "");
+        const targetId = String(source.userId || source.targetId || "").trim();
+        const identity = targetId || target;
 
-        if (!target) {
+        if (!identity) {
           toast("Contato invalido.");
           return false;
         }
 
-        if (typeof isBlocked === "function" && isBlocked(target)) {
+        if (target && typeof isBlocked === "function" && isBlocked(target)) {
           toast("Contato bloqueado neste aparelho.");
           return false;
         }
 
-        const stored = arcaFindInviteContact(target) || {};
-        const key = source.key || stored.key || createInviteAutoKey(target);
-        const label = source.label || stored.label || target;
+        const stored = arcaFindInviteContact(targetId || target) || {};
+        const key = source.key || stored.key || createInviteAutoKey(identity);
+        const label = source.label || stored.label || target || targetId;
 
-        $("otherUser").value = target;
+        $("otherUser").value = target || targetId;
         $("chatKey").value = key;
 
         cryptoKey = await createCryptoKey(key);
         const sharedKeyHash = await sha256(key);
         const result = await api("/api/open-chat", {
           target,
+          targetId,
           sharedKeyHash,
         });
 
@@ -4820,6 +4849,8 @@
         const previousRoom = currentRoom;
         currentRoom = result.roomId;
         peerUser = (result.peer && result.peer.username) || target;
+        const peerUserId =
+          (result.peer && result.peer.userId) || result.targetId || targetId;
         peerAvatar =
           (result.peer && result.peer.avatar) ||
           arcaGetContactPhoto(peerUser) ||
@@ -4832,24 +4863,28 @@
 
         const list = loadInviteContacts();
         const index = list.findIndex(
-          (item) => cleanUsername(item.username) === target,
+          (item) =>
+            (peerUserId && String(item.userId || "") === peerUserId) ||
+            cleanUsername(item.username) === cleanUsername(peerUser),
         );
         const nextContact = {
           ...stored,
           ...source,
           label,
-          username: target,
+          username: peerUser,
+          userId: peerUserId,
           key,
           roomId: currentRoom,
+          pairHash: result.pairHash || stored.pairHash || "",
           type: source.type || stored.type || "friend",
           createdAt: source.createdAt || stored.createdAt || Date.now(),
         };
 
         if (index >= 0) list[index] = { ...list[index], ...nextContact };
-        else if (!isContactHiddenInVault(target)) list.push(nextContact);
+        else if (!isContactHiddenInVault(peerUser)) list.push(nextContact);
         saveInviteContacts(list);
 
-        clearUnreadMessages(target);
+        clearUnreadMessages(peerUser);
         arcaRememberContactPhoto(peerUser, peerAvatar);
         arcaSetAvatarElement($("peerAvatar"), peerAvatar);
         arcaRefreshChatAvatar();
@@ -4894,8 +4929,16 @@
         return arcaOpenDirectChat(item || arcaFindInviteContact(user) || user);
       }
 
+      async function openInviteContactByUserId(userId) {
+        const id = String(userId || "").trim();
+        if (!id) return false;
+        const item = arcaFindInviteContact(id);
+        return arcaOpenDirectChat(item || { userId: id });
+      }
+
       window.arcaOpenDirectChat = arcaOpenDirectChat;
       window.openInviteContactByUsername = openInviteContactByUsername;
+      window.openInviteContactByUserId = openInviteContactByUserId;
 
       async function syncFriendsFromServer() {
         try {
@@ -4908,7 +4951,7 @@
           }
 
           for (const friend of result.friends) {
-            saveInviteContactLocal(friend.username);
+            saveInviteContactLocal(friend);
           }
 
           renderInviteContacts();
@@ -4993,7 +5036,7 @@
           .map(
             (item, index) => `
                   <div class="vaultItem">
-                    <div onclick="openInviteContactByUsername('${escapeHtml(item.username)}')" style="cursor:pointer;flex:1">
+                    <div onclick="openInviteContact(${index})" style="cursor:pointer;flex:1">
                       <div class="vaultItemName">
                         👤 ${escapeHtml(item.label || item.username)}
                         ${
@@ -5203,10 +5246,6 @@
             return;
           }
 
-          const saved = saveInviteContactLocal(from);
-
-          if (!saved) return;
-
           const result = await api("/api/accept-invite", {
             from,
           });
@@ -5215,6 +5254,15 @@
             toast(result.error);
             return;
           }
+
+          const saved = saveInviteContactLocal({
+            ...(result.peer || {}),
+            username: (result.peer && result.peer.username) || from,
+            roomId: result.roomId || "",
+            pairHash: result.pairHash || "",
+          });
+
+          if (!saved) return;
 
           toast("Convite aceito e contato salvo: " + from);
 
@@ -6658,6 +6706,7 @@
             label: label || username,
             username,
             key,
+            userId: "",
             createdAt: Date.now(),
           });
 
@@ -6692,7 +6741,10 @@
         const nextContact = {
           label: item.label || username,
           username,
+          userId: item.userId || "",
           key: item.key,
+          roomId: item.roomId || "",
+          pairHash: item.pairHash || "",
           type: "vault",
           fromVault: true,
           createdAt: item.createdAt || Date.now(),
@@ -6702,7 +6754,9 @@
           list[existingIndex] = {
             ...list[existingIndex],
             ...nextContact,
-            roomId: list[existingIndex].roomId,
+          roomId: list[existingIndex].roomId,
+          userId: list[existingIndex].userId || nextContact.userId || "",
+          pairHash: list[existingIndex].pairHash || nextContact.pairHash || "",
           };
         } else {
           list.push(nextContact);
@@ -6749,6 +6803,9 @@
         return vaultEntries.map((item) => ({
           label: item.label || item.username,
           username: item.username,
+          userId: item.userId || "",
+          roomId: item.roomId || "",
+          pairHash: item.pairHash || "",
           type: "vault",
           fromVault: true,
         }));
@@ -6759,6 +6816,9 @@
         return vaultEntries.map((item) => ({
           label: item.label || item.username,
           username: item.username,
+          userId: item.userId || "",
+          roomId: item.roomId || "",
+          pairHash: item.pairHash || "",
           type: "vault",
           fromVault: true,
         }));

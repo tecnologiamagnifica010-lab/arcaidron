@@ -87,6 +87,7 @@ const invites = new Map();
   valor = array de amigos
 */
 const friends = new Map();
+const friendRooms = new Map();
 
 let pool = null;
 
@@ -182,20 +183,55 @@ async function loadFriendships() {
       user_a TEXT NOT NULL,
       user_b TEXT NOT NULL,
       room_id TEXT NOT NULL,
+      user_a_id TEXT,
+      user_b_id TEXT,
+      pair_hash TEXT,
       created_at BIGINT NOT NULL,
       PRIMARY KEY (user_a, user_b)
     )
   `);
 
+  await pool.query(`
+    ALTER TABLE arcaidron_friendships
+    ADD COLUMN IF NOT EXISTS user_a_id TEXT
+  `);
+
+  await pool.query(`
+    ALTER TABLE arcaidron_friendships
+    ADD COLUMN IF NOT EXISTS user_b_id TEXT
+  `);
+
+  await pool.query(`
+    ALTER TABLE arcaidron_friendships
+    ADD COLUMN IF NOT EXISTS pair_hash TEXT
+  `);
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_arcaidron_friendships_pair_hash
+    ON arcaidron_friendships (pair_hash)
+    WHERE pair_hash IS NOT NULL
+  `);
+
   const result = await pool.query(`
-    SELECT user_a, user_b
+    SELECT user_a, user_b, user_a_id, user_b_id, room_id, pair_hash
     FROM arcaidron_friendships
   `);
 
   friends.clear();
+  friendRooms.clear();
 
   for (const row of result.rows) {
-    addFriendInMemory(row.user_a, row.user_b);
+    const a = cleanUsername(row.user_a);
+    const b = cleanUsername(row.user_b);
+    if (!a || !b || !users.has(a) || !users.has(b)) continue;
+
+    const idA = row.user_a_id || users.get(a)?.userId || "";
+    const idB = row.user_b_id || users.get(b)?.userId || "";
+    const roomId = row.room_id || createRoomIdByUserIds(idA, idB);
+    const pairHash = row.pair_hash || createFriendPairHash(idA, idB);
+
+    addFriendInMemory(a, b, roomId, pairHash);
+    ensureChatInMemory(roomId, a, b, idA, idB);
   }
 }
 
@@ -311,9 +347,7 @@ function verifyToken(token) {
   }
 }
 
-function createRoomIdByUsers(userA, userB) {
-  const idA = users.get(userA)?.userId || userA;
-  const idB = users.get(userB)?.userId || userB;
+function createRoomIdByUserIds(idA, idB) {
   const pair = [idA, idB].sort().join("::");
 
   return crypto
@@ -322,11 +356,21 @@ function createRoomIdByUsers(userA, userB) {
     .digest("hex");
 }
 
-function normalizeFriendPair(userA, userB) {
-  return [cleanUsername(userA), cleanUsername(userB)].sort();
+function createFriendPairHash(idA, idB) {
+  const pair = [String(idA || ""), String(idB || "")].sort().join("_");
+  return crypto
+    .createHash("sha256")
+    .update("ARCAIDRON-FRIEND-PAIR::" + pair)
+    .digest("hex");
 }
 
-function addFriendInMemory(userA, userB) {
+function createRoomIdByUsers(userA, userB) {
+  const idA = users.get(userA)?.userId || userA;
+  const idB = users.get(userB)?.userId || userB;
+  return createRoomIdByUserIds(idA, idB);
+}
+
+function addFriendInMemory(userA, userB, roomId = "", pairHash = "") {
   const a = cleanUsername(userA);
   const b = cleanUsername(userB);
   if (!a || !b || a === b) return;
@@ -335,25 +379,160 @@ function addFriendInMemory(userA, userB) {
   if (!friends.has(b)) friends.set(b, []);
   if (!friends.get(a).includes(b)) friends.get(a).push(b);
   if (!friends.get(b).includes(a)) friends.get(b).push(a);
+
+  const key = [a, b].sort().join("::");
+  if (roomId) friendRooms.set(key, { roomId, pairHash });
+}
+
+function ensureUserId(username) {
+  const user = users.get(cleanUsername(username));
+  if (!user) return "";
+
+  if (!user.userId) {
+    user.userId = "arc_" + crypto.randomBytes(8).toString("hex");
+    saveUser(user).catch((err) => {
+      console.error("Erro ao persistir ID do usuario:", err);
+    });
+  }
+
+  return user.userId;
+}
+
+function ensureChatInMemory(roomId, userA, userB, idA = "", idB = "") {
+  const a = cleanUsername(userA);
+  const b = cleanUsername(userB);
+  if (!roomId || !a || !b || !users.has(a) || !users.has(b)) return null;
+
+  let chat = chats.get(roomId);
+  if (!chat) {
+    chat = {
+      roomId,
+      members: [a, b],
+      memberIds: [idA || ensureUserId(a), idB || ensureUserId(b)],
+      messages: [],
+      createdAt: Date.now(),
+    };
+    chats.set(roomId, chat);
+    return chat;
+  }
+
+  chat.members = [a, b];
+  chat.memberIds = [idA || ensureUserId(a), idB || ensureUserId(b)];
+  return chat;
 }
 
 async function saveFriendship(userA, userB) {
-  addFriendInMemory(userA, userB);
+  return ensureFriendshipRoom(userA, userB);
+}
 
-  if (!pool) return;
+async function ensureFriendshipRoom(userA, userB) {
+  const a = cleanUsername(userA);
+  const b = cleanUsername(userB);
+  if (!a || !b || a === b || !users.has(a) || !users.has(b)) {
+    return null;
+  }
 
-  const [a, b] = normalizeFriendPair(userA, userB);
-  const roomId = createRoomIdByUsers(a, b);
+  const idA = ensureUserId(a);
+  const idB = ensureUserId(b);
+  if (!idA || !idB) return null;
 
-  await pool.query(
+  const sortedIds = [idA, idB].sort();
+  const pairHash = createFriendPairHash(idA, idB);
+  const roomId = createRoomIdByUserIds(idA, idB);
+  const userById = new Map([
+    [idA, a],
+    [idB, b],
+  ]);
+  const leftUser = userById.get(sortedIds[0]);
+  const rightUser = userById.get(sortedIds[1]);
+
+  addFriendInMemory(a, b, roomId, pairHash);
+  ensureChatInMemory(roomId, a, b, idA, idB);
+
+  if (pool) {
+    const updated = await pool.query(
+      `
+      UPDATE arcaidron_friendships
+      SET
+        user_a = $1,
+        user_b = $2,
+        room_id = $3,
+        user_a_id = $4,
+        user_b_id = $5,
+        pair_hash = $6
+      WHERE room_id = $3
+        OR pair_hash = $6
+        OR (user_a = $1 AND user_b = $2)
+        OR (user_a = $2 AND user_b = $1)
+      `,
+      [
+        leftUser,
+        rightUser,
+        roomId,
+        sortedIds[0],
+        sortedIds[1],
+        pairHash,
+      ],
+    );
+
+    if (updated.rowCount === 0) {
+      await pool.query(
+      `
+      INSERT INTO arcaidron_friendships
+        (user_a, user_b, room_id, user_a_id, user_b_id, pair_hash, created_at)
+      VALUES
+        ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (user_a, user_b)
+      DO UPDATE SET
+        room_id = EXCLUDED.room_id,
+        user_a_id = EXCLUDED.user_a_id,
+        user_b_id = EXCLUDED.user_b_id,
+        pair_hash = EXCLUDED.pair_hash
+      `,
+      [
+        leftUser,
+        rightUser,
+        roomId,
+        sortedIds[0],
+        sortedIds[1],
+        pairHash,
+        Date.now(),
+      ],
+      );
+    }
+  }
+
+  return {
+    roomId,
+    pairHash,
+    members: [a, b],
+    memberIds: [idA, idB],
+  };
+}
+
+async function rebuildChatFromRoomId(roomId) {
+  if (chats.has(roomId)) return chats.get(roomId);
+  if (!pool || !roomId) return null;
+
+  const result = await pool.query(
     `
-    INSERT INTO arcaidron_friendships (user_a, user_b, room_id, created_at)
-    VALUES ($1, $2, $3, $4)
-    ON CONFLICT (user_a, user_b)
-    DO UPDATE SET room_id = EXCLUDED.room_id
+    SELECT user_a, user_b, user_a_id, user_b_id, pair_hash
+    FROM arcaidron_friendships
+    WHERE room_id = $1
+    LIMIT 1
     `,
-    [a, b, roomId, Date.now()],
+    [roomId],
   );
+
+  const row = result.rows[0];
+  if (!row) return null;
+
+  const a = cleanUsername(row.user_a);
+  const b = cleanUsername(row.user_b);
+  if (!a || !b || !users.has(a) || !users.has(b)) return null;
+
+  addFriendInMemory(a, b, roomId, row.pair_hash || "");
+  return ensureChatInMemory(roomId, a, b, row.user_a_id, row.user_b_id);
 }
 
 function userStatus(username) {
@@ -508,6 +687,7 @@ app.post("/api/online-users", auth, (req, res) => {
 
     list.push({
       username,
+      userId: user.userId,
       avatar: user.avatar || "",
       status: "online",
     });
@@ -550,40 +730,48 @@ app.post("/api/privacy-online", auth, (req, res) => {
   res.json({ ok: true, hidden });
 });
 
-app.post("/api/open-chat", auth, (req, res) => {
+app.post("/api/open-chat", auth, async (req, res) => {
   const me = req.user;
+  const targetIdRaw = String(req.body.targetId || "").trim();
   const targetRaw = String(req.body.target || "").trim();
-  const target = findUsernameByUserId(targetRaw) || cleanUsername(targetRaw);
+  const target =
+    findUsernameByUserId(targetIdRaw) ||
+    findUsernameByUserId(targetRaw) ||
+    cleanUsername(targetRaw);
   const sharedKeyHash = String(req.body.sharedKeyHash || "");
 
-  if (!target || !sharedKeyHash) {
-    return res.json({ error: "Informe usuário e chave" });
+  if (!target) {
+    return res.json({ error: "Informe usuario e chave" });
   }
 
   if (target === me) {
-    return res.json({ error: "Você não pode conversar consigo mesmo" });
+    return res.json({ error: "Voce nao pode conversar consigo mesmo" });
   }
 
   const user = users.get(target);
 
   if (!user) {
-    return res.json({ error: "Usuário ou chave inválidos" });
+    return res.json({ error: "Usuario ou chave invalidos" });
   }
 
-  const roomId = createRoomIdByUsers(me, target);
+  let room;
+  try {
+    room = await ensureFriendshipRoom(me, target);
+  } catch (err) {
+    console.error("Erro ao abrir sala por IDs:", err);
+    return res.json({ error: "Nao foi possivel abrir a conversa" });
+  }
 
-  if (!chats.has(roomId)) {
-    chats.set(roomId, {
-      roomId,
-      members: [me, target],
-      messages: [],
-      createdAt: Date.now(),
-    });
+  if (!room) {
+    return res.json({ error: "Nao foi possivel abrir a conversa" });
   }
 
   res.json({
     ok: true,
-    roomId,
+    roomId: room.roomId,
+    pairHash: room.pairHash,
+    targetId: user.userId,
+    sharedKeyHash,
     peer: publicUser(target),
     status: userStatus(target),
     lastSeen: user.lastSeen || null,
@@ -641,6 +829,7 @@ app.post("/api/send-invite", auth, (req, res) => {
 
   invites.get(target).push({
     from,
+    fromId: users.get(from)?.userId || "",
     createdAt: Date.now(),
   });
 
@@ -648,6 +837,7 @@ app.post("/api/send-invite", auth, (req, res) => {
     ok: true,
     message: "Pedido de amizade enviado",
     target,
+    targetId: users.get(target)?.userId || targetId,
   });
 });
 
@@ -669,7 +859,25 @@ app.post("/api/list-friends", auth, (req, res) => {
 
   res.json({
     ok: true,
-    friends: myFriends.map((friend) => publicUser(friend)),
+    friends: myFriends
+      .map((friend) => {
+        const item = publicUser(friend);
+        if (!item) return null;
+
+        const key = [cleanUsername(username), cleanUsername(friend)]
+          .sort()
+          .join("::");
+        const room = friendRooms.get(key) || {};
+
+        return {
+          ...item,
+          roomId: room.roomId || createRoomIdByUsers(username, friend),
+          pairHash:
+            room.pairHash ||
+            createFriendPairHash(ensureUserId(username), ensureUserId(friend)),
+        };
+      })
+      .filter(Boolean),
   });
 });
 
@@ -692,8 +900,9 @@ app.post("/api/accept-invite", auth, async (req, res) => {
     received.filter((i) => i.from !== from),
   );
 
+  let room;
   try {
-    await saveFriendship(username, from);
+    room = await saveFriendship(username, from);
   } catch (err) {
     console.error("Erro ao salvar amizade:", err);
     return res.json({
@@ -705,6 +914,11 @@ app.post("/api/accept-invite", auth, async (req, res) => {
     ok: true,
     message: "Amizade aceita",
     from,
+    roomId: room?.roomId || createRoomIdByUsers(username, from),
+    pairHash:
+      room?.pairHash ||
+      createFriendPairHash(ensureUserId(username), ensureUserId(from)),
+    peer: publicUser(from),
   });
 });
 
@@ -760,7 +974,7 @@ io.on("connection", async (socket) => {
 
   socket.on("room:join", async (data) => {
     const roomId = data.roomId;
-    const chat = chats.get(roomId);
+    const chat = chats.get(roomId) || (await rebuildChatFromRoomId(roomId));
 
     if (!chat) return;
     if (!chat.members.includes(username)) return;
@@ -855,8 +1069,8 @@ io.on("connection", async (socket) => {
     });
   });
 
-  socket.on("message:send", (data, ack) => {
-    const chat = chats.get(data.roomId);
+  socket.on("message:send", async (data, ack) => {
+    const chat = chats.get(data.roomId) || (await rebuildChatFromRoomId(data.roomId));
 
     if (!chat || !chat.members.includes(username)) {
       if (typeof ack === "function") ack({ error: "Sala inválida" });
@@ -921,8 +1135,8 @@ io.on("connection", async (socket) => {
     if (typeof ack === "function") ack({ ok: true, id: message.id });
   });
 
-  socket.on("message:edit", (data) => {
-    const chat = chats.get(data.roomId);
+  socket.on("message:edit", async (data) => {
+    const chat = chats.get(data.roomId) || (await rebuildChatFromRoomId(data.roomId));
     if (!chat || !chat.members.includes(username)) return;
 
     const msg = chat.messages.find(
@@ -945,8 +1159,8 @@ io.on("connection", async (socket) => {
     });
   });
 
-  socket.on("message:delete", (data) => {
-    const chat = chats.get(data.roomId);
+  socket.on("message:delete", async (data) => {
+    const chat = chats.get(data.roomId) || (await rebuildChatFromRoomId(data.roomId));
     if (!chat || !chat.members.includes(username)) return;
 
     const msg = chat.messages.find(
@@ -969,8 +1183,8 @@ io.on("connection", async (socket) => {
     });
   });
 
-  socket.on("message:seen", (data) => {
-    const chat = chats.get(data.roomId);
+  socket.on("message:seen", async (data) => {
+    const chat = chats.get(data.roomId) || (await rebuildChatFromRoomId(data.roomId));
     if (!chat || !chat.members.includes(username)) return;
 
     const msg = chat.messages.find((m) => m.id === data.id);
@@ -1004,9 +1218,9 @@ io.on("connection", async (socket) => {
     });
   });
 
-  socket.on("call:signal", (data) => {
+  socket.on("call:signal", async (data) => {
     const roomId = data.roomId;
-    const chat = chats.get(roomId);
+    const chat = chats.get(roomId) || (await rebuildChatFromRoomId(roomId));
 
     if (!chat || !chat.members.includes(username)) return;
 

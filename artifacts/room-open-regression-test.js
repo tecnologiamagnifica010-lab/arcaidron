@@ -3,6 +3,7 @@ const crypto = require("crypto");
 
 const html = fs.readFileSync("index.html", "utf8");
 const functional = fs.readFileSync("public/arcaidron-functional.js", "utf8");
+const server = fs.readFileSync("server.js", "utf8");
 
 function assert(condition, message) {
   if (!condition) {
@@ -22,8 +23,8 @@ assert(
   "index.html must expose the single direct chat opener",
 );
 assert(
-  html.includes("openInviteContactByUsername('${escapeHtml(item.username)}')"),
-  "conversation rows must open by username instead of filtered index",
+  html.includes('onclick="openInviteContact(${index})"'),
+  "conversation rows must open the saved contact object, not a username-only path",
 );
 assert(
   html.includes("return arcaOpenDirectChat(item);"),
@@ -34,8 +35,24 @@ assert(
   "vault/manual open paths must use the direct opener",
 );
 assert(
-  functional.includes("openInviteContactByUsername(username)"),
-  "functional overlay must open chats by username",
+  html.includes("async function openInviteContactByUserId"),
+  "index.html must expose opening a contact by unique userId",
+);
+assert(
+  functional.includes("arcaOpenConversationByIndex"),
+  "functional overlay must open the saved contact object by index",
+);
+assert(
+  server.includes("async function ensureFriendshipRoom"),
+  "server must persist and rebuild rooms from the stable userId pair",
+);
+assert(
+  server.includes("findUsernameByUserId(targetIdRaw)"),
+  "open-chat must resolve the target by unique ID before username fallback",
+);
+assert(
+  server.includes("await rebuildChatFromRoomId"),
+  "socket events must rebuild missing in-memory rooms from persisted roomId",
 );
 
 const ab = createRoomIdByIds("arc_a", "arc_b");
