@@ -75,6 +75,15 @@ function newUserId() {
   return "arc_" + crypto.randomBytes(10).toString("hex");
 }
 
+function newInternalUsername(displayName) {
+  const base = cleanUsername(displayName) || "user";
+  let candidate = base;
+  while (users.has(candidate)) {
+    candidate = `${base}_${crypto.randomBytes(3).toString("hex")}`.slice(0, 32);
+  }
+  return candidate;
+}
+
 function getRoomId(id1, id2) {
   const pair = [String(id1 || ""), String(id2 || "")].sort().join("_");
   return crypto.createHash("sha256").update("ARCAIDRON_ROOM:" + pair).digest("hex");
@@ -102,13 +111,21 @@ function publicUser(username) {
   const user = users.get(username);
   if (!user) return null;
   return {
-    username: user.username,
+    username: user.displayName || user.username,
+    account: user.username,
     userId: user.userId,
     avatar: user.avatar || "",
     publicKey: user.publicKey || null,
     lastSeen: user.lastSeen || null,
     online: socketsByUser.has(username),
   };
+}
+
+function findUsersByLoginName(name) {
+  const clean = cleanUsername(name);
+  return [...users.values()].filter((user) => {
+    return cleanUsername(user.displayName || user.username) === clean || user.username === clean;
+  });
 }
 
 function resolveUser(value) {
@@ -175,6 +192,7 @@ async function initDb() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS arcaidron_users (
       username TEXT PRIMARY KEY,
+      display_name TEXT,
       user_id TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       avatar TEXT,
@@ -182,6 +200,17 @@ async function initDb() {
       created_at BIGINT NOT NULL,
       last_seen BIGINT
     )
+  `);
+
+  await pool.query(`
+    ALTER TABLE arcaidron_users
+    ADD COLUMN IF NOT EXISTS display_name TEXT
+  `);
+
+  await pool.query(`
+    UPDATE arcaidron_users
+    SET display_name = username
+    WHERE display_name IS NULL
   `);
 
   await pool.query(`
@@ -227,6 +256,7 @@ async function initDb() {
   for (const row of userRows.rows) {
     users.set(row.username, {
       username: row.username,
+      displayName: row.display_name || row.username,
       userId: row.user_id,
       passwordHash: row.password_hash,
       avatar: row.avatar || "",
@@ -264,10 +294,11 @@ async function persistUser(user) {
   await pool.query(
     `
     INSERT INTO arcaidron_users
-      (username, user_id, password_hash, avatar, public_key, created_at, last_seen)
-    VALUES ($1,$2,$3,$4,$5,$6,$7)
+      (username, display_name, user_id, password_hash, avatar, public_key, created_at, last_seen)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
     ON CONFLICT(username)
     DO UPDATE SET
+      display_name = EXCLUDED.display_name,
       user_id = EXCLUDED.user_id,
       password_hash = EXCLUDED.password_hash,
       avatar = EXCLUDED.avatar,
@@ -276,6 +307,7 @@ async function persistUser(user) {
     `,
     [
       user.username,
+      user.displayName || user.username,
       user.userId,
       user.passwordHash,
       user.avatar || "",
@@ -393,9 +425,11 @@ async function userHasProtectedData(username) {
   }
 }
 
-function buildUser(username, passwordHash, body, existing = null) {
+function buildUser(loginName, passwordHash, body, existing = null) {
+  const displayName = cleanUsername(loginName);
   return {
-    username,
+    username: existing?.username || newInternalUsername(displayName),
+    displayName: existing?.displayName || displayName,
     userId: existing?.userId || newUserId(),
     passwordHash,
     avatar: String(body.avatar || existing?.avatar || ""),
@@ -415,30 +449,26 @@ function auth(req, res, next) {
 
 app.post("/api/register", async (req, res) => {
   try {
-    const username = cleanUsername(req.body.username);
+    const loginName = cleanUsername(req.body.username);
     const password = String(req.body.password || "");
-    if (username.length < 3) return res.json({ error: "Nome muito curto" });
+    if (loginName.length < 3) return res.json({ error: "Nome muito curto" });
     if (password.length < 6) return res.json({ error: "Senha muito curta" });
-    if (users.has(username)) {
-      if (!(await userHasProtectedData(username))) {
-        const resetUser = buildUser(
-          username,
-          await bcrypt.hash(password, 10),
-          req.body,
-          users.get(username),
-        );
-        await persistUser(resetUser);
-        return res.json({ ok: true, reset: true, token: sign(username), user: publicUser(username) });
+
+    for (const candidate of findUsersByLoginName(loginName)) {
+      if (await bcrypt.compare(password, candidate.passwordHash)) {
+        if (req.body.publicKey) candidate.publicKey = req.body.publicKey;
+        if (req.body.avatar && String(req.body.avatar).startsWith("data:image/")) {
+          candidate.avatar = String(req.body.avatar);
+        }
+        await persistUser(candidate);
+        return res.json({ ok: true, existed: true, token: sign(candidate.username), user: publicUser(candidate.username) });
       }
-      return res.json({
-        error: "Esta conta ja existe e possui dados protegidos. Use Entrar ou escolha outro nome.",
-      });
     }
 
-    const user = buildUser(username, await bcrypt.hash(password, 10), req.body);
+    const user = buildUser(loginName, await bcrypt.hash(password, 10), req.body);
 
     await persistUser(user);
-    res.json({ ok: true, token: sign(username), user: publicUser(username) });
+    res.json({ ok: true, created: true, token: sign(user.username), user: publicUser(user.username) });
   } catch (err) {
     console.error("register", err);
     res.json({ error: "Erro ao criar conta" });
@@ -447,12 +477,19 @@ app.post("/api/register", async (req, res) => {
 
 app.post("/api/login", async (req, res) => {
   try {
-    const username = cleanUsername(req.body.username);
+    const loginName = cleanUsername(req.body.username);
     const password = String(req.body.password || "");
-    const user = users.get(username);
-    if (!user) return res.json({ error: "Conta nao encontrada" });
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) return res.json({ error: "Senha invalida" });
+    const candidates = findUsersByLoginName(loginName);
+    if (!candidates.length) return res.json({ error: "Conta nao encontrada. Toque em Criar Conta." });
+
+    let user = null;
+    for (const candidate of candidates) {
+      if (await bcrypt.compare(password, candidate.passwordHash)) {
+        user = candidate;
+        break;
+      }
+    }
+    if (!user) return res.json({ error: "Senha invalida" });
 
     if (req.body.publicKey) user.publicKey = req.body.publicKey;
     if (req.body.avatar && String(req.body.avatar).startsWith("data:image/")) {
@@ -469,58 +506,41 @@ app.post("/api/login", async (req, res) => {
 app.post("/api/auth", async (req, res) => {
   try {
     const mode = String(req.body.mode || "login");
-    const username = cleanUsername(req.body.username);
+    const loginName = cleanUsername(req.body.username);
     const password = String(req.body.password || "");
 
-    if (username.length < 3) return res.json({ error: "Nome muito curto" });
+    if (loginName.length < 3) return res.json({ error: "Nome muito curto" });
     if (password.length < 6) return res.json({ error: "Senha muito curta" });
 
-    let user = users.get(username);
+    const candidates = findUsersByLoginName(loginName);
+    let user = null;
+    for (const candidate of candidates) {
+      if (await bcrypt.compare(password, candidate.passwordHash)) {
+        user = candidate;
+        break;
+      }
+    }
 
     if (user) {
-      const ok = await bcrypt.compare(password, user.passwordHash);
-      if (!ok) {
-        if (mode === "register" && !(await userHasProtectedData(username))) {
-          const resetUser = buildUser(
-            username,
-            await bcrypt.hash(password, 10),
-            req.body,
-            user,
-          );
-          await persistUser(resetUser);
-          return res.json({
-            ok: true,
-            created: true,
-            reset: true,
-            token: sign(username),
-            user: publicUser(username),
-          });
-        }
-        return res.json({
-          error: mode === "register"
-            ? "Este nome ja possui conversas protegidas. Escolha outro nome."
-            : "Senha incorreta para esta conta.",
-        });
-      }
-
       if (req.body.publicKey) user.publicKey = req.body.publicKey;
       if (req.body.avatar && String(req.body.avatar).startsWith("data:image/")) {
         user.avatar = String(req.body.avatar);
       }
       await persistUser(user);
-      return res.json({ ok: true, created: false, token: sign(username), user: publicUser(username) });
+      return res.json({ ok: true, created: false, token: sign(user.username), user: publicUser(user.username) });
     }
 
     if (mode === "login") {
+      if (candidates.length) return res.json({ error: "Senha incorreta para esta conta." });
       return res.json({
         error: "Conta nao encontrada. Toque em Criar Conta para cadastrar este nome.",
       });
     }
 
-    user = buildUser(username, await bcrypt.hash(password, 10), req.body);
+    user = buildUser(loginName, await bcrypt.hash(password, 10), req.body);
 
     await persistUser(user);
-    return res.json({ ok: true, created: true, token: sign(username), user: publicUser(username) });
+    return res.json({ ok: true, created: true, token: sign(user.username), user: publicUser(user.username) });
   } catch (err) {
     console.error("auth", err);
     return res.json({ error: "Erro ao autenticar" });
