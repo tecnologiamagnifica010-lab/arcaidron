@@ -22,12 +22,7 @@
     body.arca-theme-light #authScreen,body.arca-theme-light #appScreen,body.arca-theme-light #arcaUtilityOverlay{background:linear-gradient(180deg,#f7fbff,#dfeeff)!important;color:#07111f!important}
     body.arca-theme-orange .logo,body.arca-theme-red .logo,body.arca-theme-brazil .logo,body.arca-theme-flamengo .logo,body.arca-theme-corinthians .logo,body.arca-theme-palmeiras .logo,body.arca-theme-santos .logo{background:linear-gradient(150deg,var(--arca-blue),#06132b 58%,var(--arca-purple))!important}
     .arca-modern-icon{display:grid!important;place-items:center!important;font-size:0!important;line-height:0!important}
-    .arca-modern-icon:before,.arca-modern-icon:after,
-    #voiceBtn.arca-modern-icon:before,#voiceBtn.arca-modern-icon:after,
-    #videoBtn.arca-modern-icon:before,#videoBtn.arca-modern-icon:after,
-    #clearBtn.arca-modern-icon:before,#clearBtn.arca-modern-icon:after,
-    #clipBtn.arca-modern-icon:before,#clipBtn.arca-modern-icon:after,
-    #sendBtn.arca-modern-icon:before,#sendBtn.arca-modern-icon:after{content:none!important;display:none!important}
+    .arca-modern-icon:before,.arca-modern-icon:after,#sendBtn:before,#sendBtn:after,#clipBtn:before,#clipBtn:after,#voiceBtn:before,#voiceBtn:after,#videoBtn:before,#videoBtn:after,#clearBtn:before,#clearBtn:after{content:none!important;display:none!important}
     .arca-modern-icon svg{width:58%!important;height:58%!important;stroke:currentColor!important;fill:none!important;stroke-width:2.35!important;stroke-linecap:round!important;stroke-linejoin:round!important}
     #sendBtn.arca-modern-icon svg{width:64%!important;height:64%!important}
   `;
@@ -244,44 +239,27 @@
     const seen = new Set();
     [...online, ...contacts(), ...vaultContacts()].forEach((item) => {
       const user = clean(item.username);
-      const identity = String(item.userId || user || "").trim();
-      if (!identity || seen.has(identity)) return;
-      seen.add(identity);
+      if (!user || seen.has(user)) return;
+      seen.add(user);
       merged.push({ ...item, username: user });
     });
-    window.arcaUtilityChatItems = merged;
-    show("Conversas", `<div class="arcaUtilityList">${merged.length ? merged.map((item, index) => `<button class="arcaUtilityRow" onclick="arcaOpenConversationByIndex(${index})"><div class="arcaUtilityRowIcon">${item.fromVault ? "CF" : "ON"}</div><div><strong>${safe(item.label || item.username)}</strong><small>${item.fromVault ? "Contato do cofre privado" : online.some((u) => clean(u.username) === item.username) ? "Online agora" : "Contato salvo"}</small></div><div class="small">Abrir</div></button>`).join("") : '<div class="safeItem">Nenhum contato online ou conversa salva agora.</div>'}</div>`);
+    show("Conversas", `<div class="arcaUtilityList">${merged.length ? merged.map((item) => `<button class="arcaUtilityRow" onclick="arcaOpenConversationByName('${item.username}','${item.fromVault ? "vault" : "contact"}')"><div class="arcaUtilityRowIcon">${item.fromVault ? "CF" : "ON"}</div><div><strong>${safe(item.label || item.username)}</strong><small>${item.fromVault ? "Contato do cofre privado" : online.some((u) => clean(u.username) === item.username) ? "Online agora" : "Contato salvo"}</small></div><div class="small">Abrir</div></button>`).join("") : '<div class="safeItem">Nenhum contato online ou conversa salva agora.</div>'}</div>`);
   };
-  window.arcaOpenConversationByIndex = async function (index) {
-    const item = (window.arcaUtilityChatItems || [])[index];
-    if (!item) return toast("Contato nao encontrado.");
-    return window.arcaOpenConversationByName(item.userId || item.username, item.fromVault ? "vault" : "contact", item);
-  };
-  window.arcaOpenConversationByName = async function (username, source, contact) {
-    const identity = String(username || "").trim();
-    const cleanName = clean(contact?.username || username);
-    if (cleanName && blocked(cleanName)) return toast("Contato bloqueado neste aparelho.");
-    if (source === "vault" && cleanName && typeof window.arcaOpenVaultChatByUsername === "function") {
-      const opened = await window.arcaOpenVaultChatByUsername(cleanName);
+  window.arcaOpenConversationByName = async function (username, source) {
+    if (blocked(username)) return toast("Contato bloqueado neste aparelho.");
+    if (source === "vault" && typeof window.arcaOpenVaultChatByUsername === "function") {
+      const opened = await window.arcaOpenVaultChatByUsername(username);
       if (opened) return;
     }
-    if (!contacts().some((item) => String(item.userId || "") === identity || clean(item.username) === cleanName) && typeof saveInviteContactLocal === "function") {
-      saveInviteContactLocal(contact || username);
+    let list = contacts();
+    let index = list.findIndex((item) => clean(item.username) === clean(username));
+    if (index < 0 && typeof saveInviteContactLocal === "function") {
+      saveInviteContactLocal(username);
+      list = contacts();
+      index = list.findIndex((item) => clean(item.username) === clean(username));
     }
     $("arcaUtilityOverlay")?.classList.add("hidden");
-    if (contact && typeof window.arcaOpenDirectChat === "function") {
-      await window.arcaOpenDirectChat(contact);
-      return;
-    }
-    if (identity.startsWith("arc_") && typeof openInviteContactByUserId === "function") {
-      await openInviteContactByUserId(identity);
-      return;
-    }
-    if (typeof openInviteContactByUsername === "function") {
-      await openInviteContactByUsername(cleanName || username);
-      return;
-    }
-    if (typeof window.arcaOpenDirectChat === "function") await window.arcaOpenDirectChat(username);
+    if (index >= 0 && typeof openInviteContact === "function") openInviteContact(index);
   };
   window.arcaOpenRequests = async function () {
     show("Solicitacoes", '<div class="safeItem">Carregando solicitacoes...</div>');
@@ -357,4 +335,4 @@
   document.addEventListener("DOMContentLoaded", wire);
   setInterval(wire, 1200);
 })();
- 
+
