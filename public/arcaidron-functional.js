@@ -21,8 +21,13 @@
     body.arca-theme-santos{--arca-blue:#f7fbff;--arca-purple:#111}
     body.arca-theme-light #authScreen,body.arca-theme-light #appScreen,body.arca-theme-light #arcaUtilityOverlay{background:linear-gradient(180deg,#f7fbff,#dfeeff)!important;color:#07111f!important}
     body.arca-theme-orange .logo,body.arca-theme-red .logo,body.arca-theme-brazil .logo,body.arca-theme-flamengo .logo,body.arca-theme-corinthians .logo,body.arca-theme-palmeiras .logo,body.arca-theme-santos .logo{background:linear-gradient(150deg,var(--arca-blue),#06132b 58%,var(--arca-purple))!important}
-    .arca-modern-icon{display:grid!important;place-items:center!important}
-    .arca-modern-icon:before,.arca-modern-icon:after{content:none!important}
+    .arca-modern-icon{display:grid!important;place-items:center!important;font-size:0!important;line-height:0!important}
+    .arca-modern-icon:before,.arca-modern-icon:after,
+    #voiceBtn.arca-modern-icon:before,#voiceBtn.arca-modern-icon:after,
+    #videoBtn.arca-modern-icon:before,#videoBtn.arca-modern-icon:after,
+    #clearBtn.arca-modern-icon:before,#clearBtn.arca-modern-icon:after,
+    #clipBtn.arca-modern-icon:before,#clipBtn.arca-modern-icon:after,
+    #sendBtn.arca-modern-icon:before,#sendBtn.arca-modern-icon:after{content:none!important;display:none!important}
     .arca-modern-icon svg{width:58%!important;height:58%!important;stroke:currentColor!important;fill:none!important;stroke-width:2.35!important;stroke-linecap:round!important;stroke-linejoin:round!important}
     #sendBtn.arca-modern-icon svg{width:64%!important;height:64%!important}
   `;
@@ -94,7 +99,7 @@
   function arcaApplyModernIcons() {
     Object.keys(arcaIcons).forEach((id) => {
       const button = $(id);
-      if (!button || button.dataset.arcaIconReady === "1") return;
+      if (!button) return;
       button.dataset.arcaIconReady = "1";
       button.classList.add("arca-modern-icon");
       button.innerHTML = arcaIcons[id];

@@ -50,6 +50,21 @@ assert(
   "vault contacts must preserve roomId and userId when moved from normal contacts",
 );
 assert(
+  html.includes("const canonicalIdentity = targetId || source.userId || stored.userId || target") &&
+    html.includes("createInviteAutoKey(canonicalIdentity)"),
+  "messages must use the same canonical encryption key on both ID-pair sides",
+);
+assert(
+  html.includes("async function removeContactEverywhere") &&
+    html.includes("vaultEntries = vaultEntries.filter"),
+  "deleting a contact must remove it from chat list, hidden list, and vault cache",
+);
+assert(
+  html.includes("#sendBtn::before") &&
+    html.includes("content: none !important"),
+  "conversation icons must suppress old pseudo-icons behind modern SVGs",
+);
+assert(
   html.includes('onclick="openInviteContact(${index})"'),
   "conversation rows must open the saved contact object, not a username-only path",
 );

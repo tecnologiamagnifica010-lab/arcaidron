@@ -4191,6 +4191,22 @@
         flushPendingMessages(currentRoom);
       }
 
+      function ensureSocketReady() {
+        if (!token) return false;
+        if (!socket) {
+          connectSocket();
+          return false;
+        }
+        if (!socket.connected) {
+          socket.connect();
+          return false;
+        }
+        if (currentRoom) {
+          socket.emit("room:join", { roomId: currentRoom });
+        }
+        return true;
+      }
+
       $("loginTab").onclick = () => {
         authMode = "login";
         $("loginTab").classList.add("active");
@@ -4781,6 +4797,50 @@
         renderChatRooms();
       }
 
+      function sameContact(a, b) {
+        if (!a || !b) return false;
+        const idA = String(a.userId || a.targetId || "").trim();
+        const idB = String(b.userId || b.targetId || "").trim();
+        if (idA && idB && idA === idB) return true;
+        return cleanUsername(a.username || a.label || "") ===
+          cleanUsername(b.username || b.label || "");
+      }
+
+      async function removeContactEverywhere(contact) {
+        if (!contact) return;
+        const username = cleanUsername(contact.username || contact.label || "");
+
+        const contacts = loadInviteContacts().filter(
+          (item) => !sameContact(item, contact),
+        );
+        saveInviteContacts(contacts);
+
+        const hidden = loadVaultHiddenContacts().filter(
+          (name) => cleanUsername(name) !== username,
+        );
+        saveVaultHiddenContacts(hidden);
+
+        if (username) clearUnreadMessages(username);
+
+        if (Array.isArray(vaultEntries) && vaultEntries.length) {
+          vaultEntries = vaultEntries.filter((item) => !sameContact(item, contact));
+          if (vaultPassword && typeof vaultSave === "function") {
+            try {
+              const raw = localStorage.getItem(vaultStorageKey());
+              if (raw) {
+                await vaultSave(vaultEntries, vaultPassword, JSON.parse(raw).salt);
+              }
+            } catch {}
+          }
+        }
+
+        renderInviteContacts();
+        renderChatRooms();
+        if (typeof renderVaultList === "function" && vaultPassword) {
+          renderVaultList();
+        }
+      }
+
       function saveInviteContactLocal(from) {
         const source =
           from && typeof from === "object"
@@ -4903,7 +4963,10 @@
         }
 
         const stored = arcaFindInviteContact(targetId || target) || {};
-        const key = source.key || stored.key || createInviteAutoKey(identity);
+        const canonicalIdentity = targetId || source.userId || stored.userId || target;
+        const key = canonicalIdentity
+          ? createInviteAutoKey(canonicalIdentity)
+          : source.key || stored.key || createInviteAutoKey(identity);
         const label = source.label || stored.label || target || targetId;
         const cachedRoomId = source.roomId || stored.roomId || "";
 
@@ -5269,28 +5332,25 @@
         toast("Conversa segura aberta.");
       }
 
-      function deleteInviteContact(index) {
+      async function deleteInviteContact(index) {
         const list = loadInviteContacts();
+        const item = list[index];
 
         if (!confirm("Apagar este amigo?")) return;
 
-        list.splice(index, 1);
-        saveInviteContacts(list);
-        renderInviteContacts();
-        renderChatRooms();
+        await removeContactEverywhere(item);
+        toast("Contato apagado.");
       }
 
-      function deleteChatRoom(index) {
+      async function deleteChatRoom(index) {
         const list = loadInviteContacts();
+        const item = list[index];
 
         if (!confirm("Remover este bate-papo da tela?")) return;
 
-        list.splice(index, 1);
-        saveInviteContacts(list);
-        renderChatRooms();
-        renderInviteContacts();
+        await removeContactEverywhere(item);
 
-        toast("Bate-papo removido da tela.");
+        toast("Bate-papo removido e contato apagado deste aparelho.");
       }
 
       async function moveInviteToVault(index) {
@@ -5529,8 +5589,9 @@
       }
 
       function emitMessageToServer(message) {
-        if (!socket || !socket.connected) {
+        if (!message?.roomId || !ensureSocketReady()) {
           queuePendingMessage(message);
+          toast("Reconectando para enviar...");
           return;
         }
 
@@ -6208,6 +6269,16 @@
       async function startCall(video) {
         if (!currentRoom) {
           toast("Abra uma conversa primeiro.");
+          return;
+        }
+
+        if (!ensureSocketReady()) {
+          toast("Reconectando chamada. Tente novamente em alguns segundos.");
+          return;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          toast("Este navegador nao liberou camera/microfone.");
           return;
         }
 
@@ -7301,6 +7372,30 @@
       .sendBtn {
         display: grid !important;
         place-items: center !important;
+        font-size: 0 !important;
+        line-height: 0 !important;
+      }
+
+      .circleBtn::before,
+      .circleBtn::after,
+      .clipBtn::before,
+      .clipBtn::after,
+      .micBtn::before,
+      .micBtn::after,
+      .sendBtn::before,
+      .sendBtn::after,
+      #voiceBtn::before,
+      #voiceBtn::after,
+      #videoBtn::before,
+      #videoBtn::after,
+      #clearBtn::before,
+      #clearBtn::after,
+      #clipBtn::before,
+      #clipBtn::after,
+      #sendBtn::before,
+      #sendBtn::after {
+        content: none !important;
+        display: none !important;
       }
 
       .circleBtn svg,
@@ -7345,7 +7440,10 @@
 
         function setIcon(id) {
           const el = document.getElementById(id);
-          if (el && icons[id]) el.innerHTML = icons[id];
+          if (el && icons[id]) {
+            el.classList.add("arca-modern-icon");
+            el.innerHTML = icons[id];
+          }
         }
 
         function applyIcons() {
