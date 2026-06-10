@@ -778,66 +778,68 @@ app.post("/api/open-chat", auth, async (req, res) => {
   });
 });
 
-app.post("/api/send-invite", auth, (req, res) => {
+app.post("/api/send-invite", auth, async (req, res) => {
   const from = req.user;
-
   const targetId = String(req.body.targetId || "").trim();
 
   if (!targetId) {
-    return res.json({
-      error: "Informe o ID do amigo",
-    });
+    return res.json({ error: "Informe o ID do amigo" });
   }
 
   const target = findUsernameByUserId(targetId);
 
   if (!target) {
-    return res.json({
-      error: "ID não encontrado",
-    });
+    return res.json({ error: "ID nao encontrado" });
   }
 
   if (target === from) {
-    return res.json({
-      error: "Você não pode convidar a si mesmo",
-    });
-  }
-
-  if (!invites.has(target)) {
-    invites.set(target, []);
+    return res.json({ error: "Voce nao pode adicionar a si mesmo" });
   }
 
   const alreadyFriends =
     (friends.get(from) || []).includes(target) ||
     (friends.get(target) || []).includes(from);
 
-  if (alreadyFriends) {
-    return res.json({
-      error: "Vocês já são amigos",
-    });
+  let room;
+  try {
+    room = await ensureFriendshipRoom(from, target);
+  } catch (err) {
+    console.error("Erro ao criar sala por convite:", err);
+    return res.json({ error: "Nao foi possivel criar a sala do contato" });
   }
 
-  const pending =
-    invites.get(target).some((invite) => invite.from === from) ||
-    (invites.get(from) || []).some((invite) => invite.from === target);
-
-  if (pending) {
-    return res.json({
-      error: "Já existe um pedido de amizade pendente entre vocês",
-    });
+  if (!room) {
+    return res.json({ error: "Nao foi possivel criar a sala do contato" });
   }
 
-  invites.get(target).push({
-    from,
-    fromId: users.get(from)?.userId || "",
-    createdAt: Date.now(),
-  });
+  if (!alreadyFriends) {
+    if (!invites.has(target)) invites.set(target, []);
+
+    const pending =
+      invites.get(target).some((invite) => invite.from === from) ||
+      (invites.get(from) || []).some((invite) => invite.from === target);
+
+    if (!pending) {
+      invites.get(target).push({
+        from,
+        fromId: users.get(from)?.userId || "",
+        roomId: room.roomId,
+        pairHash: room.pairHash,
+        createdAt: Date.now(),
+      });
+    }
+  }
 
   res.json({
     ok: true,
-    message: "Pedido de amizade enviado",
+    message: alreadyFriends
+      ? "Contato ja estava salvo"
+      : "Contato salvo e pedido de amizade enviado",
     target,
     targetId: users.get(target)?.userId || targetId,
+    roomId: room.roomId,
+    pairHash: room.pairHash,
+    peer: publicUser(target),
   });
 });
 

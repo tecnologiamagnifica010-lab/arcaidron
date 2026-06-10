@@ -23,6 +23,14 @@ assert(
   "index.html must expose the single direct chat opener",
 );
 assert(
+  !html.includes("ARCAIDRON ABRIR SALA ROBUSTO"),
+  "old open-chat button override must not replace the direct opener",
+);
+assert(
+  html.includes("const cachedRoomId = source.roomId || stored.roomId || \"\""),
+  "saved contacts with roomId must open the conversation view immediately",
+);
+assert(
   html.includes('onclick="openInviteContact(${index})"'),
   "conversation rows must open the saved contact object, not a username-only path",
 );
@@ -45,6 +53,14 @@ assert(
 assert(
   server.includes("async function ensureFriendshipRoom"),
   "server must persist and rebuild rooms from the stable userId pair",
+);
+assert(
+  server.includes('app.post("/api/send-invite", auth, async'),
+  "adding a friend by ID must create the room before returning to the client",
+);
+assert(
+  server.includes("roomId: room.roomId"),
+  "send-invite/open-chat responses must include the stable roomId",
 );
 assert(
   server.includes("findUsernameByUserId(targetIdRaw)"),
