@@ -542,9 +542,45 @@
       function api(path, body = {}) {
         return fetch(path, {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: "Bearer " + state.token },
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Authorization: "Bearer " + state.token,
+          },
+          cache: "no-store",
           body: JSON.stringify(body),
-        }).then((res) => res.json());
+        }).then(async (res) => {
+          const text = await res.text();
+          try {
+            return JSON.parse(text);
+          } catch {
+            return {
+              error: `Resposta invalida do servidor (${res.status}). Recarregue o deploy.`,
+              details: text.slice(0, 160),
+            };
+          }
+        });
+      }
+
+      async function authRequest(path, body = {}) {
+        const response = await fetch(path + "?t=" + Date.now(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+          },
+          cache: "no-store",
+          body: JSON.stringify(body),
+        });
+        const text = await response.text();
+        try {
+          return JSON.parse(text);
+        } catch {
+          return {
+            error: `Servidor respondeu sem JSON (${response.status}).`,
+            details: text.slice(0, 160),
+          };
+        }
       }
 
       function safe(text) {
@@ -703,12 +739,17 @@
           $("authError").textContent = "Digite nome e senha.";
           return;
         }
+        localStorage.removeItem("arca_token");
+        localStorage.removeItem("arca_username");
+        localStorage.removeItem("arca_userid");
+        state.token = "";
+        state.user = null;
         $("authBtn").disabled = true;
         $("authError").textContent = "";
         const keys = await tryGetIdentityKeys(username);
         let result;
         try {
-          result = await api("/api/" + (state.mode === "register" ? "register" : "login"), {
+          result = await authRequest("/api/" + (state.mode === "register" ? "register" : "login"), {
             username,
             password,
             avatar: state.avatar,
@@ -721,7 +762,9 @@
         }
         $("authBtn").disabled = false;
         if (result.error) {
-          $("authError").textContent = result.error;
+          $("authError").textContent = result.details
+            ? result.error + " " + result.details
+            : result.error;
           return;
         }
         const user = result.user || {
