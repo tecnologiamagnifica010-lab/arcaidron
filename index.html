@@ -9115,17 +9115,49 @@ body:has(#authScreen:not(.hidden)){
   padding:0!important;
   border:0!important;
   border-radius:0!important;
-  background:url("/public/assets/arcaidron-login-reference.png") center/100% 100% no-repeat!important;
+  background:
+    linear-gradient(rgba(2,5,13,.08),rgba(2,5,13,.08)),
+    url("/assets/arcaidron-login-reference.png") center/100% 100% no-repeat,
+    url("/public/assets/arcaidron-login-reference.png") center/100% 100% no-repeat,
+    radial-gradient(circle at 50% 17%,rgba(30,144,255,.25),transparent 26%),
+    #020b1c!important;
   box-shadow:none!important;
   overflow:hidden!important;
 }
 #authScreen .authCard::before,
 #authScreen .authCard::after,
-#authScreen .logo,
-#authScreen .brand,
-#authScreen .sub{
+#authScreen .logo{
   display:none!important;
   content:none!important;
+}
+#authScreen .brand,
+#authScreen .sub{
+  display:block!important;
+  position:absolute!important;
+  left:8%!important;
+  width:84%!important;
+  text-align:center!important;
+  pointer-events:none!important;
+}
+#authScreen .brand{
+  top:21.8%!important;
+  color:rgba(245,250,255,.92)!important;
+  font-size:clamp(25px,7.6vw,45px)!important;
+  letter-spacing:.28em!important;
+  font-weight:900!important;
+  line-height:1!important;
+  text-shadow:0 2px 8px #000,0 0 16px rgba(0,145,255,.45)!important;
+}
+#authScreen .sub{
+  top:25.8%!important;
+  color:rgba(201,211,229,.86)!important;
+  font-size:clamp(13px,3.6vw,22px)!important;
+  letter-spacing:.24em!important;
+  font-weight:800!important;
+  text-transform:uppercase!important;
+}
+#authScreen .sub::after{
+  content:"SEU NOME PRIVADO  🔒"!important;
 }
 #authScreen .panel{
   position:absolute!important;
@@ -9159,13 +9191,13 @@ body:has(#authScreen:not(.hidden)){
   border:0!important;
   border-radius:999px!important;
   background:transparent!important;
-  color:transparent!important;
+  color:#9aa7bd!important;
   box-shadow:none!important;
   text-shadow:none!important;
 }
 #authScreen .tabs button.active{
   background:transparent!important;
-  color:transparent!important;
+  color:#0b8dff!important;
   border:0!important;
   box-shadow:none!important;
 }
@@ -9195,7 +9227,7 @@ body:has(#authScreen:not(.hidden)){
 }
 #authScreen #username::placeholder,
 #authScreen #password::placeholder{
-  color:transparent!important;
+  color:#148dff!important;
 }
 #authScreen #username.arcaHasValue,
 #authScreen #password.arcaHasValue,
@@ -9220,7 +9252,7 @@ body:has(#authScreen:not(.hidden)){
   border:0!important;
   border-radius:18px!important;
   background:transparent!important;
-  color:transparent!important;
+  color:#128dff!important;
   box-shadow:none!important;
   text-shadow:none!important;
 }
@@ -9243,7 +9275,7 @@ body:has(#authScreen:not(.hidden)){
   padding:0;
   margin:0;
   background:transparent;
-  color:transparent;
+  color:#128dff;
   cursor:pointer;
 }
 #authScreen .arcaBioExact{
@@ -9284,13 +9316,13 @@ body:has(#authScreen:not(.hidden)){
     const pass = document.getElementById("password");
 
     if(user){
-      user.placeholder = "";
+      user.placeholder = "Digite seu nome";
       user.setAttribute("autocomplete", "username");
       user.addEventListener("input", () => syncInputValueClass(user));
       syncInputValueClass(user);
     }
     if(pass){
-      pass.placeholder = "";
+      pass.placeholder = "Digite sua senha";
       pass.setAttribute("autocomplete", "current-password");
       pass.addEventListener("input", () => syncInputValueClass(pass));
       syncInputValueClass(pass);
