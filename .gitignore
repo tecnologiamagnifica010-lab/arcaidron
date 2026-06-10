@@ -51,3 +51,12 @@ arcaidron.zip
 .arcaidron_jwt_secret
 zipFile.zip
 *.zip
+
+# ARCAIDRON local/old generated files
+arcaidron.db
+index_ANTES_*.html
+index_backup_*.html
+attached_assets/
+artifacts/arcaidron/
+run = _npm start_
+shell
