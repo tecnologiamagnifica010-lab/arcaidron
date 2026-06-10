@@ -106,6 +106,17 @@ async function initDatabase() {
   }
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS arcaidron_users (
+      username TEXT PRIMARY KEY,
+      user_id TEXT UNIQUE,
+      password_hash TEXT NOT NULL,
+      avatar TEXT,
+      created_at BIGINT NOT NULL,
+      last_seen BIGINT
+    )
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS arcaidron_messages (
       id TEXT PRIMARY KEY,
       room_id TEXT NOT NULL,

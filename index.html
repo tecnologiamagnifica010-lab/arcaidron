@@ -4218,6 +4218,11 @@
           return;
         }
 
+        if (typeof arcaOpenDirectChat === "function") {
+          await arcaOpenDirectChat({ username: target, key, label: target });
+          return;
+        }
+
         cryptoKey = await createCryptoKey(key);
         const sharedKeyHash = await sha256(key);
 
@@ -4554,6 +4559,129 @@
         return true;
       }
 
+      function arcaFindInviteContact(username) {
+        const user = cleanUsername(username);
+        return loadInviteContacts().find(
+          (item) => cleanUsername(item.username) === user,
+        );
+      }
+
+      async function arcaOpenDirectChat(contactOrUsername) {
+        const source =
+          typeof contactOrUsername === "string"
+            ? { username: contactOrUsername }
+            : contactOrUsername || {};
+        const target = cleanUsername(source.username || source.userId || "");
+
+        if (!target) {
+          toast("Contato invalido.");
+          return false;
+        }
+
+        if (typeof isBlocked === "function" && isBlocked(target)) {
+          toast("Contato bloqueado neste aparelho.");
+          return false;
+        }
+
+        const stored = arcaFindInviteContact(target) || {};
+        const key = source.key || stored.key || createInviteAutoKey(target);
+        const label = source.label || stored.label || target;
+
+        $("otherUser").value = target;
+        $("chatKey").value = key;
+
+        cryptoKey = await createCryptoKey(key);
+        const sharedKeyHash = await sha256(key);
+        const result = await api("/api/open-chat", {
+          target,
+          sharedKeyHash,
+        });
+
+        if (!result || result.error) {
+          toast((result && result.error) || "Nao foi possivel abrir a conversa.");
+          return false;
+        }
+
+        const previousRoom = currentRoom;
+        currentRoom = result.roomId;
+        peerUser = (result.peer && result.peer.username) || target;
+        peerAvatar =
+          (result.peer && result.peer.avatar) ||
+          arcaGetContactPhoto(peerUser) ||
+          "👤";
+
+        if (previousRoom !== currentRoom) {
+          $("messages").innerHTML = "";
+          lastHistoryRoom = currentRoom;
+        }
+
+        const list = loadInviteContacts();
+        const index = list.findIndex(
+          (item) => cleanUsername(item.username) === target,
+        );
+        const nextContact = {
+          ...stored,
+          ...source,
+          label,
+          username: target,
+          key,
+          roomId: currentRoom,
+          type: source.type || stored.type || "friend",
+          createdAt: source.createdAt || stored.createdAt || Date.now(),
+        };
+
+        if (index >= 0) list[index] = { ...list[index], ...nextContact };
+        else if (!isContactHiddenInVault(target)) list.push(nextContact);
+        saveInviteContacts(list);
+
+        clearUnreadMessages(target);
+        arcaRememberContactPhoto(peerUser, peerAvatar);
+        arcaSetAvatarElement($("peerAvatar"), peerAvatar);
+        arcaRefreshChatAvatar();
+        $("peerName").textContent = label;
+
+        if (result.status === "online") {
+          setPeerStatus("online");
+        } else if (result.lastSeen) {
+          const d = new Date(result.lastSeen);
+          const lastSeenText =
+            "visto por ultimo as " +
+            d.toLocaleTimeString("pt-BR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+          $("peerStatus").textContent = lastSeenText;
+          $("targetStatus").textContent = label + " " + lastSeenText;
+          $("targetDot").classList.remove("online");
+        } else {
+          setPeerStatus("offline");
+        }
+
+        rejoinCurrentRoom();
+
+        const localMessages = loadLocalMessages(currentRoom);
+        for (const msg of localMessages) {
+          await addMessage(msg);
+        }
+
+        enterFullChat();
+        toast("Conversa segura aberta.");
+        renderInviteContacts();
+        renderChatRooms();
+        return true;
+      }
+
+      async function openInviteContactByUsername(username) {
+        const user = cleanUsername(username);
+        if (!user) return false;
+        const item = arcaFindInviteContact(user);
+        if (!item) saveInviteContactLocal(user);
+        return arcaOpenDirectChat(item || arcaFindInviteContact(user) || user);
+      }
+
+      window.arcaOpenDirectChat = arcaOpenDirectChat;
+      window.openInviteContactByUsername = openInviteContactByUsername;
+
       async function syncFriendsFromServer() {
         try {
           const result = await api("/api/list-friends");
@@ -4650,7 +4778,7 @@
           .map(
             (item, index) => `
                   <div class="vaultItem">
-                    <div onclick="openInviteContact(${index})" style="cursor:pointer;flex:1">
+                    <div onclick="openInviteContactByUsername('${escapeHtml(item.username)}')" style="cursor:pointer;flex:1">
                       <div class="vaultItemName">
                         👤 ${escapeHtml(item.label || item.username)}
                         ${
@@ -4694,6 +4822,8 @@
         const list = loadInviteContacts();
         const item = list[index];
         if (!item) return;
+
+        return arcaOpenDirectChat(item);
 
         $("otherUser").value = item.username;
         $("chatKey").value = item.key;
@@ -6378,7 +6508,12 @@
         if ($("arcaUtilityOverlay"))
           $("arcaUtilityOverlay").classList.add("hidden");
 
-        await openInviteContact(index);
+        await arcaOpenDirectChat({
+          ...item,
+          username: cleanUsername(item.username),
+          type: "vault",
+          fromVault: true,
+        });
       }
 
       function vaultOpenChat(index) {
@@ -8313,26 +8448,15 @@
           );
         }
 
-        window.arcaOpenConversationByName = function (username) {
+        window.arcaOpenConversationByName = async function (username) {
           if (isBlocked(username)) {
             toast("Contato bloqueado neste aparelho.");
             return;
           }
-          const list = currentContacts();
-          let index = list.findIndex(
-            (item) => cleanUsername(item.username) === cleanUsername(username),
-          );
-          if (index < 0) {
-            saveInviteContactLocal(username);
-            index = loadInviteContacts().findIndex(
-              (item) =>
-                cleanUsername(item.username) === cleanUsername(username),
-            );
-          }
           document
             .getElementById("arcaUtilityOverlay")
             ?.classList.add("hidden");
-          if (index >= 0) openInviteContact(index);
+          await openInviteContactByUsername(username);
         };
 
         window.arcaOpenRequests = async function () {
@@ -8512,14 +8636,13 @@
           if (previousUtility) return previousUtility(section);
         };
 
-        const oldOpenInvite = window.openInviteContact || openInviteContact;
         window.openInviteContact = async function (index) {
-          const item = currentContacts()[index];
+          const item = loadInviteContacts()[index] || currentContacts()[index];
           if (item && isBlocked(item.username)) {
             toast("Contato bloqueado neste aparelho.");
             return;
           }
-          return oldOpenInvite(index);
+          if (item) return arcaOpenDirectChat(item);
         };
 
         const oldStartCall = window.startCall || startCall;
@@ -8759,6 +8882,215 @@
 </script>
 <!-- FIM ARCAIDRON LOGIN COM FOTO CORRETO -->
 
+<!-- ARCAIDRON RESTAURA LOGIN PREMIUM COMPACTO -->
+<style>
+body:has(#authScreen:not(.hidden)){
+  overflow:auto!important;
+  min-height:100dvh!important;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(0,140,255,.24),transparent 42%),
+    radial-gradient(circle at 18% 20%,rgba(0,224,255,.12),transparent 34%),
+    #020712!important;
+}
+#authScreen{
+  min-height:100dvh!important;
+  height:auto!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:18px 14px!important;
+  overflow:visible!important;
+}
+#authScreen .authCard{
+  width:min(430px,94vw)!important;
+  min-height:0!important;
+  padding:24px 22px 26px!important;
+  border:2px solid #088bff!important;
+  border-radius:30px!important;
+  background:
+    linear-gradient(180deg,rgba(7,24,48,.94),rgba(2,9,23,.97)),
+    radial-gradient(circle at 50% 0%,rgba(0,135,255,.2),transparent 42%)!important;
+  box-shadow:0 0 0 1px rgba(109,209,255,.18) inset,0 0 34px rgba(0,132,255,.34)!important;
+}
+#authScreen .logo{
+  width:78px!important;
+  height:78px!important;
+  margin:0 auto 12px!important;
+  border-radius:50%!important;
+  background:url("/icon-192x192.png") center/cover no-repeat!important;
+  border:1px solid rgba(132,219,255,.55)!important;
+  box-shadow:0 0 28px rgba(0,151,255,.45)!important;
+}
+#authScreen .logo svg{display:none!important}
+#authScreen .brand{
+  color:#eaf6ff!important;
+  font-size:26px!important;
+  letter-spacing:7px!important;
+  line-height:1.05!important;
+  margin:0 0 8px!important;
+  text-shadow:0 3px 12px rgba(0,0,0,.75),0 0 18px rgba(0,145,255,.42)!important;
+}
+#authScreen .sub{
+  margin:0 0 16px!important;
+  color:#cbd7ea!important;
+  font-size:0!important;
+}
+#authScreen .sub::after{
+  content:"CHAT PRIVADO CRIPTOGRAFADO • VOZ • VIDEO"!important;
+  display:block!important;
+  color:#dce9ff!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  letter-spacing:4px!important;
+  line-height:1.45!important;
+}
+#authScreen .panel{
+  padding:0!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+#authScreen .tabs{
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:0!important;
+  padding:4px!important;
+  margin:12px 0 14px!important;
+  min-height:46px!important;
+  border:1px solid rgba(107,139,178,.5)!important;
+  border-radius:24px!important;
+  background:rgba(2,10,24,.62)!important;
+}
+#authScreen .tabs button{
+  display:block!important;
+  min-width:0!important;
+  height:42px!important;
+  padding:0 8px!important;
+  border-radius:20px!important;
+  background:transparent!important;
+  color:#a8b5ca!important;
+  font-size:14px!important;
+  font-weight:900!important;
+  letter-spacing:2px!important;
+  text-transform:uppercase!important;
+  white-space:nowrap!important;
+}
+#authScreen .tabs button.active{
+  color:#1798ff!important;
+  border:1px solid #098aff!important;
+  background:linear-gradient(90deg,rgba(0,43,93,.96),rgba(0,98,202,.75))!important;
+  box-shadow:0 0 18px rgba(0,137,255,.34)!important;
+}
+#authScreen #username,
+#authScreen #password,
+#authScreen #avatar{
+  display:block!important;
+  width:100%!important;
+  height:54px!important;
+  margin:0 0 11px!important;
+  padding:0 18px!important;
+  border-radius:18px!important;
+  border:1px solid rgba(118,153,194,.78)!important;
+  background:rgba(8,20,40,.88)!important;
+  color:#edf6ff!important;
+  font-size:17px!important;
+}
+#authScreen #username::placeholder,
+#authScreen #password::placeholder{color:#96a5bb!important}
+#authScreen #loginPhotoBtn{
+  display:block!important;
+  width:100%!important;
+  height:54px!important;
+  margin:0 0 12px!important;
+  border-radius:18px!important;
+  background:rgba(13,31,55,.9)!important;
+  border:1px solid rgba(87,127,174,.65)!important;
+  color:#fff!important;
+  font-size:16px!important;
+  font-weight:900!important;
+}
+#authScreen #authBtn{
+  display:block!important;
+  width:100%!important;
+  height:58px!important;
+  margin:12px 0 8px!important;
+  border-radius:18px!important;
+  border:1px solid #058eff!important;
+  background:linear-gradient(90deg,#0f5dff,#069cff)!important;
+  box-shadow:0 0 22px rgba(0,132,255,.42)!important;
+  color:#fff!important;
+  font-size:19px!important;
+  font-weight:900!important;
+  letter-spacing:3px!important;
+  text-transform:uppercase!important;
+}
+#authScreen #loginError{
+  min-height:18px!important;
+  margin-top:4px!important;
+}
+#authScreen .authCard::after{
+  content:"Seus dados protegidos com criptografia avancada"!important;
+  display:block!important;
+  margin-top:14px!important;
+  color:#98a8bf!important;
+  font-size:13px!important;
+  line-height:1.35!important;
+}
+@media (max-height:740px){
+  #authScreen{align-items:flex-start!important;padding-top:10px!important;padding-bottom:10px!important}
+  #authScreen .authCard{padding:18px 18px 20px!important;border-radius:24px!important}
+  #authScreen .logo{width:62px!important;height:62px!important;margin-bottom:8px!important}
+  #authScreen .brand{font-size:22px!important}
+  #authScreen .sub::after{font-size:10px!important;letter-spacing:3px!important}
+  #authScreen #username,
+  #authScreen #password,
+  #authScreen #avatar,
+  #authScreen #loginPhotoBtn{height:48px!important}
+  #authScreen #authBtn{height:52px!important}
+}
+</style>
+<script>
+(function(){
+  function restoreLogin(){
+    const login = document.getElementById("loginTab");
+    const reg = document.getElementById("registerTab");
+    const auth = document.getElementById("authBtn");
+    const user = document.getElementById("username");
+    const pass = document.getElementById("password");
+    const photo = document.getElementById("loginPhotoBtn");
+
+    if(user) user.placeholder = "Seu nome privado";
+    if(pass) pass.placeholder = "Sua senha";
+    if(photo) photo.textContent = "Escolher foto de perfil";
+    if(login) login.textContent = "Entrar";
+    if(reg) reg.textContent = "Criar conta";
+
+    if(login && reg && auth){
+      login.onclick = function(){
+        window.authMode = "login";
+        try{ authMode = "login"; }catch{}
+        login.classList.add("active");
+        reg.classList.remove("active");
+        auth.textContent = "Entrar";
+      };
+      reg.onclick = function(){
+        window.authMode = "register";
+        try{ authMode = "register"; }catch{}
+        reg.classList.add("active");
+        login.classList.remove("active");
+        auth.textContent = "Criar conta";
+      };
+      if(!auth.textContent.trim()) auth.textContent = "Entrar";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", restoreLogin);
+  setTimeout(restoreLogin, 100);
+  setTimeout(restoreLogin, 700);
+})();
+</script>
+<!-- FIM ARCAIDRON RESTAURA LOGIN PREMIUM COMPACTO -->
+
 <!-- ARCAIDRON ABRIR SALA ROBUSTO -->
 <script>
 (function(){
@@ -8776,6 +9108,11 @@
 
       if(!target || !key){
         if(typeof toast === "function") toast("Digite o ID/nome do amigo e a chave privada.");
+        return;
+      }
+
+      if(typeof window.arcaOpenDirectChat === "function"){
+        await window.arcaOpenDirectChat({ username: target, key, label: target });
         return;
       }
 

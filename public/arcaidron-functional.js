@@ -251,15 +251,15 @@
       const opened = await window.arcaOpenVaultChatByUsername(username);
       if (opened) return;
     }
-    let list = contacts();
-    let index = list.findIndex((item) => clean(item.username) === clean(username));
-    if (index < 0 && typeof saveInviteContactLocal === "function") {
+    if (!contacts().some((item) => clean(item.username) === clean(username)) && typeof saveInviteContactLocal === "function") {
       saveInviteContactLocal(username);
-      list = contacts();
-      index = list.findIndex((item) => clean(item.username) === clean(username));
     }
     $("arcaUtilityOverlay")?.classList.add("hidden");
-    if (index >= 0 && typeof openInviteContact === "function") openInviteContact(index);
+    if (typeof openInviteContactByUsername === "function") {
+      await openInviteContactByUsername(username);
+      return;
+    }
+    if (typeof window.arcaOpenDirectChat === "function") await window.arcaOpenDirectChat(username);
   };
   window.arcaOpenRequests = async function () {
     show("Solicitacoes", '<div class="safeItem">Carregando solicitacoes...</div>');
