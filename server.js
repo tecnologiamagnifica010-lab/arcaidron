@@ -454,17 +454,6 @@ app.post("/api/register", async (req, res) => {
     if (loginName.length < 3) return res.json({ error: "Nome muito curto" });
     if (password.length < 6) return res.json({ error: "Senha muito curta" });
 
-    for (const candidate of findUsersByLoginName(loginName)) {
-      if (await bcrypt.compare(password, candidate.passwordHash)) {
-        if (req.body.publicKey) candidate.publicKey = req.body.publicKey;
-        if (req.body.avatar && String(req.body.avatar).startsWith("data:image/")) {
-          candidate.avatar = String(req.body.avatar);
-        }
-        await persistUser(candidate);
-        return res.json({ ok: true, existed: true, token: sign(candidate.username), user: publicUser(candidate.username) });
-      }
-    }
-
     const user = buildUser(loginName, await bcrypt.hash(password, 10), req.body);
 
     await persistUser(user);
@@ -496,7 +485,7 @@ app.post("/api/login", async (req, res) => {
       user.avatar = String(req.body.avatar);
     }
     await persistUser(user);
-    res.json({ ok: true, token: sign(username), user: publicUser(username) });
+    res.json({ ok: true, token: sign(user.username), user: publicUser(user.username) });
   } catch (err) {
     console.error("login", err);
     res.json({ error: "Erro ao entrar" });
@@ -511,6 +500,12 @@ app.post("/api/auth", async (req, res) => {
 
     if (loginName.length < 3) return res.json({ error: "Nome muito curto" });
     if (password.length < 6) return res.json({ error: "Senha muito curta" });
+
+    if (mode === "register") {
+      const user = buildUser(loginName, await bcrypt.hash(password, 10), req.body);
+      await persistUser(user);
+      return res.json({ ok: true, created: true, token: sign(user.username), user: publicUser(user.username) });
+    }
 
     const candidates = findUsersByLoginName(loginName);
     let user = null;
@@ -530,17 +525,10 @@ app.post("/api/auth", async (req, res) => {
       return res.json({ ok: true, created: false, token: sign(user.username), user: publicUser(user.username) });
     }
 
-    if (mode === "login") {
-      if (candidates.length) return res.json({ error: "Senha incorreta para esta conta." });
-      return res.json({
-        error: "Conta nao encontrada. Toque em Criar Conta para cadastrar este nome.",
-      });
-    }
-
-    user = buildUser(loginName, await bcrypt.hash(password, 10), req.body);
-
-    await persistUser(user);
-    return res.json({ ok: true, created: true, token: sign(user.username), user: publicUser(user.username) });
+    if (candidates.length) return res.json({ error: "Senha incorreta para esta conta." });
+    return res.json({
+      error: "Conta nao encontrada. Toque em Criar Conta para cadastrar este nome.",
+    });
   } catch (err) {
     console.error("auth", err);
     return res.json({ error: "Erro ao autenticar" });
