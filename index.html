@@ -586,6 +586,9 @@
       }
 
       async function getIdentityKeys(owner = "") {
+        if (!window.crypto || !crypto.subtle || !crypto.getRandomValues) {
+          throw new Error("Criptografia do navegador indisponivel neste aparelho.");
+        }
         const scope = cleanUsername(owner || state.user?.username || $("username")?.value || "default");
         const storageKey = "arca_identity_keys_" + scope;
         const saved = localStorage.getItem(storageKey);
@@ -620,6 +623,15 @@
         );
         state.roomKeys.set(room.roomId, key);
         return key;
+      }
+
+      async function tryGetIdentityKeys(owner = "") {
+        try {
+          return await getIdentityKeys(owner);
+        } catch (err) {
+          console.warn("ARCAIDRON E2E indisponivel antes do login:", err?.message || err);
+          return null;
+        }
       }
 
       async function encryptForRoom(room, text) {
@@ -691,13 +703,23 @@
           $("authError").textContent = "Digite nome e senha.";
           return;
         }
-        const keys = await getIdentityKeys(username);
-        const result = await api("/api/" + (state.mode === "register" ? "register" : "login"), {
-          username,
-          password,
-          avatar: state.avatar,
-          publicKey: keys.publicJwk,
-        });
+        $("authBtn").disabled = true;
+        $("authError").textContent = "";
+        const keys = await tryGetIdentityKeys(username);
+        let result;
+        try {
+          result = await api("/api/" + (state.mode === "register" ? "register" : "login"), {
+            username,
+            password,
+            avatar: state.avatar,
+            publicKey: keys ? keys.publicJwk : null,
+          });
+        } catch (err) {
+          $("authBtn").disabled = false;
+          $("authError").textContent = "Nao foi possivel conectar ao servidor.";
+          return;
+        }
+        $("authBtn").disabled = false;
         if (result.error) {
           $("authError").textContent = result.error;
           return;
@@ -707,7 +729,7 @@
           account: result.account || result.username,
           userId: result.userId,
           avatar: result.avatar || "",
-          publicKey: result.publicKey || keys.publicJwk,
+          publicKey: result.publicKey || (keys ? keys.publicJwk : null),
         };
         state.token = result.token;
         state.user = user;
@@ -727,8 +749,8 @@
           state.avatar = state.user.avatar;
           localStorage.setItem("arca_avatar", state.avatar);
         }
-        const keys = await getIdentityKeys(state.user.username);
-        if (!state.user.publicKey) {
+        const keys = await tryGetIdentityKeys(state.user.username);
+        if (keys && !state.user.publicKey) {
           const updated = await api("/api/update-profile", { publicKey: keys.publicJwk });
           if (updated.user) state.user = updated.user;
         }
