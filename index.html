@@ -9091,6 +9091,250 @@ body:has(#authScreen:not(.hidden)){
 </script>
 <!-- FIM ARCAIDRON RESTAURA LOGIN PREMIUM COMPACTO -->
 
+<!-- ARCAIDRON LOGIN EXATO DA IMAGEM -->
+<style>
+body:has(#authScreen:not(.hidden)){
+  background:#02050d!important;
+  overflow:auto!important;
+}
+#authScreen{
+  min-height:100dvh!important;
+  height:auto!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:10px!important;
+  background:#02050d!important;
+  overflow:visible!important;
+}
+#authScreen .authCard{
+  position:relative!important;
+  width:min(94vw,45dvh,430px)!important;
+  aspect-ratio:841/1870!important;
+  min-height:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:url("/public/assets/arcaidron-login-reference.png") center/100% 100% no-repeat!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+#authScreen .authCard::before,
+#authScreen .authCard::after,
+#authScreen .logo,
+#authScreen .brand,
+#authScreen .sub{
+  display:none!important;
+  content:none!important;
+}
+#authScreen .panel{
+  position:absolute!important;
+  inset:0!important;
+  padding:0!important;
+  margin:0!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+#authScreen .tabs{
+  position:absolute!important;
+  left:9.5%!important;
+  top:36.55%!important;
+  width:81%!important;
+  height:5.35%!important;
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:0!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  background:transparent!important;
+}
+#authScreen .tabs button{
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:999px!important;
+  background:transparent!important;
+  color:transparent!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+}
+#authScreen .tabs button.active{
+  background:transparent!important;
+  color:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+#authScreen #username,
+#authScreen #password{
+  position:absolute!important;
+  left:9.5%!important;
+  width:81%!important;
+  height:5.85%!important;
+  margin:0!important;
+  border:0!important;
+  outline:0!important;
+  border-radius:16px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:#eaf5ff!important;
+  font-size:17px!important;
+  font-weight:500!important;
+  padding:0 11% 0 14%!important;
+}
+#authScreen #username{
+  top:45.25%!important;
+}
+#authScreen #password{
+  top:54.15%!important;
+  padding-right:16%!important;
+}
+#authScreen #username::placeholder,
+#authScreen #password::placeholder{
+  color:transparent!important;
+}
+#authScreen #username.arcaHasValue,
+#authScreen #password.arcaHasValue,
+#authScreen #username:focus,
+#authScreen #password:focus{
+  background:rgba(4,14,30,.88)!important;
+  border:1px solid rgba(0,143,255,.34)!important;
+}
+#authScreen #avatar,
+#authScreen #loginPhotoBtn{
+  display:none!important;
+}
+#authScreen #authBtn{
+  position:absolute!important;
+  left:9.5%!important;
+  top:70%!important;
+  width:81%!important;
+  height:6.35%!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:18px!important;
+  background:transparent!important;
+  color:transparent!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+}
+#authScreen #loginError{
+  position:absolute!important;
+  left:9.5%!important;
+  right:9.5%!important;
+  top:77.4%!important;
+  min-height:18px!important;
+  margin:0!important;
+  color:#fecaca!important;
+  font-size:12px!important;
+  text-align:center!important;
+}
+#authScreen .arcaForgotExact,
+#authScreen .arcaBioExact{
+  position:absolute;
+  z-index:5;
+  border:0;
+  padding:0;
+  margin:0;
+  background:transparent;
+  color:transparent;
+  cursor:pointer;
+}
+#authScreen .arcaBioExact{
+  left:9.5%;
+  top:61.9%;
+  width:81%;
+  height:6.9%;
+}
+#authScreen .arcaForgotExact{
+  left:9.5%;
+  top:82.85%;
+  width:81%;
+  height:4.75%;
+}
+@media (max-height:640px){
+  #authScreen{
+    align-items:flex-start!important;
+  }
+  #authScreen .authCard{
+    width:min(94vw,44dvh,400px)!important;
+  }
+}
+</style>
+<script>
+(function(){
+  function syncInputValueClass(input){
+    if(!input) return;
+    input.classList.toggle("arcaHasValue", !!input.value);
+  }
+
+  function installExactLogin(){
+    const card = document.querySelector("#authScreen .authCard");
+    const panel = document.querySelector("#authScreen .panel");
+    const login = document.getElementById("loginTab");
+    const register = document.getElementById("registerTab");
+    const auth = document.getElementById("authBtn");
+    const user = document.getElementById("username");
+    const pass = document.getElementById("password");
+
+    if(user){
+      user.placeholder = "";
+      user.setAttribute("autocomplete", "username");
+      user.addEventListener("input", () => syncInputValueClass(user));
+      syncInputValueClass(user);
+    }
+    if(pass){
+      pass.placeholder = "";
+      pass.setAttribute("autocomplete", "current-password");
+      pass.addEventListener("input", () => syncInputValueClass(pass));
+      syncInputValueClass(pass);
+    }
+
+    if(login && register && auth){
+      login.textContent = "Entrar";
+      register.textContent = "Criar conta";
+      auth.textContent = "Entrar";
+    }
+
+    if(panel && !panel.querySelector(".arcaBioExact")){
+      const bio = document.createElement("button");
+      bio.type = "button";
+      bio.className = "arcaBioExact";
+      bio.setAttribute("aria-label", "Entrar com impressao digital");
+      bio.onclick = function(){
+        try{ localStorage.setItem("arcaidron_biometric_enabled", "1"); }catch{}
+        if(typeof toast === "function") toast("Impressao digital ativada neste aparelho.");
+      };
+      panel.appendChild(bio);
+    }
+
+    if(panel && !panel.querySelector(".arcaForgotExact")){
+      const forgot = document.createElement("button");
+      forgot.type = "button";
+      forgot.className = "arcaForgotExact";
+      forgot.setAttribute("aria-label", "Esqueci minha senha");
+      forgot.onclick = function(){
+        if(typeof toast === "function") toast("Para recuperar, crie uma nova conta segura neste aparelho.");
+      };
+      panel.appendChild(forgot);
+    }
+
+    if(card) card.dataset.arcExactLoginImage = "1";
+  }
+
+  document.addEventListener("DOMContentLoaded", installExactLogin);
+  setTimeout(installExactLogin, 100);
+  setTimeout(installExactLogin, 700);
+})();
+</script>
+<!-- FIM ARCAIDRON LOGIN EXATO DA IMAGEM -->
+
 <!-- ARCAIDRON ABRIR SALA ROBUSTO -->
 <script>
 (function(){
