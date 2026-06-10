@@ -35,6 +35,16 @@ assert(
   "old Android/local contacts must be completed from /api/list-friends before opening",
 );
 assert(
+  html.includes("function arcaAccountKey()") &&
+    html.includes('"arcaidron_invite_contacts_" + arcaAccountKey()'),
+  "local contacts must be scoped by unique userId, not by similar usernames",
+);
+assert(
+  html.includes('"arcaidron_secure_vault_" + arcaAccountKey()') &&
+    html.includes('"arcaidron_local_messages_" +\n          arcaAccountKey()'),
+  "vault and local messages must be scoped by unique userId",
+);
+assert(
   html.includes("roomId: item.roomId || \"\"") &&
     html.includes("userId: item.userId || \"\""),
   "vault contacts must preserve roomId and userId when moved from normal contacts",

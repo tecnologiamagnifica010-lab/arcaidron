@@ -3480,6 +3480,32 @@
           .slice(0, 32);
       }
 
+      function arcaAccountKey() {
+        const id = String(
+          currentUserId || localStorage.getItem("arcaidron_userid") || "",
+        ).trim();
+        if (id) return "id_" + id;
+        return (
+          "name_" +
+          cleanUsername(
+            currentUser || localStorage.getItem("arcaidron_username") || "guest",
+          )
+        );
+      }
+
+      function arcaLegacyAccountKey() {
+        return cleanUsername(
+          currentUser || localStorage.getItem("arcaidron_username") || "guest",
+        );
+      }
+
+      function arcaMigrateLocalKey(newKey, oldKey) {
+        if (!newKey || !oldKey || newKey === oldKey) return;
+        if (localStorage.getItem(newKey)) return;
+        const oldValue = localStorage.getItem(oldKey);
+        if (oldValue !== null) localStorage.setItem(newKey, oldValue);
+      }
+
       function escapeHtml(text) {
         return String(text || "").replace(
           /[&<>"']/g,
@@ -4087,9 +4113,12 @@
       }
 
       function arcaGroupsKey() {
-        return (
-          "arcaidron_local_groups_" + cleanUsername(currentUser || "guest")
+        const key = "arcaidron_local_groups_" + arcaAccountKey();
+        arcaMigrateLocalKey(
+          key,
+          "arcaidron_local_groups_" + arcaLegacyAccountKey(),
         );
+        return key;
       }
 
       function arcaLoadLocalGroups() {
@@ -4296,8 +4325,7 @@
         socket.on("room:history", async (messages) => {
           const clearedRooms = JSON.parse(
             localStorage.getItem(
-              "arcaidron_cleared_rooms_" +
-                cleanUsername(currentUser || "guest"),
+              "arcaidron_cleared_rooms_" + arcaAccountKey(),
             ) || "{}",
           );
 
@@ -4663,9 +4691,7 @@
       }
 
       function inviteContactsKey() {
-        return (
-          "arcaidron_invite_contacts_" + cleanUsername(currentUser || "guest")
-        );
+        return "arcaidron_invite_contacts_" + arcaAccountKey();
       }
 
       function loadInviteContacts() {
@@ -4680,10 +4706,7 @@
         localStorage.setItem(inviteContactsKey(), JSON.stringify(list || []));
       }
       function vaultHiddenContactsKey() {
-        return (
-          "arcaidron_vault_hidden_contacts_" +
-          cleanUsername(currentUser || "guest")
-        );
+        return "arcaidron_vault_hidden_contacts_" + arcaAccountKey();
       }
 
       function loadVaultHiddenContacts() {
@@ -4718,9 +4741,7 @@
         return loadVaultHiddenContacts().includes(user);
       }
       function unreadMessagesKey() {
-        return (
-          "arcaidron_unread_messages_" + cleanUsername(currentUser || "guest")
-        );
+        return "arcaidron_unread_messages_" + arcaAccountKey();
       }
 
       function loadUnreadMessages() {
@@ -5411,14 +5432,14 @@
 
         const cleared = JSON.parse(
           localStorage.getItem(
-            "arcaidron_cleared_rooms_" + cleanUsername(currentUser || "guest"),
+            "arcaidron_cleared_rooms_" + arcaAccountKey(),
           ) || "{}",
         );
 
         cleared[currentRoom] = Date.now();
 
         localStorage.setItem(
-          "arcaidron_cleared_rooms_" + cleanUsername(currentUser || "guest"),
+          "arcaidron_cleared_rooms_" + arcaAccountKey(),
           JSON.stringify(cleared),
         );
 
@@ -5430,7 +5451,7 @@
       function localMessagesKey(roomId = currentRoom) {
         return (
           "arcaidron_local_messages_" +
-          cleanUsername(currentUser || "guest") +
+          arcaAccountKey() +
           "_" +
           String(roomId || "")
         );
@@ -5461,7 +5482,7 @@
       function localPendingMessagesKey(roomId = currentRoom) {
         return (
           "arcaidron_pending_messages_" +
-          cleanUsername(currentUser || "guest") +
+          arcaAccountKey() +
           "_" +
           String(roomId || "")
         );
@@ -5584,7 +5605,7 @@
       function arcaContactMessagesKey(username) {
         return (
           "arcaidron_contact_messages_" +
-          cleanUsername(currentUser || "guest") +
+          arcaAccountKey() +
           "_" +
           cleanUsername(username || "")
         );
@@ -6516,20 +6537,15 @@
       }
 
       function vaultStorageKey(userName) {
-        const user = cleanUsername(
-          userName ||
-            currentUser ||
-            localStorage.getItem("arcaidron_username") ||
-            "guest",
-        );
+        if (!userName) {
+          return "arcaidron_secure_vault_" + arcaAccountKey();
+        }
 
-        return "arcaidron_secure_vault_" + user;
+        return "arcaidron_secure_vault_name_" + cleanUsername(userName);
       }
 
       function vaultCurrentUser() {
-        return cleanUsername(
-          currentUser || localStorage.getItem("arcaidron_username") || "guest",
-        );
+        return arcaAccountKey();
       }
 
       function vaultHasData() {
@@ -7367,11 +7383,7 @@
         function contactPhotoKey(user) {
           return (
             "arcaidron_contact_photo_" +
-            String(
-              currentUser ||
-                localStorage.getItem("arcaidron_username") ||
-                "guest",
-            ).toLowerCase() +
+            arcaAccountKey() +
             "_" +
             String(user || "").toLowerCase()
           );
