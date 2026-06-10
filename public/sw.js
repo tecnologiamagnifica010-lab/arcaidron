@@ -1,5 +1,9 @@
 self.addEventListener("install", () => {
-  console.log("ARCAIDRON instalado");
+  self.skipWaiting();
 });
 
-self.addEventListener("fetch", (event) => {});
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))),
+  );
+});

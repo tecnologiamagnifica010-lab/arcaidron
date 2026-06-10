@@ -500,6 +500,17 @@
     <div id="toast" class="toast hidden"></div>
 
     <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations()
+          .then((items) => items.forEach((item) => item.unregister()))
+          .catch(() => {});
+      }
+      if (window.caches) {
+        caches.keys()
+          .then((keys) => keys.forEach((key) => caches.delete(key)))
+          .catch(() => {});
+      }
+
       const $ = (id) => document.getElementById(id);
       const enc = new TextEncoder();
       const dec = new TextDecoder();

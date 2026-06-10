@@ -42,6 +42,14 @@ if (DATABASE_URL) {
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: "32mb" }));
 app.use(rateLimit({ windowMs: 60 * 1000, max: 240 }));
+app.use((req, res, next) => {
+  if (req.path === "/" || req.path.startsWith("/api/")) {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+  }
+  next();
+});
 app.use(express.static(__dirname));
 
 app.get("/", (req, res) => {
@@ -128,6 +136,15 @@ function findUsersByLoginName(name) {
   });
 }
 
+async function passwordMatches(password, passwordHash) {
+  if (!passwordHash || typeof passwordHash !== "string") return false;
+  try {
+    return await bcrypt.compare(password, passwordHash);
+  } catch {
+    return false;
+  }
+}
+
 function resolveUser(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -208,9 +225,56 @@ async function initDb() {
   `);
 
   await pool.query(`
+    ALTER TABLE arcaidron_users
+    ADD COLUMN IF NOT EXISTS user_id TEXT
+  `);
+
+  await pool.query(`
+    ALTER TABLE arcaidron_users
+    ADD COLUMN IF NOT EXISTS password_hash TEXT
+  `);
+
+  await pool.query(`
+    ALTER TABLE arcaidron_users
+    ADD COLUMN IF NOT EXISTS avatar TEXT
+  `);
+
+  await pool.query(`
+    ALTER TABLE arcaidron_users
+    ADD COLUMN IF NOT EXISTS public_key JSONB
+  `);
+
+  await pool.query(`
+    ALTER TABLE arcaidron_users
+    ADD COLUMN IF NOT EXISTS created_at BIGINT
+  `);
+
+  await pool.query(`
+    ALTER TABLE arcaidron_users
+    ADD COLUMN IF NOT EXISTS last_seen BIGINT
+  `);
+
+  await pool.query(`
     UPDATE arcaidron_users
     SET display_name = username
     WHERE display_name IS NULL
+  `);
+
+  await pool.query(`
+    UPDATE arcaidron_users
+    SET user_id = 'arc_' || substring(md5(username || random()::text || clock_timestamp()::text), 1, 20)
+    WHERE user_id IS NULL OR user_id = ''
+  `);
+
+  await pool.query(`
+    UPDATE arcaidron_users
+    SET created_at = FLOOR(EXTRACT(EPOCH FROM NOW()) * 1000)
+    WHERE created_at IS NULL
+  `);
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_arcaidron_users_user_id
+    ON arcaidron_users(user_id)
   `);
 
   await pool.query(`
@@ -473,7 +537,7 @@ app.post("/api/login", async (req, res) => {
 
     let user = null;
     for (const candidate of candidates) {
-      if (await bcrypt.compare(password, candidate.passwordHash)) {
+      if (await passwordMatches(password, candidate.passwordHash)) {
         user = candidate;
         break;
       }
@@ -510,7 +574,7 @@ app.post("/api/auth", async (req, res) => {
     const candidates = findUsersByLoginName(loginName);
     let user = null;
     for (const candidate of candidates) {
-      if (await bcrypt.compare(password, candidate.passwordHash)) {
+      if (await passwordMatches(password, candidate.passwordHash)) {
         user = candidate;
         break;
       }

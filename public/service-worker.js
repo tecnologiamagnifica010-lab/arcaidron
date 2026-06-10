@@ -1,23 +1,13 @@
-const CACHE_NAME = "arcaidron-v1";
-
-self.addEventListener("install", event => {
-
-event.waitUntil(
-
-caches.open(CACHE_NAME)
-
-);
-
+self.addEventListener("install", (event) => {
+  self.skipWaiting();
 });
 
-self.addEventListener("fetch", event => {
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))),
+  );
+});
 
-event.respondWith(
-
-fetch(event.request).catch(()=>
-caches.match(event.request)
-)
-
-);
-
+self.addEventListener("fetch", () => {
+  return;
 });
