@@ -692,8 +692,7 @@
           return;
         }
         const keys = await getIdentityKeys(username);
-        const result = await api("/api/auth", {
-          mode: state.mode,
+        const result = await api("/api/" + (state.mode === "register" ? "register" : "login"), {
           username,
           password,
           avatar: state.avatar,
@@ -703,8 +702,15 @@
           $("authError").textContent = result.error;
           return;
         }
+        const user = result.user || {
+          username: result.username,
+          account: result.account || result.username,
+          userId: result.userId,
+          avatar: result.avatar || "",
+          publicKey: result.publicKey || keys.publicJwk,
+        };
         state.token = result.token;
-        state.user = result.user;
+        state.user = user;
         localStorage.setItem("arca_token", state.token);
         localStorage.setItem("arca_username", state.user.username);
         localStorage.setItem("arca_userid", state.user.userId);

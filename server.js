@@ -129,6 +129,20 @@ function publicUser(username) {
   };
 }
 
+function authPayload(user, extra = {}) {
+  const publicInfo = publicUser(user.username);
+  return {
+    ok: true,
+    ...extra,
+    token: sign(user.username),
+    user: publicInfo,
+    username: publicInfo.username,
+    account: publicInfo.account,
+    userId: publicInfo.userId,
+    avatar: publicInfo.avatar,
+  };
+}
+
 function findUsersByLoginName(name) {
   const clean = cleanUsername(name);
   return [...users.values()].filter((user) => {
@@ -207,9 +221,9 @@ async function initDb() {
   if (!pool) return;
 
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS arcaidron_users (
+    CREATE TABLE IF NOT EXISTS arcaidron_accounts_v2 (
       username TEXT PRIMARY KEY,
-      display_name TEXT,
+      display_name TEXT NOT NULL,
       user_id TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       avatar TEXT,
@@ -217,64 +231,6 @@ async function initDb() {
       created_at BIGINT NOT NULL,
       last_seen BIGINT
     )
-  `);
-
-  await pool.query(`
-    ALTER TABLE arcaidron_users
-    ADD COLUMN IF NOT EXISTS display_name TEXT
-  `);
-
-  await pool.query(`
-    ALTER TABLE arcaidron_users
-    ADD COLUMN IF NOT EXISTS user_id TEXT
-  `);
-
-  await pool.query(`
-    ALTER TABLE arcaidron_users
-    ADD COLUMN IF NOT EXISTS password_hash TEXT
-  `);
-
-  await pool.query(`
-    ALTER TABLE arcaidron_users
-    ADD COLUMN IF NOT EXISTS avatar TEXT
-  `);
-
-  await pool.query(`
-    ALTER TABLE arcaidron_users
-    ADD COLUMN IF NOT EXISTS public_key JSONB
-  `);
-
-  await pool.query(`
-    ALTER TABLE arcaidron_users
-    ADD COLUMN IF NOT EXISTS created_at BIGINT
-  `);
-
-  await pool.query(`
-    ALTER TABLE arcaidron_users
-    ADD COLUMN IF NOT EXISTS last_seen BIGINT
-  `);
-
-  await pool.query(`
-    UPDATE arcaidron_users
-    SET display_name = username
-    WHERE display_name IS NULL
-  `);
-
-  await pool.query(`
-    UPDATE arcaidron_users
-    SET user_id = 'arc_' || substring(md5(username || random()::text || clock_timestamp()::text), 1, 20)
-    WHERE user_id IS NULL OR user_id = ''
-  `);
-
-  await pool.query(`
-    UPDATE arcaidron_users
-    SET created_at = FLOOR(EXTRACT(EPOCH FROM NOW()) * 1000)
-    WHERE created_at IS NULL
-  `);
-
-  await pool.query(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_arcaidron_users_user_id
-    ON arcaidron_users(user_id)
   `);
 
   await pool.query(`
@@ -316,8 +272,14 @@ async function initDb() {
     )
   `);
 
-  const userRows = await pool.query("SELECT * FROM arcaidron_users");
+  users.clear();
+  usersById.clear();
+  rooms.clear();
+  hiddenContacts.clear();
+
+  const userRows = await pool.query("SELECT * FROM arcaidron_accounts_v2");
   for (const row of userRows.rows) {
+    if (!row.username || !row.user_id || !row.password_hash) continue;
     users.set(row.username, {
       username: row.username,
       displayName: row.display_name || row.username,
@@ -325,7 +287,7 @@ async function initDb() {
       passwordHash: row.password_hash,
       avatar: row.avatar || "",
       publicKey: row.public_key || null,
-      createdAt: Number(row.created_at),
+      createdAt: Number(row.created_at || Date.now()),
       lastSeen: row.last_seen ? Number(row.last_seen) : null,
     });
     usersById.set(row.user_id, row.username);
@@ -357,7 +319,7 @@ async function persistUser(user) {
   if (!pool) return;
   await pool.query(
     `
-    INSERT INTO arcaidron_users
+    INSERT INTO arcaidron_accounts_v2
       (username, display_name, user_id, password_hash, avatar, public_key, created_at, last_seen)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
     ON CONFLICT(username)
@@ -521,7 +483,7 @@ app.post("/api/register", async (req, res) => {
     const user = buildUser(loginName, await bcrypt.hash(password, 10), req.body);
 
     await persistUser(user);
-    res.json({ ok: true, created: true, token: sign(user.username), user: publicUser(user.username) });
+    res.json(authPayload(user, { created: true }));
   } catch (err) {
     console.error("register", err);
     res.json({ error: "Erro ao criar conta" });
@@ -549,7 +511,7 @@ app.post("/api/login", async (req, res) => {
       user.avatar = String(req.body.avatar);
     }
     await persistUser(user);
-    res.json({ ok: true, token: sign(user.username), user: publicUser(user.username) });
+    res.json(authPayload(user));
   } catch (err) {
     console.error("login", err);
     res.json({ error: "Erro ao entrar" });
@@ -568,7 +530,7 @@ app.post("/api/auth", async (req, res) => {
     if (mode === "register") {
       const user = buildUser(loginName, await bcrypt.hash(password, 10), req.body);
       await persistUser(user);
-      return res.json({ ok: true, created: true, token: sign(user.username), user: publicUser(user.username) });
+      return res.json(authPayload(user, { created: true }));
     }
 
     const candidates = findUsersByLoginName(loginName);
@@ -586,7 +548,7 @@ app.post("/api/auth", async (req, res) => {
         user.avatar = String(req.body.avatar);
       }
       await persistUser(user);
-      return res.json({ ok: true, created: false, token: sign(user.username), user: publicUser(user.username) });
+      return res.json(authPayload(user, { created: false }));
     }
 
     if (candidates.length) return res.json({ error: "Senha incorreta para esta conta." });
