@@ -681,7 +681,8 @@
           return;
         }
         const keys = await getIdentityKeys(username);
-        const result = await api("/api/" + state.mode, {
+        const result = await api("/api/auth", {
+          mode: state.mode,
           username,
           password,
           avatar: state.avatar,

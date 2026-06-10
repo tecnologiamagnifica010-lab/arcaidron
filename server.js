@@ -381,7 +381,11 @@ app.post("/api/register", async (req, res) => {
     const password = String(req.body.password || "");
     if (username.length < 3) return res.json({ error: "Nome muito curto" });
     if (password.length < 6) return res.json({ error: "Senha muito curta" });
-    if (users.has(username)) return res.json({ error: "Nome ja existe" });
+    if (users.has(username)) {
+      return res.json({
+        error: "Esta conta ja existe. Use Entrar com a senha cadastrada.",
+      });
+    }
 
     const user = {
       username,
@@ -419,6 +423,57 @@ app.post("/api/login", async (req, res) => {
   } catch (err) {
     console.error("login", err);
     res.json({ error: "Erro ao entrar" });
+  }
+});
+
+app.post("/api/auth", async (req, res) => {
+  try {
+    const mode = String(req.body.mode || "login");
+    const username = cleanUsername(req.body.username);
+    const password = String(req.body.password || "");
+
+    if (username.length < 3) return res.json({ error: "Nome muito curto" });
+    if (password.length < 6) return res.json({ error: "Senha muito curta" });
+
+    let user = users.get(username);
+
+    if (user) {
+      const ok = await bcrypt.compare(password, user.passwordHash);
+      if (!ok) {
+        return res.json({
+          error: "Senha incorreta para esta conta. Para criar outra, escolha outro nome.",
+        });
+      }
+
+      if (req.body.publicKey) user.publicKey = req.body.publicKey;
+      if (req.body.avatar && String(req.body.avatar).startsWith("data:image/")) {
+        user.avatar = String(req.body.avatar);
+      }
+      await persistUser(user);
+      return res.json({ ok: true, created: false, token: sign(username), user: publicUser(username) });
+    }
+
+    if (mode === "login") {
+      return res.json({
+        error: "Conta nao encontrada. Toque em Criar Conta para cadastrar este nome.",
+      });
+    }
+
+    user = {
+      username,
+      userId: newUserId(),
+      passwordHash: await bcrypt.hash(password, 10),
+      avatar: String(req.body.avatar || ""),
+      publicKey: req.body.publicKey || null,
+      createdAt: Date.now(),
+      lastSeen: null,
+    };
+
+    await persistUser(user);
+    return res.json({ ok: true, created: true, token: sign(username), user: publicUser(username) });
+  } catch (err) {
+    console.error("auth", err);
+    return res.json({ error: "Erro ao autenticar" });
   }
 });
 
