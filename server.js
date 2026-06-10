@@ -367,6 +367,44 @@ async function persistMessage(message) {
   );
 }
 
+async function userHasProtectedData(username) {
+  const clean = cleanUsername(username);
+  for (const room of rooms.values()) {
+    if (roomHasUser(room, clean)) return true;
+    if ((room.messages || []).some((message) => message.from === clean)) return true;
+  }
+
+  if (!pool) return false;
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        (SELECT COUNT(*) FROM arcaidron_rooms WHERE user_a = $1 OR user_b = $1) AS rooms,
+        (SELECT COUNT(*) FROM arcaidron_messages WHERE sender = $1) AS messages
+      `,
+      [clean],
+    );
+    const row = result.rows[0] || {};
+    return Number(row.rooms || 0) > 0 || Number(row.messages || 0) > 0;
+  } catch (err) {
+    console.error("Erro ao verificar dados protegidos:", err);
+    return true;
+  }
+}
+
+function buildUser(username, passwordHash, body, existing = null) {
+  return {
+    username,
+    userId: existing?.userId || newUserId(),
+    passwordHash,
+    avatar: String(body.avatar || existing?.avatar || ""),
+    publicKey: body.publicKey || existing?.publicKey || null,
+    createdAt: existing?.createdAt || Date.now(),
+    lastSeen: existing?.lastSeen || null,
+  };
+}
+
 function auth(req, res, next) {
   const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
   const username = verify(token);
@@ -382,20 +420,22 @@ app.post("/api/register", async (req, res) => {
     if (username.length < 3) return res.json({ error: "Nome muito curto" });
     if (password.length < 6) return res.json({ error: "Senha muito curta" });
     if (users.has(username)) {
+      if (!(await userHasProtectedData(username))) {
+        const resetUser = buildUser(
+          username,
+          await bcrypt.hash(password, 10),
+          req.body,
+          users.get(username),
+        );
+        await persistUser(resetUser);
+        return res.json({ ok: true, reset: true, token: sign(username), user: publicUser(username) });
+      }
       return res.json({
-        error: "Esta conta ja existe. Use Entrar com a senha cadastrada.",
+        error: "Esta conta ja existe e possui dados protegidos. Use Entrar ou escolha outro nome.",
       });
     }
 
-    const user = {
-      username,
-      userId: newUserId(),
-      passwordHash: await bcrypt.hash(password, 10),
-      avatar: String(req.body.avatar || ""),
-      publicKey: req.body.publicKey || null,
-      createdAt: Date.now(),
-      lastSeen: null,
-    };
+    const user = buildUser(username, await bcrypt.hash(password, 10), req.body);
 
     await persistUser(user);
     res.json({ ok: true, token: sign(username), user: publicUser(username) });
@@ -440,8 +480,26 @@ app.post("/api/auth", async (req, res) => {
     if (user) {
       const ok = await bcrypt.compare(password, user.passwordHash);
       if (!ok) {
+        if (mode === "register" && !(await userHasProtectedData(username))) {
+          const resetUser = buildUser(
+            username,
+            await bcrypt.hash(password, 10),
+            req.body,
+            user,
+          );
+          await persistUser(resetUser);
+          return res.json({
+            ok: true,
+            created: true,
+            reset: true,
+            token: sign(username),
+            user: publicUser(username),
+          });
+        }
         return res.json({
-          error: "Senha incorreta para esta conta. Para criar outra, escolha outro nome.",
+          error: mode === "register"
+            ? "Este nome ja possui conversas protegidas. Escolha outro nome."
+            : "Senha incorreta para esta conta.",
         });
       }
 
@@ -459,15 +517,7 @@ app.post("/api/auth", async (req, res) => {
       });
     }
 
-    user = {
-      username,
-      userId: newUserId(),
-      passwordHash: await bcrypt.hash(password, 10),
-      avatar: String(req.body.avatar || ""),
-      publicKey: req.body.publicKey || null,
-      createdAt: Date.now(),
-      lastSeen: null,
-    };
+    user = buildUser(username, await bcrypt.hash(password, 10), req.body);
 
     await persistUser(user);
     return res.json({ ok: true, created: true, token: sign(username), user: publicUser(username) });
