@@ -34,6 +34,9 @@
         color: var(--text);
         overflow: hidden;
       }
+      body[data-theme="red"] { --blue: #ff2858; --cyan: #ff8ba5; --violet: #9d1232; }
+      body[data-theme="orange"] { --blue: #ff8a00; --cyan: #ffd166; --violet: #ff4f1f; }
+      body[data-theme="white"] { --bg: #edf6ff; --panel: rgba(235, 247, 255, 0.94); --panel2: rgba(255, 255, 255, 0.9); --text: #061326; --muted: #385675; --blue: #0878ff; --cyan: #0bbde8; --violet: #2455ff; }
       button, input { font: inherit; }
       button { cursor: pointer; }
       .hidden { display: none !important; }
@@ -73,6 +76,26 @@
         font-weight: 950;
         color: #fff;
         text-shadow: 0 4px 14px #001;
+      }
+      .arcaLogo {
+        width: 72%;
+        height: 72%;
+        filter: drop-shadow(0 0 12px rgba(66, 232, 255, 0.9));
+      }
+      .arcaLogo .shield {
+        fill: url(#arcaShield);
+        stroke: #7af2ff;
+        stroke-width: 2.2;
+      }
+      .arcaLogo .core {
+        fill: rgba(1, 12, 28, 0.92);
+        stroke: #ffffff;
+        stroke-width: 1.6;
+      }
+      .arcaLogo .line {
+        stroke: #39dfff;
+        stroke-width: 1.7;
+        stroke-linecap: round;
       }
       h1 {
         margin: 0;
@@ -349,10 +372,20 @@
         border-radius: 18px;
         padding: 12px 14px 24px;
         position: relative;
-        word-break: break-word;
+        word-break: normal;
+        overflow-wrap: break-word;
         border: 1px solid rgba(84, 172, 255, 0.55);
         background: linear-gradient(135deg, rgba(16, 87, 188, 0.94), rgba(5, 63, 150, 0.94));
         box-shadow: 0 0 22px rgba(0, 128, 255, 0.25);
+      }
+      .bubbleText {
+        display: block;
+        white-space: pre-wrap;
+      }
+      .audioMessage {
+        width: min(260px, 58vw);
+        display: block;
+        filter: drop-shadow(0 0 10px rgba(66, 232, 255, 0.25));
       }
       .bubble.them {
         border-color: rgba(168, 82, 255, 0.55);
@@ -409,6 +442,60 @@
         background: #061326;
         padding: 18px;
       }
+      .callOverlay {
+        position: fixed;
+        inset: 0;
+        z-index: 70;
+        display: grid;
+        place-items: center;
+        padding: 18px;
+        background: radial-gradient(circle at 50% 20%, rgba(0, 145, 255, 0.28), transparent 36%), rgba(0, 4, 12, 0.9);
+      }
+      .callCard {
+        width: min(460px, 94vw);
+        border: 1px solid rgba(66, 232, 255, 0.62);
+        border-radius: 28px;
+        padding: 22px;
+        background: linear-gradient(145deg, rgba(8, 29, 56, 0.96), rgba(2, 8, 18, 0.98));
+        box-shadow: 0 0 42px rgba(0, 132, 255, 0.42);
+        text-align: center;
+      }
+      .callVideos {
+        position: relative;
+        min-height: 220px;
+        margin: 14px 0;
+        border-radius: 22px;
+        overflow: hidden;
+        background: #020814;
+        border: 1px solid rgba(75, 159, 255, 0.4);
+      }
+      .callVideos video {
+        width: 100%;
+        height: 100%;
+        min-height: 220px;
+        object-fit: cover;
+        background: #020814;
+      }
+      #localVideo {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        width: 112px;
+        height: 148px;
+        min-height: 0;
+        border-radius: 16px;
+        border: 1px solid rgba(66, 232, 255, 0.72);
+        box-shadow: 0 0 18px rgba(0, 132, 255, 0.5);
+      }
+      .callActions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .danger {
+        border: 1px solid rgba(255, 61, 99, 0.7);
+        background: linear-gradient(135deg, #9d1232, #ff3d63);
+      }
       @media (max-width: 560px) {
         .actions { grid-template-columns: repeat(2, 1fr); }
         .chatHeader { grid-template-columns: 42px 52px 1fr 40px 40px 40px; gap: 6px; }
@@ -419,7 +506,7 @@
   <body>
     <div id="auth" class="auth">
       <div class="authCard">
-        <div class="logoOrb"><div class="logoMark">A</div></div>
+        <div class="logoOrb"><svg class="arcaLogo" viewBox="0 0 80 80" aria-hidden="true"><defs><linearGradient id="arcaShield" x1="16" y1="8" x2="64" y2="72" gradientUnits="userSpaceOnUse"><stop stop-color="#7af2ff"/><stop offset=".45" stop-color="#078cff"/><stop offset="1" stop-color="#6c36ff"/></linearGradient></defs><path class="shield" d="M40 6 65 16v19c0 17-10 29-25 37C25 64 15 52 15 35V16L40 6z"/><path class="core" d="M27 30c0-8 6-14 14-14s14 6 14 14-6 14-14 14h-5l-9 7 2-10a14 14 0 0 1-2-11z"/><path class="line" d="M26 58h28M22 24l-8-4M58 24l8-4M23 44l-8 5M57 44l8 5"/><circle cx="34" cy="30" r="2.3" fill="#42e8ff"/><circle cx="41" cy="30" r="2.3" fill="#42e8ff"/><circle cx="48" cy="30" r="2.3" fill="#42e8ff"/></svg></div>
         <h1>ARCAIDRON</h1>
         <div class="subtitle">CHAT PRIVADO CRIPTOGRAFADO • VOZ • VIDEO</div>
         <div class="tabs">
@@ -460,7 +547,7 @@
 
     <main id="main" class="main hidden">
       <header class="topbar">
-        <div class="logoOrb" style="width:42px;height:42px;margin:0"><div class="logoMark" style="font-size:26px">A</div></div>
+        <div class="logoOrb" style="width:42px;height:42px;margin:0"><svg class="arcaLogo" viewBox="0 0 80 80" aria-hidden="true"><defs><linearGradient id="arcaShieldSmall" x1="16" y1="8" x2="64" y2="72" gradientUnits="userSpaceOnUse"><stop stop-color="#7af2ff"/><stop offset=".45" stop-color="#078cff"/><stop offset="1" stop-color="#6c36ff"/></linearGradient></defs><path fill="url(#arcaShieldSmall)" stroke="#7af2ff" stroke-width="2.2" d="M40 6 65 16v19c0 17-10 29-25 37C25 64 15 52 15 35V16L40 6z"/><path fill="rgba(1,12,28,.92)" stroke="#fff" stroke-width="1.6" d="M27 30c0-8 6-14 14-14s14 6 14 14-6 14-14 14h-5l-9 7 2-10a14 14 0 0 1-2-11z"/><circle cx="34" cy="30" r="2.3" fill="#42e8ff"/><circle cx="41" cy="30" r="2.3" fill="#42e8ff"/><circle cx="48" cy="30" r="2.3" fill="#42e8ff"/></svg></div>
         <div class="brand">ARCAIDRON</div>
         <button id="menuBtn" class="iconBtn" type="button">⋮</button>
       </header>
@@ -496,6 +583,20 @@
       </footer>
     </section>
 
+    <section id="callOverlay" class="callOverlay hidden">
+      <div class="callCard">
+        <img id="callAvatar" class="avatar bigAvatar" style="margin:0 auto 10px" alt="" />
+        <h2 id="callTitle">Chamada</h2>
+        <p id="callStatus" class="small">Conectando...</p>
+        <div id="callVideos" class="callVideos hidden">
+          <video id="remoteVideo" autoplay playsinline></video>
+          <video id="localVideo" autoplay playsinline muted></video>
+        </div>
+        <audio id="remoteAudio" autoplay></audio>
+        <div id="callActions" class="callActions"></div>
+      </div>
+    </section>
+
     <div id="modal" class="modal hidden"><div id="modalCard" class="modalCard"></div></div>
     <div id="toast" class="toast hidden"></div>
 
@@ -524,9 +625,16 @@
         currentRoom: null,
         roomKeys: new Map(),
         pending: [],
+        qrStop: null,
         localStream: null,
         peerConnection: null,
+        callRoom: null,
+        pendingCall: null,
+        pendingIce: [],
+        mediaRecorder: null,
+        audioChunks: [],
       };
+      document.body.dataset.theme = localStorage.getItem("arca_theme") || "blue";
 
       function toast(text) {
         $("toast").textContent = text;
@@ -734,11 +842,23 @@
         $("authError").textContent = "";
       }
 
+      function authErrorText(result) {
+        const text = result?.details ? result.error + " " + result.details : result?.error;
+        if (!text) return "Nao foi possivel entrar.";
+        if (/nao encontrada|não encontrada/i.test(text)) return "Conta nao encontrada. Toque em CRIAR CONTA para cadastrar.";
+        if (/senha/i.test(text)) return "Senha incorreta para esta conta.";
+        return text;
+      }
+
       $("authBtn").onclick = async () => {
         const username = cleanUsername($("username").value);
         const password = $("password").value;
         if (!username || !password) {
           $("authError").textContent = "Digite nome e senha.";
+          return;
+        }
+        if (password.length < 6) {
+          $("authError").textContent = "A senha precisa ter pelo menos 6 numeros ou letras.";
           return;
         }
         localStorage.removeItem("arca_token");
@@ -747,6 +867,8 @@
         state.token = "";
         state.user = null;
         $("authBtn").disabled = true;
+        const originalLabel = $("authBtn").textContent;
+        $("authBtn").textContent = state.mode === "register" ? "CRIANDO..." : "ENTRANDO...";
         $("authError").textContent = "";
         const keys = await tryGetIdentityKeys(username);
         let result;
@@ -757,16 +879,28 @@
             avatar: state.avatar,
             publicKey: keys ? keys.publicJwk : null,
           });
+          if (result.error || !result.token) {
+            const fallback = await authRequest("/api/auth", {
+              mode: state.mode,
+              username,
+              password,
+              avatar: state.avatar,
+              publicKey: keys ? keys.publicJwk : null,
+            });
+            if (fallback?.token && !fallback.error) result = fallback;
+          }
         } catch (err) {
           $("authBtn").disabled = false;
+          $("authBtn").textContent = originalLabel;
           $("authError").textContent = "Nao foi possivel conectar ao servidor.";
           return;
         }
         $("authBtn").disabled = false;
-        if (result.error) {
-          $("authError").textContent = result.details
-            ? result.error + " " + result.details
-            : result.error;
+        $("authBtn").textContent = originalLabel;
+        if (result.error || !result.token) {
+          const message = authErrorText(result);
+          if (/Conta nao encontrada/i.test(message)) setMode("register");
+          $("authError").textContent = message;
           return;
         }
         const user = result.user || {
@@ -949,11 +1083,19 @@
           </div>
           <button class="ghost" style="width:100%;margin-top:14px" onclick="scanFriendQr()">Escanear QR Code</button>
           <video id="qrVideo" class="hidden" playsinline style="width:100%;margin-top:14px;border-radius:18px;border:1px solid rgba(0,160,255,.45);background:#001326"></video>
+          <button id="qrBackBtn" class="ghost hidden" style="width:100%;margin-top:10px" onclick="stopQrScan()">Voltar</button>
+          <button class="ghost" style="width:100%;margin-top:10px" onclick="hideModal()">Fechar</button>
         `);
+      };
+
+      window.stopQrScan = () => {
+        if (state.qrStop) state.qrStop();
+        state.qrStop = null;
       };
 
       window.scanFriendQr = async () => {
         const video = $("qrVideo");
+        const backBtn = $("qrBackBtn");
         if (!navigator.mediaDevices?.getUserMedia || !("BarcodeDetector" in window)) {
           toast("Leitor QR indisponivel neste navegador. Digite o ID.");
           return;
@@ -968,11 +1110,15 @@
             video.srcObject = null;
             video.classList.add("hidden");
           }
+          if (backBtn) backBtn.classList.add("hidden");
+          state.qrStop = null;
         };
         try {
           stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+          state.qrStop = stop;
           video.srcObject = stream;
           video.classList.remove("hidden");
+          if (backBtn) backBtn.classList.remove("hidden");
           await video.play();
           const detector = new BarcodeDetector({ formats: ["qr_code"] });
           timer = setInterval(async () => {
@@ -1042,21 +1188,35 @@
       async function appendMessage(message) {
         if (!state.currentRoom || message.roomId !== state.currentRoom.roomId) return;
         if (document.querySelector(`[data-message-id="${CSS.escape(message.id)}"]`)) return;
-        const mine = message.from === state.user.username;
+        const mine = message.from === state.user.username || message.from === state.user.account;
         const text = await decryptFromRoom(state.currentRoom, message);
         const row = document.createElement("div");
         row.className = "bubbleRow " + (mine ? "mine" : "them");
         row.dataset.messageId = message.id;
         const avatar = !mine ? `<img class="avatar" style="width:34px;height:34px" src="${safe(state.currentRoom.peer.avatar || "")}" alt="">` : "";
+        const content = renderMessageContent(message, text);
         row.innerHTML = `
           ${avatar}
           <div class="bubble ${mine ? "" : "them"}" ondblclick="deleteMessage('${safe(message.id)}')">
-            <span>${safe(text)}</span>
+            ${content}
             <span class="time">${time(message.createdAt)}<span class="seen">${mine ? " ✓" : ""}</span></span>
           </div>
         `;
         $("messageList").appendChild(row);
         $("messageList").scrollTop = $("messageList").scrollHeight;
+      }
+
+      function renderMessageContent(message, text) {
+        if (message.type === "audio") {
+          try {
+            const audio = JSON.parse(text);
+            if (audio?.dataUrl) return `<audio class="audioMessage" controls preload="metadata" src="${safe(audio.dataUrl)}"></audio>`;
+          } catch {}
+        }
+        if (message.type === "file" || text.startsWith("[arquivo:")) {
+          return `<span class="bubbleText">${safe(text.split("] ")[0] + "]")}</span>`;
+        }
+        return `<span class="bubbleText">${safe(text)}</span>`;
       }
 
       $("sendBtn").onclick = sendText;
@@ -1077,16 +1237,20 @@
         const text = $("messageInput").value.trim();
         if (!state.currentRoom) return toast("Abra uma conversa.");
         if (!text) return;
-        const encrypted = await encryptForRoom(state.currentRoom, text);
+        await sendEncryptedMessage("text", text);
+        $("messageInput").value = "";
+      }
+
+      async function sendEncryptedMessage(type, payload) {
+        const encrypted = await encryptForRoom(state.currentRoom, payload);
         const message = {
           id: crypto.randomUUID(),
           roomId: state.currentRoom.roomId,
           from: state.user.username,
-          type: "text",
+          type,
           ...encrypted,
           createdAt: Date.now(),
         };
-        $("messageInput").value = "";
         await appendMessage(message);
         state.socket.emit("message:send", message, (ack) => {
           if (!ack || ack.error) toast(ack?.error || "Falha ao enviar.");
@@ -1117,48 +1281,211 @@
 
       $("recordBtn").onclick = async () => {
         if (!navigator.mediaDevices?.getUserMedia) return toast("Microfone indisponivel.");
-        toast("Gravacao simples: use + para enviar audio/arquivo nesta versao.");
+        if (!window.MediaRecorder) return toast("Gravacao de audio indisponivel neste navegador.");
+        if (!state.currentRoom) return toast("Abra uma conversa.");
+        if (state.mediaRecorder && state.mediaRecorder.state === "recording") {
+          state.mediaRecorder.stop();
+          $("recordBtn").textContent = "🎙";
+          toast("Enviando audio...");
+          return;
+        }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          state.audioChunks = [];
+          state.mediaRecorder = new MediaRecorder(stream);
+          state.mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size) state.audioChunks.push(event.data);
+          };
+          state.mediaRecorder.onstop = async () => {
+            stream.getTracks().forEach((track) => track.stop());
+            const blob = new Blob(state.audioChunks, { type: state.mediaRecorder.mimeType || "audio/webm" });
+            const dataUrl = await fileToDataUrl(blob);
+            await sendEncryptedMessage("audio", JSON.stringify({ kind: "audio", mime: blob.type, dataUrl }));
+            state.audioChunks = [];
+            state.mediaRecorder = null;
+          };
+          state.mediaRecorder.start();
+          $("recordBtn").textContent = "■";
+          toast("Gravando audio... toque no microfone para enviar.");
+        } catch (err) {
+          toast("Permita o microfone para gravar audio.");
+        }
       };
 
       $("audioCallBtn").onclick = () => startCall(false);
       $("videoCallBtn").onclick = () => startCall(true);
 
+      function setCallUi({ title, status, avatar, video, actions }) {
+        $("callTitle").textContent = title || "Chamada";
+        $("callStatus").textContent = status || "Conectando...";
+        setAvatar($("callAvatar"), avatar || state.currentRoom?.peer || state.callRoom?.peer || {}, "A");
+        $("callVideos").classList.toggle("hidden", !video);
+        $("callActions").innerHTML = actions || "";
+        $("callOverlay").classList.remove("hidden");
+      }
+
+      function hideCallUi() {
+        $("callOverlay").classList.add("hidden");
+        $("remoteVideo").srcObject = null;
+        $("localVideo").srcObject = null;
+        $("remoteAudio").srcObject = null;
+        $("callActions").innerHTML = "";
+      }
+
+      function closePeerConnection() {
+        if (state.peerConnection) {
+          state.peerConnection.ontrack = null;
+          state.peerConnection.onicecandidate = null;
+          state.peerConnection.close();
+        }
+        state.peerConnection = null;
+        if (state.localStream) state.localStream.getTracks().forEach((track) => track.stop());
+        state.localStream = null;
+        state.pendingIce = [];
+      }
+
+      window.endCall = (notify = true) => {
+        const roomId = state.callRoom?.roomId || state.currentRoom?.roomId;
+        if (notify && roomId && state.socket) state.socket.emit("call:signal", { roomId, type: "hang" });
+        closePeerConnection();
+        state.callRoom = null;
+        state.pendingCall = null;
+        hideCallUi();
+      };
+
+      function createPeer(room, video) {
+        state.callRoom = room;
+        state.peerConnection = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+        state.peerConnection.onicecandidate = (event) => {
+          if (event.candidate) state.socket.emit("call:signal", { roomId: room.roomId, type: "ice", candidate: event.candidate });
+        };
+        state.peerConnection.ontrack = (event) => {
+          const [stream] = event.streams;
+          if (stream) {
+            $("remoteVideo").srcObject = stream;
+            $("remoteAudio").srcObject = stream;
+          }
+          $("callStatus").textContent = video ? "Video conectado" : "Voz conectada";
+        };
+        state.peerConnection.onconnectionstatechange = () => {
+          const status = state.peerConnection?.connectionState;
+          if (status === "connected") $("callStatus").textContent = video ? "Video conectado" : "Voz conectada";
+          if (["failed", "closed"].includes(status)) window.endCall(false);
+        };
+      }
+
+      async function prepareLocalMedia(video) {
+        state.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video });
+        $("localVideo").srcObject = state.localStream;
+        state.localStream.getTracks().forEach((track) => state.peerConnection.addTrack(track, state.localStream));
+      }
+
       async function startCall(video) {
         if (!state.currentRoom) return;
         if (!navigator.mediaDevices?.getUserMedia) return toast("Camera/microfone indisponivel.");
-        state.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video });
-        state.peerConnection = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-        state.localStream.getTracks().forEach((track) => state.peerConnection.addTrack(track, state.localStream));
-        state.peerConnection.onicecandidate = (event) => {
-          if (event.candidate) state.socket.emit("call:signal", { roomId: state.currentRoom.roomId, type: "ice", candidate: event.candidate });
-        };
-        const offer = await state.peerConnection.createOffer();
-        await state.peerConnection.setLocalDescription(offer);
-        state.socket.emit("call:signal", { roomId: state.currentRoom.roomId, type: "offer", offer, video });
-        toast(video ? "Chamando video..." : "Chamando voz...");
+        try {
+          window.endCall(false);
+          const room = state.currentRoom;
+          setCallUi({
+            title: video ? "Chamando por video" : "Chamando por voz",
+            status: `${room.peer.username} esta sendo chamado...`,
+            avatar: room.peer,
+            video,
+            actions: `<button class="primary danger" onclick="endCall()">Encerrar</button><button class="ghost" onclick="endCall(false)">Fechar</button>`,
+          });
+          createPeer(room, video);
+          await prepareLocalMedia(video);
+          const offer = await state.peerConnection.createOffer();
+          await state.peerConnection.setLocalDescription(offer);
+          state.socket.emit("call:signal", { roomId: room.roomId, type: "offer", offer, video, callId: crypto.randomUUID() });
+        } catch (err) {
+          window.endCall(false);
+          toast(video ? "Nao foi possivel iniciar o video." : "Nao foi possivel iniciar a chamada de voz.");
+        }
       }
 
-      async function handleCallSignal(data) {
-        if (!state.currentRoom || data.roomId !== state.currentRoom.roomId) return;
-        if (data.type === "offer") {
-          if (!confirm(`${data.from} esta chamando. Atender?`)) return;
-          state.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: !!data.video });
-          state.peerConnection = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-          state.localStream.getTracks().forEach((track) => state.peerConnection.addTrack(track, state.localStream));
-          state.peerConnection.onicecandidate = (event) => {
-            if (event.candidate) state.socket.emit("call:signal", { roomId: data.roomId, type: "ice", candidate: event.candidate });
-          };
+      async function roomForSignal(roomId) {
+        let room = state.currentRoom?.roomId === roomId ? state.currentRoom : state.rooms.find((item) => item.roomId === roomId);
+        if (!room) {
+          await refreshRooms();
+          room = state.rooms.find((item) => item.roomId === roomId);
+        }
+        return room;
+      }
+
+      async function answerIncomingCall() {
+        const data = state.pendingCall;
+        if (!data) return;
+        const room = await roomForSignal(data.roomId);
+        if (!room) return toast("Sala da chamada nao encontrada.");
+        try {
+          setCallUi({
+            title: data.video ? "Video em andamento" : "Chamada de voz",
+            status: "Conectando...",
+            avatar: data.fromUser || room.peer,
+            video: !!data.video,
+            actions: `<button class="primary danger" onclick="endCall()">Encerrar</button><button class="ghost" onclick="endCall(false)">Fechar</button>`,
+          });
+          closePeerConnection();
+          createPeer(room, !!data.video);
+          await prepareLocalMedia(!!data.video);
           await state.peerConnection.setRemoteDescription(data.offer);
           const answer = await state.peerConnection.createAnswer();
           await state.peerConnection.setLocalDescription(answer);
           state.socket.emit("call:signal", { roomId: data.roomId, type: "answer", answer });
-          toast("Chamada conectando...");
+          for (const candidate of state.pendingIce.splice(0)) await state.peerConnection.addIceCandidate(candidate).catch(() => {});
+          state.pendingCall = null;
+        } catch (err) {
+          window.endCall();
+          toast("Nao foi possivel atender a chamada.");
+        }
+      }
+
+      window.answerIncomingCall = answerIncomingCall;
+      window.declineIncomingCall = () => {
+        if (state.pendingCall) state.socket.emit("call:signal", { roomId: state.pendingCall.roomId, type: "decline" });
+        state.pendingCall = null;
+        hideCallUi();
+      };
+
+      async function handleCallSignal(data) {
+        if (!data?.roomId || data.from === state.user?.account || data.from === state.user?.username) return;
+        const room = await roomForSignal(data.roomId);
+        if (!room) return;
+        if (data.type === "offer") {
+          if (state.pendingCall?.callId === data.callId) return;
+          state.pendingCall = data;
+          state.callRoom = room;
+          setCallUi({
+            title: data.video ? "Chamada de video" : "Chamada de voz",
+            status: `${data.fromUser?.username || room.peer.username} esta chamando`,
+            avatar: data.fromUser || room.peer,
+            video: false,
+            actions: `<button class="primary" onclick="answerIncomingCall()">Atender</button><button class="primary danger" onclick="declineIncomingCall()">Recusar</button>`,
+          });
+          return;
         }
         if (data.type === "answer" && state.peerConnection) {
           await state.peerConnection.setRemoteDescription(data.answer);
+          $("callStatus").textContent = "Conectado";
+          return;
         }
-        if (data.type === "ice" && state.peerConnection && data.candidate) {
-          await state.peerConnection.addIceCandidate(data.candidate).catch(() => {});
+        if (data.type === "ice" && data.candidate) {
+          if (state.peerConnection?.remoteDescription) {
+            await state.peerConnection.addIceCandidate(data.candidate).catch(() => {});
+          } else {
+            state.pendingIce.push(data.candidate);
+          }
+          return;
+        }
+        if (data.type === "decline") {
+          toast("Chamada recusada.");
+          window.endCall(false);
+          return;
+        }
+        if (data.type === "hang") {
+          toast("Chamada encerrada.");
+          window.endCall(false);
         }
       }
 
@@ -1225,10 +1552,80 @@
       window.showSettings = () => {
         showModal(`
           <h3>Configurações</h3>
-          <button class="ghost" onclick="document.getElementById('photoInput').click()">Atualizar foto</button>
-          <button class="ghost" style="margin-top:10px" onclick="copyId()">Copiar meu ID</button>
-          <button class="ghost" style="margin-top:10px" onclick="logout()">Entrar em outra conta</button>
+          <button class="ghost" onclick="showAccountSettings()">Conta</button>
+          <button class="ghost" style="margin-top:10px" onclick="showPrivacySettings()">Privacidade</button>
+          <button class="ghost" style="margin-top:10px" onclick="showNotificationSettings()">Notificações</button>
+          <button class="ghost" style="margin-top:10px" onclick="showAppearanceSettings()">Aparência</button>
+          <button class="ghost" style="margin-top:10px" onclick="showLanguageSettings()">Idioma</button>
+          <button class="ghost" style="margin-top:10px" onclick="showAboutSettings()">Sobre o ARCAIDRON</button>
+          <button class="primary danger" style="margin-top:14px" onclick="logout()">Entrar em outra conta</button>
         `);
+      };
+
+      window.showAccountSettings = () => showModal(`
+        <h3>Conta</h3>
+        <p class="small">Nome: ${safe(state.user.username)}</p>
+        <p class="small">ID: ${safe(state.user.userId)}</p>
+        <button class="ghost" onclick="document.getElementById('photoInput').click()">Atualizar foto</button>
+        <button class="ghost" style="margin-top:10px" onclick="copyId()">Copiar meu ID</button>
+        <button class="ghost" style="margin-top:10px" onclick="showSettings()">Voltar</button>
+      `);
+
+      window.showPrivacySettings = () => showModal(`
+        <h3>Privacidade</h3>
+        <label class="small"><input type="checkbox" onchange="saveSetting('hideOnline', this.checked)" ${localStorage.getItem("arca_hideOnline") === "true" ? "checked" : ""}> Ocultar online</label><br><br>
+        <label class="small"><input type="checkbox" onchange="saveSetting('hideSeen', this.checked)" ${localStorage.getItem("arca_hideSeen") === "true" ? "checked" : ""}> Ocultar visto</label><br><br>
+        <label class="small"><input type="checkbox" onchange="saveSetting('tempMessages', this.checked)" ${localStorage.getItem("arca_tempMessages") !== "false" ? "checked" : ""}> Mensagens temporarias em 24 horas</label>
+        <button class="ghost" style="margin-top:14px" onclick="showSettings()">Voltar</button>
+      `);
+
+      window.showNotificationSettings = () => showModal(`
+        <h3>Notificações</h3>
+        <label class="small"><input type="checkbox" onchange="saveSetting('sound', this.checked)" ${localStorage.getItem("arca_sound") !== "false" ? "checked" : ""}> Sons de mensagens e chamadas</label><br><br>
+        <label class="small"><input type="checkbox" onchange="saveSetting('vibrate', this.checked)" ${localStorage.getItem("arca_vibrate") !== "false" ? "checked" : ""}> Vibrar no celular</label>
+        <button class="ghost" style="margin-top:14px" onclick="showSettings()">Voltar</button>
+      `);
+
+      window.showAppearanceSettings = () => showModal(`
+        <h3>Aparência</h3>
+        <button class="ghost" onclick="setTheme('blue')">Azul ARCAIDRON</button>
+        <button class="ghost" style="margin-top:10px" onclick="setTheme('red')">Vermelho</button>
+        <button class="ghost" style="margin-top:10px" onclick="setTheme('orange')">Laranja</button>
+        <button class="ghost" style="margin-top:10px" onclick="setTheme('white')">Branco</button>
+        <button class="ghost" style="margin-top:14px" onclick="showSettings()">Voltar</button>
+      `);
+
+      window.showLanguageSettings = () => showModal(`
+        <h3>Idioma</h3>
+        <button class="ghost" onclick="setLanguage('pt-BR')">Português</button>
+        <button class="ghost" style="margin-top:10px" onclick="setLanguage('en')">English</button>
+        <button class="ghost" style="margin-top:10px" onclick="setLanguage('es')">Español</button>
+        <button class="ghost" style="margin-top:10px" onclick="setLanguage('fr')">Français</button>
+        <button class="ghost" style="margin-top:10px" onclick="setLanguage('zh')">中文</button>
+        <button class="ghost" style="margin-top:14px" onclick="showSettings()">Voltar</button>
+      `);
+
+      window.showAboutSettings = () => showModal(`
+        <h3>Sobre o ARCAIDRON</h3>
+        <p class="small">ARCAIDRON e uma rede privada de conversa segura por ID unico, com salas exclusivas entre dois usuarios, mensagens cifradas no aparelho e privacidade como regra principal.</p>
+        <p class="small">Versao: 1.0.0</p>
+        <button class="ghost" style="margin-top:14px" onclick="showSettings()">Voltar</button>
+      `);
+
+      window.saveSetting = (key, value) => {
+        localStorage.setItem("arca_" + key, String(value));
+        toast("Configuracao salva.");
+      };
+
+      window.setTheme = (theme) => {
+        localStorage.setItem("arca_theme", theme);
+        document.body.dataset.theme = theme;
+        toast("Tema aplicado.");
+      };
+
+      window.setLanguage = (language) => {
+        localStorage.setItem("arca_language", language);
+        toast("Idioma salvo.");
       };
 
       $("menuBtn").onclick = showSettings;
@@ -1249,7 +1646,10 @@
         $("modalCard").innerHTML = html;
         $("modal").classList.remove("hidden");
       }
-      window.hideModal = () => $("modal").classList.add("hidden");
+      window.hideModal = () => {
+        stopQrScan();
+        $("modal").classList.add("hidden");
+      };
       $("modal").onclick = (event) => {
         if (event.target === $("modal")) hideModal();
       };

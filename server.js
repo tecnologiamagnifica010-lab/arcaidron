@@ -144,6 +144,8 @@ function authPayload(user, extra = {}) {
 }
 
 function findUsersByLoginName(name) {
+  const raw = String(name || "").trim();
+  if (usersById.has(raw)) return [users.get(usersById.get(raw))].filter(Boolean);
   const clean = cleanUsername(name);
   return [...users.values()].filter((user) => {
     return cleanUsername(user.displayName || user.username) === clean || user.username === clean;
@@ -170,6 +172,13 @@ function resolveUser(value) {
 function ensureSet(map, key) {
   if (!map.has(key)) map.set(key, new Set());
   return map.get(key);
+}
+
+function emitToUser(username, event, payload) {
+  const sockets = socketsByUser.get(username);
+  if (!sockets || !sockets.size) return false;
+  for (const socketId of sockets) io.to(socketId).emit(event, payload);
+  return true;
 }
 
 function isHiddenFor(owner, peerId) {
@@ -736,12 +745,14 @@ io.on("connection", async (socket) => {
   socket.on("call:signal", (data) => {
     const room = rooms.get(String(data.roomId || ""));
     if (!roomHasUser(room, username)) return;
-    socket.to(room.roomId).emit("call:signal", {
+    const payload = {
       ...data,
       roomId: room.roomId,
       from: username,
       fromUser: publicUser(username),
-    });
+    };
+    const peer = peerOf(room, username);
+    emitToUser(peer, "call:signal", payload);
   });
 
   socket.on("disconnect", async () => {
