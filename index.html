@@ -571,7 +571,6 @@
           </div>
         </div>
         <input id="photoInput" type="file" accept="image/*" hidden />
-        <button id="fingerBtn" class="ghost" type="button" style="margin-top:14px">Entrar com impressao digital</button>
         <button id="authBtn" class="primary" type="button">⚡ ENTRAR</button>
         <div class="error" id="authError"></div>
         <p class="small" style="text-align:center">Seus dados ficam protegidos por criptografia de ponta a ponta.</p>
@@ -862,11 +861,13 @@
       $("password").addEventListener("keydown", (event) => {
         if (event.key === "Enter") $("authBtn").click();
       });
-      $("fingerBtn").onclick = async () => {
+      window.activateFingerprint = async () => {
         if (!window.PublicKeyCredential || !state.token) {
           toast("Entre uma vez com senha para ativar acesso rapido neste aparelho.");
           return;
         }
+        localStorage.setItem("arca_fingerprint_enabled", "true");
+        toast("Acesso por digital ativado neste aparelho.");
         await boot();
       };
 
@@ -1674,6 +1675,7 @@
           <button class="ghost" style="margin-top:10px" onclick="showAppearanceSettings()">Aparência</button>
           <button class="ghost" style="margin-top:10px" onclick="showLanguageSettings()">Idioma</button>
           <button class="ghost" style="margin-top:10px" onclick="showAboutSettings()">Sobre o ARCAIDRON</button>
+          <button class="ghost" style="margin-top:10px" onclick="activateFingerprint()">Ativar digital</button>
           <button class="primary danger" style="margin-top:14px" onclick="logout()">Entrar em outra conta</button>
         `);
       };
@@ -1684,6 +1686,7 @@
         <p class="small">ID: ${safe(state.user.userId)}</p>
         <button class="ghost" onclick="document.getElementById('photoInput').click()">Atualizar foto</button>
         <button class="ghost" style="margin-top:10px" onclick="copyId()">Copiar meu ID</button>
+        <button class="ghost" style="margin-top:10px" onclick="activateFingerprint()">Ativar digital neste aparelho</button>
         <button class="ghost" style="margin-top:10px" onclick="showSettings()">Voltar</button>
       `);
 
