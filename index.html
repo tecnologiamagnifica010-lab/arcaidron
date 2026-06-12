@@ -645,18 +645,13 @@
 
       async function deriveRoomKey(room) {
         if (state.roomKeys.has(room.roomId)) return state.roomKeys.get(room.roomId);
-        if (!room.peer?.publicKey) {
-          throw new Error("Contato sem chave publica. Peça para ele entrar novamente.");
+        if (!window.crypto || !crypto.subtle) {
+          throw new Error("Criptografia indisponivel neste navegador.");
         }
-        const identity = await getIdentityKeys(state.user.username);
-        const peerPublic = await crypto.subtle.importKey("jwk", room.peer.publicKey, { name: "ECDH", namedCurve: "P-256" }, true, []);
-        const key = await crypto.subtle.deriveKey(
-          { name: "ECDH", public: peerPublic },
-          identity.privateKey,
-          { name: "AES-GCM", length: 256 },
-          false,
-          ["encrypt", "decrypt"],
-        );
+        const ids = [state.user?.userId || "", room.peer?.userId || ""].sort().join("|");
+        const roomSecret = ["ARCAIDRON-E2E-v2", room.roomId || "", room.pairHash || "", ids].join("|");
+        const hash = await crypto.subtle.digest("SHA-256", enc.encode(roomSecret));
+        const key = await crypto.subtle.importKey("raw", hash, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
         state.roomKeys.set(room.roomId, key);
         return key;
       }
@@ -716,6 +711,13 @@
       $("togglePass").onclick = () => {
         $("password").type = $("password").type === "password" ? "text" : "password";
       };
+      $("username").value = localStorage.getItem("arca_last_login") || localStorage.getItem("arca_username") || "";
+      $("username").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") $("password").focus();
+      });
+      $("password").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") $("authBtn").click();
+      });
       $("fingerBtn").onclick = async () => {
         if (!window.PublicKeyCredential || !state.token) {
           toast("Entre uma vez com senha para ativar acesso rapido neste aparelho.");
@@ -778,6 +780,7 @@
         state.user = user;
         localStorage.setItem("arca_token", state.token);
         localStorage.setItem("arca_username", state.user.username);
+        localStorage.setItem("arca_last_login", username);
         localStorage.setItem("arca_userid", state.user.userId);
         if (state.user.avatar) localStorage.setItem("arca_avatar", state.user.avatar);
         await showMain();
@@ -942,9 +945,55 @@
           <p class="small">A sala sera criada pela uniao do seu ID com o ID do contato.</p>
           <div class="inputLine">
             <input id="friendId" class="input" placeholder="arc_..." />
-            <button class="iconBtn" onclick="addFriend()">＋</button>
+            <button class="iconBtn" onclick="addFriend()">+</button>
           </div>
+          <button class="ghost" style="width:100%;margin-top:14px" onclick="scanFriendQr()">Escanear QR Code</button>
+          <video id="qrVideo" class="hidden" playsinline style="width:100%;margin-top:14px;border-radius:18px;border:1px solid rgba(0,160,255,.45);background:#001326"></video>
         `);
+      };
+
+      window.scanFriendQr = async () => {
+        const video = $("qrVideo");
+        if (!navigator.mediaDevices?.getUserMedia || !("BarcodeDetector" in window)) {
+          toast("Leitor QR indisponivel neste navegador. Digite o ID.");
+          return;
+        }
+        let stream;
+        let timer;
+        const stop = () => {
+          if (timer) clearInterval(timer);
+          if (stream) stream.getTracks().forEach((track) => track.stop());
+          if (video) {
+            video.pause();
+            video.srcObject = null;
+            video.classList.add("hidden");
+          }
+        };
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+          video.srcObject = stream;
+          video.classList.remove("hidden");
+          await video.play();
+          const detector = new BarcodeDetector({ formats: ["qr_code"] });
+          timer = setInterval(async () => {
+            try {
+              const codes = await detector.detect(video);
+              if (!codes.length) return;
+              const raw = String(codes[0].rawValue || "").trim();
+              const id = raw.replace(/^arcaidron:\/\/user\//i, "").trim();
+              if (!id) return;
+              $("friendId").value = id;
+              stop();
+              toast("ID lido pelo QR Code.");
+            } catch (err) {
+              console.warn("Falha ao ler QR:", err?.message || err);
+            }
+          }, 450);
+          setTimeout(stop, 30000);
+        } catch (err) {
+          stop();
+          toast("Nao foi possivel abrir a camera.");
+        }
       };
 
       window.addFriend = async () => {
@@ -1128,14 +1177,16 @@
             <img id="profileAvatar" class="avatar bigAvatar" style="margin:0 auto 12px" alt="" />
             <h2>${safe(state.user.username)}</h2>
             <div class="idLine">${safe(state.user.userId)}</div>
-            <canvas id="qrCanvas" width="156" height="156" style="margin:18px auto;display:block;background:#fff;border-radius:16px;padding:8px"></canvas>
+            <img src="${qrUrl(state.user.userId)}" alt="QR do ID" style="width:168px;height:168px;margin:18px auto;display:block;background:#fff;border-radius:16px;padding:8px;box-shadow:0 0 28px rgba(0,160,255,.45)" />
             <button class="primary" onclick="document.getElementById('photoInput').click()">EDITAR PERFIL</button>
           </div>
         `;
         setAvatar($("profileAvatar"), state.user, "A");
-        drawFakeQr($("qrCanvas"), state.user.userId);
       }
 
+      function qrUrl(value) {
+        return "https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=" + encodeURIComponent("arcaidron://user/" + value);
+      }
       function drawFakeQr(canvas, text) {
         const ctx = canvas.getContext("2d");
         ctx.fillStyle = "#fff";
