@@ -387,6 +387,39 @@
         display: block;
         filter: drop-shadow(0 0 10px rgba(66, 232, 255, 0.25));
       }
+      .replyQuote {
+        display: block;
+        margin: 0 0 8px;
+        padding: 8px 10px;
+        border-left: 3px solid var(--cyan);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.2);
+        color: #cfe6ff;
+        font-size: 12px;
+      }
+      .replyBar {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: 1fr 38px;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 10px;
+        border: 1px solid rgba(66, 232, 255, 0.36);
+        border-radius: 14px;
+        background: rgba(6, 22, 42, 0.96);
+        color: #cfe6ff;
+        font-size: 13px;
+      }
+      .replyBtn {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        border: 0;
+        background: transparent;
+        color: #cfe6ff;
+        font-size: 17px;
+      }
+      .bubble.them .replyBtn { right: 8px; }
       .bubble.them {
         border-color: rgba(168, 82, 255, 0.55);
         background: linear-gradient(135deg, rgba(42, 22, 74, 0.94), rgba(21, 15, 45, 0.94));
@@ -575,6 +608,7 @@
       </header>
       <div id="messageList" class="chatList"></div>
       <footer class="composer">
+        <div id="replyBar" class="replyBar hidden"><span id="replyText"></span><button class="iconBtn" type="button" onclick="cancelReply()">×</button></div>
         <button id="attachBtn" class="iconBtn" type="button">＋</button>
         <input id="messageInput" class="messageInput" placeholder="Mensagem..." />
         <button id="recordBtn" class="iconBtn" type="button">🎙</button>
@@ -633,6 +667,8 @@
         pendingIce: [],
         mediaRecorder: null,
         audioChunks: [],
+        replyDraft: null,
+        pendingAudio: null,
       };
       document.body.dataset.theme = localStorage.getItem("arca_theme") || "blue";
 
@@ -1190,34 +1226,71 @@
         if (document.querySelector(`[data-message-id="${CSS.escape(message.id)}"]`)) return;
         const mine = message.from === state.user.username || message.from === state.user.account;
         const text = await decryptFromRoom(state.currentRoom, message);
+        const parsed = parseMessagePayload(message, text);
         const row = document.createElement("div");
         row.className = "bubbleRow " + (mine ? "mine" : "them");
         row.dataset.messageId = message.id;
         const avatar = !mine ? `<img class="avatar" style="width:34px;height:34px" src="${safe(state.currentRoom.peer.avatar || "")}" alt="">` : "";
-        const content = renderMessageContent(message, text);
+        const content = renderMessageContent(message, parsed);
         row.innerHTML = `
           ${avatar}
           <div class="bubble ${mine ? "" : "them"}" ondblclick="deleteMessage('${safe(message.id)}')">
+            <button class="replyBtn" type="button" onclick="startReply('${safe(message.id)}')">↩</button>
             ${content}
             <span class="time">${time(message.createdAt)}<span class="seen">${mine ? " ✓" : ""}</span></span>
           </div>
         `;
+        row._replyText = parsed.text || "Audio";
+        row._replyFrom = mine ? "Voce" : state.currentRoom.peer.username;
         $("messageList").appendChild(row);
         $("messageList").scrollTop = $("messageList").scrollHeight;
       }
 
-      function renderMessageContent(message, text) {
-        if (message.type === "audio") {
-          try {
-            const audio = JSON.parse(text);
-            if (audio?.dataUrl) return `<audio class="audioMessage" controls preload="metadata" src="${safe(audio.dataUrl)}"></audio>`;
-          } catch {}
-        }
-        if (message.type === "file" || text.startsWith("[arquivo:")) {
-          return `<span class="bubbleText">${safe(text.split("] ")[0] + "]")}</span>`;
-        }
-        return `<span class="bubbleText">${safe(text)}</span>`;
+      function parseMessagePayload(message, text) {
+        try {
+          const data = JSON.parse(text);
+          if (data && typeof data === "object" && data.kind) {
+            return {
+              kind: data.kind,
+              text: data.text || "",
+              dataUrl: data.dataUrl || "",
+              mime: data.mime || "",
+              reply: data.reply || null,
+            };
+          }
+        } catch {}
+        return { kind: message.type || "text", text, dataUrl: "", mime: "", reply: null };
       }
+
+      function renderMessageContent(message, parsed) {
+        const quote = parsed.reply
+          ? `<span class="replyQuote"><strong>${safe(parsed.reply.from || "Mensagem")}</strong><br>${safe(parsed.reply.text || "")}</span>`
+          : "";
+        if (message.type === "audio") {
+          if (parsed.dataUrl) return `${quote}<audio class="audioMessage" controls preload="metadata" src="${safe(parsed.dataUrl)}"></audio>`;
+        }
+        if (message.type === "file" || parsed.text.startsWith("[arquivo:")) {
+          return `${quote}<span class="bubbleText">${safe(parsed.text.split("] ")[0] + "]")}</span>`;
+        }
+        return `${quote}<span class="bubbleText">${safe(parsed.text)}</span>`;
+      }
+
+      window.startReply = (id) => {
+        const row = document.querySelector(`[data-message-id="${CSS.escape(id)}"]`);
+        if (!row) return;
+        const text = String(row._replyText || "Mensagem").slice(0, 140);
+        const from = String(row._replyFrom || "Contato");
+        state.replyDraft = { id, text, from };
+        $("replyText").innerHTML = `<strong>Respondendo ${safe(from)}</strong><br>${safe(text)}`;
+        $("replyBar").classList.remove("hidden");
+        $("messageInput").focus();
+      };
+
+      window.cancelReply = () => {
+        state.replyDraft = null;
+        $("replyBar").classList.add("hidden");
+        $("replyText").textContent = "";
+      };
 
       $("sendBtn").onclick = sendText;
       $("messageInput").onkeydown = (event) => {
@@ -1237,8 +1310,9 @@
         const text = $("messageInput").value.trim();
         if (!state.currentRoom) return toast("Abra uma conversa.");
         if (!text) return;
-        await sendEncryptedMessage("text", text);
+        await sendEncryptedMessage("text", buildMessagePayload("text", { text }));
         $("messageInput").value = "";
+        cancelReply();
       }
 
       async function sendEncryptedMessage(type, payload) {
@@ -1248,12 +1322,21 @@
           roomId: state.currentRoom.roomId,
           from: state.user.username,
           type,
+          replyTo: state.replyDraft?.id || "",
           ...encrypted,
           createdAt: Date.now(),
         };
         await appendMessage(message);
         state.socket.emit("message:send", message, (ack) => {
           if (!ack || ack.error) toast(ack?.error || "Falha ao enviar.");
+        });
+      }
+
+      function buildMessagePayload(kind, data = {}) {
+        return JSON.stringify({
+          kind,
+          ...data,
+          reply: state.replyDraft ? { ...state.replyDraft } : null,
         });
       }
 
@@ -1266,6 +1349,7 @@
       $("backBtn").onclick = () => {
         $("chat").classList.add("hidden");
         state.currentRoom = null;
+        cancelReply();
         refreshRooms().then(() => renderHome("chats"));
       };
 
@@ -1274,8 +1358,8 @@
         const file = event.target.files[0];
         if (!file) return;
         const dataUrl = await fileToDataUrl(file);
-        $("messageInput").value = `[arquivo:${file.name}] ${dataUrl}`;
-        await sendText();
+        await sendEncryptedMessage("file", buildMessagePayload("file", { text: `[arquivo:${file.name}]`, dataUrl, mime: file.type || "" }));
+        cancelReply();
         event.target.value = "";
       };
 
@@ -1286,7 +1370,7 @@
         if (state.mediaRecorder && state.mediaRecorder.state === "recording") {
           state.mediaRecorder.stop();
           $("recordBtn").textContent = "🎙";
-          toast("Enviando audio...");
+          toast("Audio gravado. Escute antes de enviar.");
           return;
         }
         try {
@@ -1300,9 +1384,10 @@
             stream.getTracks().forEach((track) => track.stop());
             const blob = new Blob(state.audioChunks, { type: state.mediaRecorder.mimeType || "audio/webm" });
             const dataUrl = await fileToDataUrl(blob);
-            await sendEncryptedMessage("audio", JSON.stringify({ kind: "audio", mime: blob.type, dataUrl }));
+            state.pendingAudio = { mime: blob.type, dataUrl };
             state.audioChunks = [];
             state.mediaRecorder = null;
+            showAudioPreview();
           };
           state.mediaRecorder.start();
           $("recordBtn").textContent = "■";
@@ -1310,6 +1395,37 @@
         } catch (err) {
           toast("Permita o microfone para gravar audio.");
         }
+      };
+
+      function showAudioPreview() {
+        if (!state.pendingAudio) return;
+        showModal(`
+          <h3>Prévia do áudio</h3>
+          <p class="small">Escute antes de enviar.</p>
+          <audio class="audioMessage" style="width:100%;margin:14px 0" controls preload="metadata" src="${safe(state.pendingAudio.dataUrl)}"></audio>
+          <div class="callActions">
+            <button class="primary" onclick="sendPendingAudio()">Enviar</button>
+            <button class="primary danger" onclick="cancelPendingAudio()">Cancelar</button>
+          </div>
+        `);
+      }
+
+      window.sendPendingAudio = async () => {
+        if (!state.pendingAudio) return;
+        await sendEncryptedMessage("audio", buildMessagePayload("audio", {
+          text: "Audio",
+          mime: state.pendingAudio.mime,
+          dataUrl: state.pendingAudio.dataUrl,
+        }));
+        state.pendingAudio = null;
+        cancelReply();
+        hideModal();
+      };
+
+      window.cancelPendingAudio = () => {
+        state.pendingAudio = null;
+        hideModal();
+        toast("Audio cancelado.");
       };
 
       $("audioCallBtn").onclick = () => startCall(false);
