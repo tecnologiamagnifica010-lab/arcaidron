@@ -1009,7 +1009,7 @@
         });
         state.socket.on("message:deleted", ({ id }) => {
           const row = document.querySelector(`[data-message-id="${CSS.escape(id)}"] .bubble`);
-          if (row) row.firstChild.textContent = "Mensagem apagada";
+          if (row) row.innerHTML = `<span class="bubbleText">Mensagem apagada</span>`;
         });
         state.socket.on("message:seen", ({ id }) => {
           const marker = document.querySelector(`[data-message-id="${CSS.escape(id)}"] .seen`);
@@ -1218,8 +1218,20 @@
 
       async function renderMessages(messages) {
         $("messageList").innerHTML = `<div class="dayPill">Hoje</div>`;
-        for (const message of messages) await appendMessage(message);
+        const visibleMessages = messages.filter((message) => !isLocallyCleared(message));
+        for (const message of visibleMessages) await appendMessage(message);
         $("messageList").scrollTop = $("messageList").scrollHeight;
+      }
+
+      function clearKey(roomId = state.currentRoom?.roomId) {
+        const userId = state.user?.userId || state.user?.username || "local";
+        return "arca_clear_" + userId + "_" + roomId;
+      }
+
+      function isLocallyCleared(message) {
+        if (!message?.roomId) return false;
+        const clearedAt = Number(localStorage.getItem(clearKey(message.roomId)) || 0);
+        return clearedAt && Number(message.createdAt || 0) <= clearedAt;
       }
 
       async function appendMessage(message) {
@@ -1235,8 +1247,8 @@
         const content = renderMessageContent(message, parsed);
         row.innerHTML = `
           ${avatar}
-          <div class="bubble ${mine ? "" : "them"}" ondblclick="deleteMessage('${safe(message.id)}')">
-            <button class="replyBtn" type="button" onclick="startReply('${safe(message.id)}')">↩</button>
+          <div class="bubble ${mine ? "" : "them"}" onclick="showMessageActions('${safe(message.id)}')">
+            <button class="replyBtn" type="button" onclick="event.stopPropagation(); startReply('${safe(message.id)}')">↩</button>
             ${content}
             <span class="time">${time(message.createdAt)}<span class="seen">${mine ? " ✓" : ""}</span></span>
           </div>
@@ -1293,6 +1305,18 @@
         $("replyText").textContent = "";
       };
 
+      window.showMessageActions = (id) => {
+        const row = document.querySelector(`[data-message-id="${CSS.escape(id)}"]`);
+        if (!row) return;
+        showModal(`
+          <h3>Mensagem</h3>
+          <p class="small">${safe(String(row._replyText || "Mensagem").slice(0, 120))}</p>
+          <button class="ghost" onclick="startReply('${safe(id)}'); hideModal()">Responder</button>
+          <button class="primary danger" style="margin-top:10px" onclick="deleteMessage('${safe(id)}')">Apagar para todos</button>
+          <button class="ghost" style="margin-top:10px" onclick="hideModal()">Fechar</button>
+        `);
+      };
+
       $("sendBtn").onclick = sendText;
       $("messageInput").onkeydown = (event) => {
         if (event.key === "Enter") sendText();
@@ -1345,6 +1369,7 @@
         if (!state.currentRoom) return;
         if (!confirm("Apagar esta mensagem para todos?")) return;
         state.socket.emit("message:delete", { roomId: state.currentRoom.roomId, id });
+        hideModal();
       };
 
       $("backBtn").onclick = () => {
@@ -1757,8 +1782,10 @@
       };
 
       window.clearChatLocal = () => {
+        if (state.currentRoom) localStorage.setItem(clearKey(), String(Date.now()));
         $("messageList").innerHTML = `<div class="dayPill">Hoje</div>`;
         hideModal();
+        toast("Mensagens apagadas desta tela.");
       };
 
       function showModal(html) {

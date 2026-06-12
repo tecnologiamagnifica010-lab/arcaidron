@@ -728,7 +728,7 @@ io.on("connection", async (socket) => {
     const room = rooms.get(String(roomId || ""));
     if (!roomHasUser(room, username)) return;
     const message = room.messages.find((item) => item.id === id);
-    if (!message || message.from !== username) return;
+    if (!message) return;
     message.deleted = true;
     message.cipher = "";
     message.iv = "";
