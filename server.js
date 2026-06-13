@@ -702,10 +702,13 @@ io.on("connection", async (socket) => {
 
     if (!room.messages.some((item) => item.id === message.id)) {
       room.messages.push(message);
-      await persistMessage(message);
+      persistMessage(message).catch((err) => {
+        console.error("Erro ao salvar mensagem:", err);
+      });
     }
 
     io.to(room.roomId).emit("message:new", message);
+    emitToUser(peerOf(room, username), "message:new", message);
     if (typeof ack === "function") ack({ ok: true, id: message.id });
   });
 

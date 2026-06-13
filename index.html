@@ -668,6 +668,7 @@
         audioChunks: [],
         replyDraft: null,
         pendingAudio: null,
+        roomsRefreshTimer: null,
       };
       document.body.dataset.theme = localStorage.getItem("arca_theme") || "blue";
 
@@ -990,7 +991,16 @@
 
       function connectSocket() {
         if (state.socket) state.socket.disconnect();
-        state.socket = io({ auth: { token: state.token }, transports: ["websocket", "polling"], reconnection: true });
+        state.socket = io({
+          auth: { token: state.token },
+          transports: ["websocket", "polling"],
+          upgrade: true,
+          rememberUpgrade: true,
+          reconnection: true,
+          reconnectionDelay: 300,
+          reconnectionDelayMax: 1600,
+          timeout: 6000,
+        });
         state.socket.on("connect", () => {
           if (state.currentRoom) joinRoom(state.currentRoom);
         });
@@ -1001,11 +1011,11 @@
         state.socket.on("message:new", async (message) => {
           if (state.currentRoom && message.roomId === state.currentRoom.roomId) {
             await appendMessage(message);
-            if (message.from !== state.user.username) {
+            if (message.from !== state.user.username && message.from !== state.user.account) {
               state.socket.emit("message:seen", { roomId: message.roomId, id: message.id });
             }
           }
-          refreshRooms();
+          scheduleRoomsRefresh();
         });
         state.socket.on("message:deleted", ({ id }) => {
           const row = document.querySelector(`[data-message-id="${CSS.escape(id)}"] .bubble`);
@@ -1031,6 +1041,13 @@
         if (result.error) return toast(result.error);
         state.rooms = result.rooms || [];
         if (result.user) state.user = result.user;
+      }
+
+      function scheduleRoomsRefresh() {
+        clearTimeout(state.roomsRefreshTimer);
+        state.roomsRefreshTimer = setTimeout(() => {
+          refreshRooms().catch(() => {});
+        }, 500);
       }
 
       function renderHome(section = "home") {
@@ -1323,10 +1340,10 @@
       };
       $("messageInput").oninput = () => {
         if (state.currentRoom && state.socket) {
-          state.socket.emit("typing", { roomId: state.currentRoom.roomId, typing: true });
+          state.socket.volatile.emit("typing", { roomId: state.currentRoom.roomId, typing: true });
           clearTimeout($("messageInput").typingTimer);
           $("messageInput").typingTimer = setTimeout(() => {
-            state.socket.emit("typing", { roomId: state.currentRoom.roomId, typing: false });
+            state.socket.volatile.emit("typing", { roomId: state.currentRoom.roomId, typing: false });
           }, 700);
         }
       };
@@ -1352,8 +1369,8 @@
           createdAt: Date.now(),
         };
         await appendMessage(message);
-        state.socket.emit("message:send", message, (ack) => {
-          if (!ack || ack.error) toast(ack?.error || "Falha ao enviar.");
+        state.socket.timeout(7000).emit("message:send", message, (err, ack) => {
+          if (err || !ack || ack.error) toast(ack?.error || "Falha ao confirmar envio. A mensagem sera reenviada ao reconectar.");
         });
       }
 
