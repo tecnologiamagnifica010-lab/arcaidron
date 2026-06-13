@@ -664,6 +664,8 @@
         callRoom: null,
         pendingCall: null,
         pendingIce: [],
+        callRetryTimer: null,
+        activeCallId: "",
         mediaRecorder: null,
         audioChunks: [],
         replyDraft: null,
@@ -1492,6 +1494,9 @@
       }
 
       function closePeerConnection() {
+        if (state.callRetryTimer) clearInterval(state.callRetryTimer);
+        state.callRetryTimer = null;
+        state.activeCallId = "";
         if (state.peerConnection) {
           state.peerConnection.ontrack = null;
           state.peerConnection.onicecandidate = null;
@@ -1505,7 +1510,7 @@
 
       window.endCall = (notify = true) => {
         const roomId = state.callRoom?.roomId || state.currentRoom?.roomId;
-        if (notify && roomId && state.socket) state.socket.emit("call:signal", { roomId, type: "hang" });
+        if (notify && roomId && state.socket) emitCallSignal({ roomId, type: "hang", callId: state.activeCallId || state.pendingCall?.callId || "" });
         closePeerConnection();
         state.callRoom = null;
         state.pendingCall = null;
@@ -1514,9 +1519,18 @@
 
       function createPeer(room, video) {
         state.callRoom = room;
-        state.peerConnection = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+        state.peerConnection = new RTCPeerConnection({
+          iceServers: [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
+            { urls: "stun:stun2.l.google.com:19302" },
+          ],
+          bundlePolicy: "max-bundle",
+          rtcpMuxPolicy: "require",
+          iceCandidatePoolSize: 4,
+        });
         state.peerConnection.onicecandidate = (event) => {
-          if (event.candidate) state.socket.emit("call:signal", { roomId: room.roomId, type: "ice", candidate: event.candidate });
+          if (event.candidate) emitCallSignal({ roomId: room.roomId, type: "ice", candidate: event.candidate, callId: state.activeCallId || state.pendingCall?.callId || "" });
         };
         state.peerConnection.ontrack = (event) => {
           const [stream] = event.streams;
@@ -1534,9 +1548,39 @@
       }
 
       async function prepareLocalMedia(video) {
-        state.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video });
+        state.localStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          video: video ? { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } } : false,
+        });
         $("localVideo").srcObject = state.localStream;
         state.localStream.getTracks().forEach((track) => state.peerConnection.addTrack(track, state.localStream));
+      }
+
+      function emitCallSignal(payload, callback) {
+        if (!state.socket?.connected) {
+          toast("Reconectando chamada...");
+          state.socket?.connect();
+        }
+        state.socket.timeout(5000).emit("call:signal", payload, (err, ack) => {
+          if (callback) callback(err, ack);
+        });
+      }
+
+      function startOfferRetry(payload) {
+        if (state.callRetryTimer) clearInterval(state.callRetryTimer);
+        let attempts = 0;
+        const sendOffer = () => {
+          attempts += 1;
+          emitCallSignal(payload, (err, ack) => {
+            if (!err && ack?.delivered) $("callStatus").textContent = "Chamando...";
+          });
+          if (attempts >= 5) {
+            clearInterval(state.callRetryTimer);
+            state.callRetryTimer = null;
+          }
+        };
+        sendOffer();
+        state.callRetryTimer = setInterval(sendOffer, 1200);
       }
 
       async function startCall(video) {
@@ -1556,7 +1600,8 @@
           await prepareLocalMedia(video);
           const offer = await state.peerConnection.createOffer();
           await state.peerConnection.setLocalDescription(offer);
-          state.socket.emit("call:signal", { roomId: room.roomId, type: "offer", offer, video, callId: crypto.randomUUID() });
+          state.activeCallId = crypto.randomUUID();
+          startOfferRetry({ roomId: room.roomId, type: "offer", offer, video, callId: state.activeCallId });
         } catch (err) {
           window.endCall(false);
           toast(video ? "Nao foi possivel iniciar o video." : "Nao foi possivel iniciar a chamada de voz.");
@@ -1591,7 +1636,7 @@
           await state.peerConnection.setRemoteDescription(data.offer);
           const answer = await state.peerConnection.createAnswer();
           await state.peerConnection.setLocalDescription(answer);
-          state.socket.emit("call:signal", { roomId: data.roomId, type: "answer", answer });
+          emitCallSignal({ roomId: data.roomId, type: "answer", answer, callId: data.callId || "" });
           for (const candidate of state.pendingIce.splice(0)) await state.peerConnection.addIceCandidate(candidate).catch(() => {});
           state.pendingCall = null;
         } catch (err) {
@@ -1602,7 +1647,7 @@
 
       window.answerIncomingCall = answerIncomingCall;
       window.declineIncomingCall = () => {
-        if (state.pendingCall) state.socket.emit("call:signal", { roomId: state.pendingCall.roomId, type: "decline" });
+        if (state.pendingCall) emitCallSignal({ roomId: state.pendingCall.roomId, type: "decline", callId: state.pendingCall.callId || "" });
         state.pendingCall = null;
         hideCallUi();
       };
@@ -1613,7 +1658,9 @@
         if (!room) return;
         if (data.type === "offer") {
           if (state.pendingCall?.callId === data.callId) return;
+          if (state.peerConnection && state.activeCallId === data.callId) return;
           state.pendingCall = data;
+          state.activeCallId = data.callId || "";
           state.callRoom = room;
           setCallUi({
             title: data.video ? "Chamada de video" : "Chamada de voz",
@@ -1625,6 +1672,8 @@
           return;
         }
         if (data.type === "answer" && state.peerConnection) {
+          if (state.callRetryTimer) clearInterval(state.callRetryTimer);
+          state.callRetryTimer = null;
           await state.peerConnection.setRemoteDescription(data.answer);
           $("callStatus").textContent = "Conectado";
           return;
@@ -1638,6 +1687,8 @@
           return;
         }
         if (data.type === "decline") {
+          if (state.callRetryTimer) clearInterval(state.callRetryTimer);
+          state.callRetryTimer = null;
           toast("Chamada recusada.");
           window.endCall(false);
           return;

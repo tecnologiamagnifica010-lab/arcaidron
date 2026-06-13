@@ -745,9 +745,12 @@ io.on("connection", async (socket) => {
     socket.to(room.roomId).emit("typing", { roomId: room.roomId, username, typing: !!typing });
   });
 
-  socket.on("call:signal", (data) => {
+  socket.on("call:signal", (data, ack) => {
     const room = rooms.get(String(data.roomId || ""));
-    if (!roomHasUser(room, username)) return;
+    if (!roomHasUser(room, username)) {
+      if (typeof ack === "function") ack({ error: "Sala invalida" });
+      return;
+    }
     const payload = {
       ...data,
       roomId: room.roomId,
@@ -755,7 +758,8 @@ io.on("connection", async (socket) => {
       fromUser: publicUser(username),
     };
     const peer = peerOf(room, username);
-    emitToUser(peer, "call:signal", payload);
+    const delivered = emitToUser(peer, "call:signal", payload);
+    if (typeof ack === "function") ack({ ok: true, delivered });
   });
 
   socket.on("disconnect", async () => {
