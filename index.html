@@ -622,7 +622,7 @@
         <h2 id="callTitle">Chamada</h2>
         <p id="callStatus" class="small">Conectando...</p>
         <div id="callVideos" class="callVideos hidden">
-          <video id="remoteVideo" autoplay playsinline></video>
+          <video id="remoteVideo" autoplay playsinline muted></video>
           <video id="localVideo" autoplay playsinline muted></video>
         </div>
         <audio id="remoteAudio" autoplay></audio>
@@ -1562,8 +1562,14 @@
         state.peerConnection.ontrack = (event) => {
           const [stream] = event.streams;
           if (stream) {
-            $("remoteVideo").srcObject = stream;
-            $("remoteAudio").srcObject = stream;
+            if (event.track.kind === "video") {
+              $("remoteVideo").srcObject = stream;
+              $("remoteVideo").play().catch(() => {});
+            }
+            if (event.track.kind === "audio") {
+              $("remoteAudio").srcObject = stream;
+              $("remoteAudio").play().catch(() => toast("Toque na tela para liberar o audio da chamada."));
+            }
           }
           $("callStatus").textContent = video ? "Video conectado" : "Voz conectada";
         };
@@ -1582,9 +1588,9 @@
         const videoTrack = state.localStream?.getVideoTracks?.()[0];
         if (videoTrack?.applyConstraints) {
           await videoTrack.applyConstraints({
-            width: { ideal: 360, max: 480 },
-            height: { ideal: 270, max: 360 },
-            frameRate: { ideal: 15, max: 18 },
+            width: { ideal: 480, max: 640 },
+            height: { ideal: 360, max: 480 },
+            frameRate: { ideal: 18, max: 20 },
           }).catch(() => {});
         }
         const sender = state.peerConnection?.getSenders?.().find((item) => item.track?.kind === "video");
@@ -1592,22 +1598,31 @@
         const params = sender.getParameters();
         params.encodings = params.encodings && params.encodings.length ? params.encodings : [{}];
         params.degradationPreference = "maintain-framerate";
-        params.encodings[0].maxBitrate = 260000;
-        params.encodings[0].maxFramerate = 15;
-        params.encodings[0].scaleResolutionDownBy = 1.6;
+        params.encodings[0].maxBitrate = 420000;
+        params.encodings[0].maxFramerate = 18;
+        params.encodings[0].scaleResolutionDownBy = 1.2;
         await sender.setParameters(params).catch(() => {});
+      }
+
+      async function flushPendingIce() {
+        if (!state.peerConnection?.remoteDescription) return;
+        const pending = state.pendingIce.splice(0);
+        for (const candidate of pending) {
+          await state.peerConnection.addIceCandidate(candidate).catch(() => {});
+        }
       }
 
       async function prepareLocalMedia(video) {
         state.localStream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1, sampleRate: 48000 },
           video: video ? {
-            width: { ideal: 480, max: 640 },
-            height: { ideal: 360, max: 480 },
-            frameRate: { ideal: 18, max: 24 },
+            width: { ideal: 640, max: 854 },
+            height: { ideal: 480, max: 480 },
+            frameRate: { ideal: 24, max: 24 },
           } : false,
         });
         $("localVideo").srcObject = state.localStream;
+        $("localVideo").play().catch(() => {});
         state.localStream.getAudioTracks().forEach((track) => {
           track.enabled = !state.micMuted;
         });
@@ -1624,12 +1639,12 @@
         params.encodings = params.encodings && params.encodings.length ? params.encodings : [{}];
         if (kind === "video") {
           params.degradationPreference = "maintain-framerate";
-          params.encodings[0].maxBitrate = 380000;
-          params.encodings[0].maxFramerate = 18;
-          params.encodings[0].scaleResolutionDownBy = 1.25;
+          params.encodings[0].maxBitrate = 720000;
+          params.encodings[0].maxFramerate = 24;
+          params.encodings[0].scaleResolutionDownBy = 1;
         }
         if (kind === "audio") {
-          params.encodings[0].maxBitrate = 32000;
+          params.encodings[0].maxBitrate = 64000;
         }
         await sender.setParameters(params).catch(() => {});
       }
@@ -1717,7 +1732,7 @@
           const answer = await state.peerConnection.createAnswer();
           await state.peerConnection.setLocalDescription(answer);
           emitCallSignal({ roomId: data.roomId, type: "answer", answer, callId: data.callId || "" });
-          for (const candidate of state.pendingIce.splice(0)) await state.peerConnection.addIceCandidate(candidate).catch(() => {});
+          await flushPendingIce();
           state.pendingCall = null;
         } catch (err) {
           window.endCall();
@@ -1755,6 +1770,7 @@
           if (state.callRetryTimer) clearInterval(state.callRetryTimer);
           state.callRetryTimer = null;
           await state.peerConnection.setRemoteDescription(data.answer);
+          await flushPendingIce();
           $("callStatus").textContent = "Conectado";
           return;
         }
