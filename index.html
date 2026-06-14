@@ -486,16 +486,22 @@
       }
       .callCard {
         width: min(460px, 94vw);
+        max-height: calc(100dvh - 36px);
         border: 1px solid rgba(66, 232, 255, 0.62);
         border-radius: 28px;
         padding: 22px;
         background: linear-gradient(145deg, rgba(8, 29, 56, 0.96), rgba(2, 8, 18, 0.98));
         box-shadow: 0 0 42px rgba(0, 132, 255, 0.42);
         text-align: center;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
       }
       .callVideos {
         position: relative;
-        min-height: 220px;
+        flex: 1 1 min(52dvh, 420px);
+        min-height: 180px;
+        max-height: min(52dvh, 420px);
         margin: 14px 0;
         border-radius: 22px;
         overflow: hidden;
@@ -505,7 +511,7 @@
       .callVideos video {
         width: 100%;
         height: 100%;
-        min-height: 220px;
+        min-height: 0;
         object-fit: cover;
         background: #020814;
       }
@@ -525,6 +531,13 @@
         grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
         gap: 10px;
       }
+      .callCard > .callActions {
+        flex: 0 0 auto;
+        position: relative;
+        z-index: 3;
+        padding-top: 8px;
+        background: linear-gradient(180deg, rgba(2, 8, 18, 0), rgba(2, 8, 18, 0.96) 28%);
+      }
       .danger {
         border: 1px solid rgba(255, 61, 99, 0.7);
         background: linear-gradient(135deg, #9d1232, #ff3d63);
@@ -533,6 +546,48 @@
         .actions { grid-template-columns: repeat(2, 1fr); }
         .chatHeader { grid-template-columns: 42px 52px 1fr 40px 40px 40px; gap: 6px; }
         .brand { font-size: 19px; }
+        .callOverlay {
+          place-items: stretch;
+          padding: calc(env(safe-area-inset-top) + 10px) 10px calc(env(safe-area-inset-bottom) + 10px);
+        }
+        .callCard {
+          width: 100%;
+          max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
+          padding: 14px;
+          border-radius: 24px;
+        }
+        .callCard .bigAvatar {
+          width: 56px;
+          height: 56px;
+          margin-bottom: 6px !important;
+        }
+        .callCard h2 {
+          margin: 4px 0;
+          font-size: 20px;
+        }
+        .callCard .small {
+          margin: 4px 0;
+        }
+        .callVideos {
+          flex-basis: 46dvh;
+          min-height: 0;
+          max-height: 46dvh;
+          margin: 10px 0;
+        }
+        #localVideo {
+          width: 88px;
+          height: 116px;
+          right: 10px;
+          bottom: 10px;
+        }
+        .callActions {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+        }
+        .callActions button {
+          min-height: 48px;
+          padding-inline: 8px;
+        }
       }
     </style>
   </head>
