@@ -667,6 +667,7 @@
         callRetryTimer: null,
         activeCallId: "",
         micMuted: false,
+        videoReduced: false,
         mediaRecorder: null,
         audioChunks: [],
         replyDraft: null,
@@ -1546,6 +1547,7 @@
 
       function createPeer(room, video) {
         state.callRoom = room;
+        state.videoReduced = false;
         state.peerConnection = new RTCPeerConnection({
           iceServers: [
             { urls: "stun:stun.l.google.com:19302" },
@@ -1582,25 +1584,37 @@
           }
           if (["failed", "closed"].includes(status)) window.endCall(false);
         };
+        state.peerConnection.oniceconnectionstatechange = () => {
+          const status = state.peerConnection?.iceConnectionState;
+          if (status === "checking") $("callStatus").textContent = "Conectando midia...";
+          if (status === "connected" || status === "completed") $("callStatus").textContent = video ? "Video conectado" : "Voz conectada";
+          if (status === "disconnected" && video) reduceVideoLoad();
+          if (status === "failed") {
+            state.peerConnection?.restartIce?.();
+            if (video) reduceVideoLoad();
+          }
+        };
       }
 
       async function reduceVideoLoad() {
+        if (state.videoReduced) return;
+        state.videoReduced = true;
         const videoTrack = state.localStream?.getVideoTracks?.()[0];
         if (videoTrack?.applyConstraints) {
           await videoTrack.applyConstraints({
             width: { ideal: 480, max: 640 },
-            height: { ideal: 360, max: 480 },
-            frameRate: { ideal: 18, max: 20 },
+            height: { ideal: 270, max: 360 },
+            frameRate: { ideal: 20, max: 24 },
           }).catch(() => {});
         }
         const sender = state.peerConnection?.getSenders?.().find((item) => item.track?.kind === "video");
         if (!sender?.getParameters || !sender?.setParameters) return;
         const params = sender.getParameters();
         params.encodings = params.encodings && params.encodings.length ? params.encodings : [{}];
-        params.degradationPreference = "maintain-framerate";
-        params.encodings[0].maxBitrate = 420000;
-        params.encodings[0].maxFramerate = 18;
-        params.encodings[0].scaleResolutionDownBy = 1.2;
+        params.degradationPreference = "balanced";
+        params.encodings[0].maxBitrate = 650000;
+        params.encodings[0].maxFramerate = 24;
+        params.encodings[0].scaleResolutionDownBy = 1;
         await sender.setParameters(params).catch(() => {});
       }
 
@@ -1616,9 +1630,10 @@
         state.localStream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1, sampleRate: 48000 },
           video: video ? {
-            width: { ideal: 640, max: 854 },
-            height: { ideal: 480, max: 480 },
-            frameRate: { ideal: 24, max: 24 },
+            width: { ideal: 640, max: 960 },
+            height: { ideal: 360, max: 540 },
+            frameRate: { ideal: 24, max: 30 },
+            facingMode: "user",
           } : false,
         });
         $("localVideo").srcObject = state.localStream;
@@ -1638,9 +1653,9 @@
         const params = sender.getParameters();
         params.encodings = params.encodings && params.encodings.length ? params.encodings : [{}];
         if (kind === "video") {
-          params.degradationPreference = "maintain-framerate";
-          params.encodings[0].maxBitrate = 720000;
-          params.encodings[0].maxFramerate = 24;
+          params.degradationPreference = "balanced";
+          params.encodings[0].maxBitrate = 1200000;
+          params.encodings[0].maxFramerate = 30;
           params.encodings[0].scaleResolutionDownBy = 1;
         }
         if (kind === "audio") {
@@ -1966,8 +1981,14 @@
 
       document.querySelectorAll(".nav button").forEach((btn) => {
         btn.onclick = async () => {
+          const section = btn.dataset.nav;
+          if (section === "profile" || section === "files" || section === "calls") {
+            renderHome(section);
+            refreshRooms().catch(() => {});
+            return;
+          }
           await refreshRooms();
-          renderHome(btn.dataset.nav);
+          renderHome(section);
         };
       });
 

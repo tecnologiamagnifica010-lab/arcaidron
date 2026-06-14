@@ -23,7 +23,7 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 const DATABASE_URL = process.env.DATABASE_URL || "";
 const MESSAGE_TTL_MS = 24 * 60 * 60 * 1000;
-const JWT_SECRET = process.env.JWT_SECRET || loadLocalSecret();
+const JWT_SECRET = process.env.JWT_SECRET || stableSecretFromDatabaseUrl() || loadLocalSecret();
 
 const users = new Map(); // username -> user
 const usersById = new Map(); // userId -> username
@@ -69,6 +69,11 @@ function loadLocalSecret() {
   } catch {
     return crypto.randomBytes(32).toString("hex");
   }
+}
+
+function stableSecretFromDatabaseUrl() {
+  if (!DATABASE_URL) return "";
+  return crypto.createHash("sha256").update(`ARCAIDRON_JWT:${DATABASE_URL}`).digest("hex");
 }
 
 function cleanUsername(value) {
