@@ -1570,21 +1570,68 @@
         state.peerConnection.onconnectionstatechange = () => {
           const status = state.peerConnection?.connectionState;
           if (status === "connected") $("callStatus").textContent = video ? "Video conectado" : "Voz conectada";
+          if (status === "disconnected" && video) {
+            $("callStatus").textContent = "Ajustando video para internet fraca...";
+            reduceVideoLoad();
+          }
           if (["failed", "closed"].includes(status)) window.endCall(false);
         };
+      }
+
+      async function reduceVideoLoad() {
+        const videoTrack = state.localStream?.getVideoTracks?.()[0];
+        if (videoTrack?.applyConstraints) {
+          await videoTrack.applyConstraints({
+            width: { ideal: 360, max: 480 },
+            height: { ideal: 270, max: 360 },
+            frameRate: { ideal: 15, max: 18 },
+          }).catch(() => {});
+        }
+        const sender = state.peerConnection?.getSenders?.().find((item) => item.track?.kind === "video");
+        if (!sender?.getParameters || !sender?.setParameters) return;
+        const params = sender.getParameters();
+        params.encodings = params.encodings && params.encodings.length ? params.encodings : [{}];
+        params.degradationPreference = "maintain-framerate";
+        params.encodings[0].maxBitrate = 260000;
+        params.encodings[0].maxFramerate = 15;
+        params.encodings[0].scaleResolutionDownBy = 1.6;
+        await sender.setParameters(params).catch(() => {});
       }
 
       async function prepareLocalMedia(video) {
         state.localStream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-          video: video ? { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } } : false,
+          video: video ? {
+            width: { ideal: 480, max: 640 },
+            height: { ideal: 360, max: 480 },
+            frameRate: { ideal: 18, max: 24 },
+          } : false,
         });
         $("localVideo").srcObject = state.localStream;
         state.localStream.getAudioTracks().forEach((track) => {
           track.enabled = !state.micMuted;
         });
-        state.localStream.getTracks().forEach((track) => state.peerConnection.addTrack(track, state.localStream));
+        state.localStream.getTracks().forEach((track) => {
+          const sender = state.peerConnection.addTrack(track, state.localStream);
+          tuneSenderForWeakNetwork(sender, track.kind);
+        });
         updateMuteButton();
+      }
+
+      async function tuneSenderForWeakNetwork(sender, kind) {
+        if (!sender?.getParameters || !sender?.setParameters) return;
+        const params = sender.getParameters();
+        params.encodings = params.encodings && params.encodings.length ? params.encodings : [{}];
+        if (kind === "video") {
+          params.degradationPreference = "maintain-framerate";
+          params.encodings[0].maxBitrate = 380000;
+          params.encodings[0].maxFramerate = 18;
+          params.encodings[0].scaleResolutionDownBy = 1.25;
+        }
+        if (kind === "audio") {
+          params.encodings[0].maxBitrate = 32000;
+        }
+        await sender.setParameters(params).catch(() => {});
       }
 
       function emitCallSignal(payload, callback) {
