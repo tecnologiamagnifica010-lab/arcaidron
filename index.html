@@ -522,7 +522,7 @@
       }
       .callActions {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
         gap: 10px;
       }
       .danger {
@@ -666,6 +666,7 @@
         pendingIce: [],
         callRetryTimer: null,
         activeCallId: "",
+        micMuted: false,
         mediaRecorder: null,
         audioChunks: [],
         replyDraft: null,
@@ -1485,6 +1486,31 @@
         $("callOverlay").classList.remove("hidden");
       }
 
+      function callControlButtons() {
+        return `
+          <button id="muteBtn" class="ghost" onclick="toggleMute()">Mudo</button>
+          <button class="primary danger" onclick="endCall()">Encerrar</button>
+          <button class="ghost" onclick="endCall(false)">Fechar</button>
+        `;
+      }
+
+      function updateMuteButton() {
+        const btn = $("muteBtn");
+        if (!btn) return;
+        btn.textContent = state.micMuted ? "Com som" : "Mudo";
+        btn.classList.toggle("danger", state.micMuted);
+      }
+
+      window.toggleMute = () => {
+        if (!state.localStream) return toast("Microfone ainda conectando.");
+        state.micMuted = !state.micMuted;
+        state.localStream.getAudioTracks().forEach((track) => {
+          track.enabled = !state.micMuted;
+        });
+        updateMuteButton();
+        toast(state.micMuted ? "Seu microfone esta mudo." : "Seu microfone voltou.");
+      };
+
       function hideCallUi() {
         $("callOverlay").classList.add("hidden");
         $("remoteVideo").srcObject = null;
@@ -1505,6 +1531,7 @@
         state.peerConnection = null;
         if (state.localStream) state.localStream.getTracks().forEach((track) => track.stop());
         state.localStream = null;
+        state.micMuted = false;
         state.pendingIce = [];
       }
 
@@ -1553,7 +1580,11 @@
           video: video ? { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } } : false,
         });
         $("localVideo").srcObject = state.localStream;
+        state.localStream.getAudioTracks().forEach((track) => {
+          track.enabled = !state.micMuted;
+        });
         state.localStream.getTracks().forEach((track) => state.peerConnection.addTrack(track, state.localStream));
+        updateMuteButton();
       }
 
       function emitCallSignal(payload, callback) {
@@ -1588,13 +1619,14 @@
         if (!navigator.mediaDevices?.getUserMedia) return toast("Camera/microfone indisponivel.");
         try {
           window.endCall(false);
+          state.micMuted = false;
           const room = state.currentRoom;
           setCallUi({
             title: video ? "Chamando por video" : "Chamando por voz",
             status: `${room.peer.username} esta sendo chamado...`,
             avatar: room.peer,
             video,
-            actions: `<button class="primary danger" onclick="endCall()">Encerrar</button><button class="ghost" onclick="endCall(false)">Fechar</button>`,
+            actions: callControlButtons(),
           });
           createPeer(room, video);
           await prepareLocalMedia(video);
@@ -1623,12 +1655,13 @@
         const room = await roomForSignal(data.roomId);
         if (!room) return toast("Sala da chamada nao encontrada.");
         try {
+          state.micMuted = false;
           setCallUi({
             title: data.video ? "Video em andamento" : "Chamada de voz",
             status: "Conectando...",
             avatar: data.fromUser || room.peer,
             video: !!data.video,
-            actions: `<button class="primary danger" onclick="endCall()">Encerrar</button><button class="ghost" onclick="endCall(false)">Fechar</button>`,
+            actions: callControlButtons(),
           });
           closePeerConnection();
           createPeer(room, !!data.video);
