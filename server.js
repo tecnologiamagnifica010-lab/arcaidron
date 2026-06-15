@@ -14,7 +14,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" },
-  maxHttpBufferSize: 28 * 1024 * 1024,
+  maxHttpBufferSize: 96 * 1024 * 1024,
   pingInterval: 10000,
   pingTimeout: 30000,
   transports: ["websocket", "polling"],
@@ -40,7 +40,7 @@ if (DATABASE_URL) {
 }
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(express.json({ limit: "32mb" }));
+app.use(express.json({ limit: "96mb" }));
 app.use(rateLimit({ windowMs: 60 * 1000, max: 240 }));
 app.use((req, res, next) => {
   if (req.path === "/" || req.path.startsWith("/api/")) {
