@@ -30,6 +30,7 @@ const usersById = new Map(); // userId -> username
 const rooms = new Map(); // roomId -> room
 const socketsByUser = new Map(); // username -> Set(socket.id)
 const hiddenContacts = new Map(); // username -> Set(peerId)
+const pendingCallsByUser = new Map(); // username -> Map(callId, payload)
 
 let pool = null;
 if (DATABASE_URL) {
@@ -194,6 +195,32 @@ function joinUserSocketsToRoom(username, roomId) {
     if (socket) socket.join(roomId);
   }
   return true;
+}
+
+function prunePendingCalls(username) {
+  const calls = pendingCallsByUser.get(username);
+  if (!calls) return [];
+  const now = Date.now();
+  for (const [callId, payload] of calls.entries()) {
+    if (now - Number(payload.createdAt || 0) > 45000) calls.delete(callId);
+  }
+  if (!calls.size) pendingCallsByUser.delete(username);
+  return [...calls.values()];
+}
+
+function rememberPendingCall(username, payload) {
+  const callId = String(payload.callId || crypto.randomUUID());
+  if (!pendingCallsByUser.has(username)) pendingCallsByUser.set(username, new Map());
+  const calls = pendingCallsByUser.get(username);
+  calls.set(callId, { ...payload, callId, createdAt: Date.now() });
+  prunePendingCalls(username);
+}
+
+function clearPendingCall(username, callId) {
+  const calls = pendingCallsByUser.get(username);
+  if (!calls) return;
+  if (callId) calls.delete(String(callId));
+  if (!callId || !calls.size) pendingCallsByUser.delete(username);
 }
 
 function isHiddenFor(owner, peerId) {
@@ -665,6 +692,10 @@ app.post("/api/history", auth, async (req, res) => {
   res.json({ ok: true, messages });
 });
 
+app.post("/api/pending-calls", auth, (req, res) => {
+  res.json({ ok: true, calls: prunePendingCalls(req.username) });
+});
+
 io.use((socket, next) => {
   const username = verify(socket.handshake.auth?.token || "");
   if (!username) return next(new Error("Nao autorizado"));
@@ -679,6 +710,7 @@ io.on("connection", async (socket) => {
     if (roomHasUser(room, username)) socket.join(room.roomId);
   }
   emitPresence(username);
+  for (const call of prunePendingCalls(username)) socket.emit("call:signal", call);
 
   socket.on("room:join", async ({ roomId }, ack) => {
     const room = rooms.get(String(roomId || ""));
@@ -779,6 +811,12 @@ io.on("connection", async (socket) => {
       fromUser: publicUser(username),
     };
     const peer = peerOf(room, username);
+    if (data.type === "offer") rememberPendingCall(peer, payload);
+    if (["answer", "decline", "hang"].includes(data.type)) {
+      clearPendingCall(username, data.callId);
+      clearPendingCall(peer, data.callId);
+    }
+    if (data.type === "ringing") clearPendingCall(username, data.callId);
     const deliveredDirect = emitToUser(peer, "call:signal", payload);
     socket.to(room.roomId).emit("call:signal", payload);
     const delivered = deliveredDirect || !!socketsByUser.get(peer)?.size;

@@ -777,7 +777,9 @@
         audioChunks: [],
         replyDraft: null,
         pendingAudio: null,
+        mediaObjectUrls: new Set(),
         roomsRefreshTimer: null,
+        callPollTimer: null,
       };
       document.body.dataset.theme = localStorage.getItem("arca_theme") || "blue";
 
@@ -1113,6 +1115,7 @@
         });
         state.socket.on("connect", () => {
           if (state.currentRoom) joinRoom(state.currentRoom);
+          fetchPendingCalls().catch(() => {});
         });
         state.socket.on("room:history", async ({ roomId, messages }) => {
           if (!state.currentRoom || state.currentRoom.roomId !== roomId) return;
@@ -1144,6 +1147,8 @@
           }
         });
         state.socket.on("call:signal", handleCallSignal);
+        clearInterval(state.callPollTimer);
+        state.callPollTimer = setInterval(() => fetchPendingCalls().catch(() => {}), 2200);
       }
 
       async function refreshRooms() {
@@ -1151,6 +1156,13 @@
         if (result.error) return toast(result.error);
         state.rooms = result.rooms || [];
         if (result.user) state.user = result.user;
+      }
+
+      async function fetchPendingCalls() {
+        if (!state.token || state.pendingCall || state.peerConnection) return;
+        const result = await api("/api/pending-calls");
+        if (result.error) return;
+        for (const call of result.calls || []) await handleCallSignal(call);
       }
 
       function scheduleRoomsRefresh() {
@@ -1344,6 +1356,7 @@
       }
 
       async function renderMessages(messages) {
+        revokeMediaObjectUrls();
         $("messageList").innerHTML = `<div class="dayPill">Hoje</div>`;
         const visibleMessages = messages.filter((message) => !isLocallyCleared(message));
         for (const message of visibleMessages) await appendMessage(message);
@@ -1383,6 +1396,7 @@
         row._replyText = parsed.text || "Audio";
         row._replyFrom = mine ? "Voce" : state.currentRoom.peer.username;
         $("messageList").appendChild(row);
+        hydrateMessageMedia(row, parsed).catch(() => {});
         $("messageList").scrollTop = $("messageList").scrollHeight;
       }
 
@@ -1445,7 +1459,11 @@
         if (!dataUrl) {
           return `<span class="bubbleText">Arquivo protegido: ${safe(name)}</span>`;
         }
-        if (mime.startsWith("image/")) {
+        const lowerName = name.toLowerCase();
+        const looksImage = mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp)$/i.test(lowerName);
+        const looksVideo = mime.startsWith("video/") || /\.(mp4|webm|mov|m4v|3gp|mkv)$/i.test(lowerName);
+        const looksAudio = mime.startsWith("audio/") || /\.(mp3|m4a|aac|ogg|oga|wav|webm)$/i.test(lowerName);
+        if (looksImage) {
           return `
             <span class="filePreview">
               <a href="${safe(dataUrl)}" download="${safe(name)}"><img class="fileImage" src="${safe(dataUrl)}" alt="${safe(name)}" loading="lazy" /></a>
@@ -1453,25 +1471,25 @@
             </span>
           `;
         }
-        if (mime.startsWith("video/")) {
+        if (looksVideo) {
           return `
             <span class="filePreview">
-              <video class="fileVideo" controls preload="metadata" src="${safe(dataUrl)}"></video>
-              <a class="fileCaption" href="${safe(dataUrl)}" download="${safe(name)}">Baixar ${safe(label)}</a>
+              <video class="fileVideo" controls playsinline preload="metadata" data-file-media="video"></video>
+              <a class="fileCaption" href="#" data-file-download download="${safe(name)}">Baixar ${safe(label)}</a>
             </span>
           `;
         }
-        if (mime.startsWith("audio/")) {
+        if (looksAudio) {
           return `
             <span class="filePreview">
-              <audio class="audioMessage" controls preload="metadata" src="${safe(dataUrl)}"></audio>
-              <a class="fileCaption" href="${safe(dataUrl)}" download="${safe(name)}">Baixar ${safe(label)}</a>
+              <audio class="audioMessage" controls preload="metadata" data-file-media="audio"></audio>
+              <a class="fileCaption" href="#" data-file-download download="${safe(name)}">Baixar ${safe(label)}</a>
             </span>
           `;
         }
         const isPdf = mime === "application/pdf" || name.toLowerCase().endsWith(".pdf");
         return `
-          <a class="fileDocument" href="${safe(dataUrl)}" download="${safe(name)}" target="_blank" rel="noopener">
+          <a class="fileDocument" href="#" data-file-download download="${safe(name)}" target="_blank" rel="noopener">
             <span class="fileIcon">${isPdf ? "PDF" : "DOC"}</span>
             <span>
               <strong>${safe(name)}</strong>
@@ -1479,6 +1497,33 @@
             </span>
           </a>
         `;
+      }
+
+      async function hydrateMessageMedia(row, parsed) {
+        const dataUrl = String(parsed.dataUrl || "");
+        if (!dataUrl) return;
+        const media = row.querySelector("[data-file-media]");
+        const download = row.querySelector("[data-file-download]");
+        if (!media && !download) return;
+        const url = await dataUrlToObjectUrl(dataUrl);
+        if (media) {
+          media.src = url;
+          media.load?.();
+        }
+        if (download) download.href = url;
+      }
+
+      async function dataUrlToObjectUrl(dataUrl) {
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        state.mediaObjectUrls.add(url);
+        return url;
+      }
+
+      function revokeMediaObjectUrls() {
+        for (const url of state.mediaObjectUrls) URL.revokeObjectURL(url);
+        state.mediaObjectUrls.clear();
       }
 
       window.startReply = (id) => {
@@ -1568,6 +1613,7 @@
       $("backBtn").onclick = () => {
         $("chat").classList.add("hidden");
         state.currentRoom = null;
+        revokeMediaObjectUrls();
         cancelReply();
         refreshRooms().then(() => renderHome("chats"));
       };
