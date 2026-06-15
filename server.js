@@ -15,8 +15,8 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" },
   maxHttpBufferSize: 96 * 1024 * 1024,
-  pingInterval: 10000,
-  pingTimeout: 30000,
+  pingInterval: 6000,
+  pingTimeout: 20000,
   transports: ["websocket", "polling"],
 });
 
@@ -183,6 +183,16 @@ function emitToUser(username, event, payload) {
   const sockets = socketsByUser.get(username);
   if (!sockets || !sockets.size) return false;
   for (const socketId of sockets) io.to(socketId).emit(event, payload);
+  return true;
+}
+
+function joinUserSocketsToRoom(username, roomId) {
+  const sockets = socketsByUser.get(username);
+  if (!sockets || !sockets.size) return false;
+  for (const socketId of sockets) {
+    const socket = io.sockets.sockets.get(socketId);
+    if (socket) socket.join(roomId);
+  }
   return true;
 }
 
@@ -599,6 +609,8 @@ app.post("/api/add-friend", auth, async (req, res) => {
 
   const room = createRoom(me, peer);
   await persistRoom(room);
+  joinUserSocketsToRoom(me, room.roomId);
+  joinUserSocketsToRoom(peer, room.roomId);
   if ((hiddenContacts.get(me) || new Set()).has(users.get(peer).userId)) {
     hiddenContacts.get(me).delete(users.get(peer).userId);
     if (pool) {
@@ -663,6 +675,9 @@ io.use((socket, next) => {
 io.on("connection", async (socket) => {
   const username = socket.username;
   ensureSet(socketsByUser, username).add(socket.id);
+  for (const room of rooms.values()) {
+    if (roomHasUser(room, username)) socket.join(room.roomId);
+  }
   emitPresence(username);
 
   socket.on("room:join", async ({ roomId }, ack) => {
@@ -758,12 +773,15 @@ io.on("connection", async (socket) => {
     }
     const payload = {
       ...data,
+      signalId: crypto.randomUUID(),
       roomId: room.roomId,
       from: username,
       fromUser: publicUser(username),
     };
     const peer = peerOf(room, username);
-    const delivered = emitToUser(peer, "call:signal", payload);
+    const deliveredDirect = emitToUser(peer, "call:signal", payload);
+    socket.to(room.roomId).emit("call:signal", payload);
+    const delivered = deliveredDirect || !!socketsByUser.get(peer)?.size;
     if (typeof ack === "function") ack({ ok: true, delivered });
   });
 

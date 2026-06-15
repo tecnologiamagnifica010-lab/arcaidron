@@ -770,6 +770,7 @@
         pendingIce: [],
         callRetryTimer: null,
         activeCallId: "",
+        seenCallSignals: new Set(),
         micMuted: false,
         videoReduced: false,
         mediaRecorder: null,
@@ -1105,9 +1106,10 @@
           upgrade: true,
           rememberUpgrade: true,
           reconnection: true,
-          reconnectionDelay: 300,
-          reconnectionDelayMax: 1600,
-          timeout: 6000,
+          reconnectionAttempts: Infinity,
+          reconnectionDelay: 150,
+          reconnectionDelayMax: 900,
+          timeout: 3500,
         });
         state.socket.on("connect", () => {
           if (state.currentRoom) joinRoom(state.currentRoom);
@@ -1811,9 +1813,9 @@
         state.localStream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1, sampleRate: 48000 },
           video: video ? {
-            width: { ideal: 640, max: 960 },
-            height: { ideal: 360, max: 540 },
-            frameRate: { ideal: 24, max: 30 },
+            width: { ideal: 540, max: 720 },
+            height: { ideal: 360, max: 480 },
+            frameRate: { ideal: 24, max: 24 },
             facingMode: "user",
           } : false,
         });
@@ -1835,12 +1837,12 @@
         params.encodings = params.encodings && params.encodings.length ? params.encodings : [{}];
         if (kind === "video") {
           params.degradationPreference = "balanced";
-          params.encodings[0].maxBitrate = 1200000;
-          params.encodings[0].maxFramerate = 30;
+          params.encodings[0].maxBitrate = 900000;
+          params.encodings[0].maxFramerate = 24;
           params.encodings[0].scaleResolutionDownBy = 1;
         }
         if (kind === "audio") {
-          params.encodings[0].maxBitrate = 64000;
+          params.encodings[0].maxBitrate = 48000;
         }
         await sender.setParameters(params).catch(() => {});
       }
@@ -1850,7 +1852,7 @@
           toast("Reconectando chamada...");
           state.socket?.connect();
         }
-        state.socket.timeout(5000).emit("call:signal", payload, (err, ack) => {
+        state.socket.timeout(2500).emit("call:signal", payload, (err, ack) => {
           if (callback) callback(err, ack);
         });
       }
@@ -1862,14 +1864,19 @@
           attempts += 1;
           emitCallSignal(payload, (err, ack) => {
             if (!err && ack?.delivered) $("callStatus").textContent = "Chamando...";
+            if (!err && ack?.ringing) {
+              $("callStatus").textContent = "Tocando no aparelho...";
+              clearInterval(state.callRetryTimer);
+              state.callRetryTimer = null;
+            }
           });
-          if (attempts >= 5) {
+          if (attempts >= 8) {
             clearInterval(state.callRetryTimer);
             state.callRetryTimer = null;
           }
         };
         sendOffer();
-        state.callRetryTimer = setInterval(sendOffer, 1200);
+        state.callRetryTimer = setInterval(sendOffer, 650);
       }
 
       async function startCall(video) {
@@ -1879,6 +1886,7 @@
           window.endCall(false);
           state.micMuted = false;
           const room = state.currentRoom;
+          state.activeCallId = crypto.randomUUID();
           setCallUi({
             title: video ? "Chamando por video" : "Chamando por voz",
             status: `${room.peer.username} esta sendo chamado...`,
@@ -1890,7 +1898,6 @@
           await prepareLocalMedia(video);
           const offer = await state.peerConnection.createOffer();
           await state.peerConnection.setLocalDescription(offer);
-          state.activeCallId = crypto.randomUUID();
           startOfferRetry({ roomId: room.roomId, type: "offer", offer, video, callId: state.activeCallId });
         } catch (err) {
           window.endCall(false);
@@ -1945,10 +1952,18 @@
 
       async function handleCallSignal(data) {
         if (!data?.roomId || data.from === state.user?.account || data.from === state.user?.username) return;
+        if (data.signalId) {
+          if (state.seenCallSignals.has(data.signalId)) return;
+          state.seenCallSignals.add(data.signalId);
+          if (state.seenCallSignals.size > 120) state.seenCallSignals.clear();
+        }
         const room = await roomForSignal(data.roomId);
         if (!room) return;
         if (data.type === "offer") {
-          if (state.pendingCall?.callId === data.callId) return;
+          if (state.pendingCall?.callId === data.callId) {
+            emitCallSignal({ roomId: data.roomId, type: "ringing", callId: data.callId || "" });
+            return;
+          }
           if (state.peerConnection && state.activeCallId === data.callId) return;
           state.pendingCall = data;
           state.activeCallId = data.callId || "";
@@ -1960,9 +1975,18 @@
             video: false,
             actions: `<button class="primary" onclick="answerIncomingCall()">Atender</button><button class="primary danger" onclick="declineIncomingCall()">Recusar</button>`,
           });
+          emitCallSignal({ roomId: data.roomId, type: "ringing", callId: data.callId || "" });
+          return;
+        }
+        if (data.type === "ringing") {
+          if (data.callId && state.activeCallId && data.callId !== state.activeCallId) return;
+          if (state.callRetryTimer) clearInterval(state.callRetryTimer);
+          state.callRetryTimer = null;
+          $("callStatus").textContent = "Tocando no aparelho...";
           return;
         }
         if (data.type === "answer" && state.peerConnection) {
+          if (data.callId && state.activeCallId && data.callId !== state.activeCallId) return;
           if (state.callRetryTimer) clearInterval(state.callRetryTimer);
           state.callRetryTimer = null;
           await state.peerConnection.setRemoteDescription(data.answer);
